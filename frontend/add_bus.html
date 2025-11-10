@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Add Bus</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <h2>Add Bus</h2>
+      <div>
+        <a href="dashboard.html">Back to Dashboard</a>
+      </div>
+    </div>
+
+    <form id="busForm">
+      <input type="text" id="bus_number" placeholder="Bus Number (e.g. BUS-01)" required pattern="[A-Za-z0-9-]+" title="Bus number can only contain letters, numbers, and hyphens">
+      <input type="text" id="driver_name" placeholder="Driver Name">
+      <input type="tel" id="driver_phone" placeholder="Driver Phone Number">
+      <input type="number" id="capacity" placeholder="Capacity (number)" min="0">
+      <input type="text" id="route" placeholder="Route (e.g. North Campus)">
+      <button type="submit">Add Bus</button>
+    </form>
+
+    <div id="msg" style="margin-top:12px;"></div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

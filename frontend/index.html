@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>College Bus System - Login</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="login-box">
+    <h2>🚍 Login Portal</h2>
+    <form id="loginForm">
+      <select id="role">
+        <option value="admin">Admin</option>
+        <option value="student">Student</option>
+      </select>
+      <input type="text" id="username" placeholder="Username" required>
+      <input type="password" id="password" placeholder="Password" required>
+      <button type="submit">Login</button>
+      <p class="form-links">
+        <a href="/forgot_password.html" id="forgotLink" style="display: none;">Forgot Password (Students)?</a>
+        <a href="/admin_forgot_password.html" id="adminForgotLink" style="display: none; margin-left:12px;">Forgot Password (Admin)?</a>
+      </p>
+    </form>
+    <div id="loginMsg" class="message"></div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>
