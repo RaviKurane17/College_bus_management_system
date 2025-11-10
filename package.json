@@ -1,0 +1,19 @@
+{
+  "name": "college-bus-system",
+  "version": "1.0.0",
+  "description": "Simple College Bus Management System (Node.js + MySQL + HTML/CSS/JS)",
+  "main": "backend/server.js",
+  "scripts": {
+    "start": "node backend/server.js"
+  },
+  "author": "Ravi Kurane",
+  "license": "MIT",
+  "dependencies": {
+    "body-parser": "^1.20.2",
+    "cors": "^2.8.5",
+    "crypto-random-string": "^5.0.0",
+    "express": "^4.18.2",
+    "mysql": "^2.18.1",
+    "nodemailer": "^7.0.10"
+  }
+}
