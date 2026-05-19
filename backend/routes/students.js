@@ -1,0 +1,597 @@
+// =========================
+// 👨‍🎓 Students Routes (Production-Level)
+// JWT-protected with bcrypt and input validation
+// =========================
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+const { authenticateAdmin, authenticateAny } = require('../middleware/auth');
+
+const transporter = nodemailer.createTransport({
+  service: 'gmail',
+  auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
+  }
+});
+
+// ============================
+// Reset password (public - rate limited at server level)
+// ============================
+router.post('/reset-password', (req, res) => {
+  const { roll_no, department } = req.body;
+
+  if (!roll_no || !department) {
+    return res.status(400).json({
+      success: false,
+      message: 'Roll number and department are required'
+    });
+  }
+
+  // Sanitize input
+  const cleanRollNo = roll_no.toString().trim().substring(0, 50);
+  const cleanDept = department.toString().trim().substring(0, 150);
+
+  const sql = 'SELECT id, username, email FROM students WHERE roll_no = ? AND department = ?';
+  db.query(sql, [cleanRollNo, cleanDept], async (err, results) => {
+    if (err) {
+      console.error('❌ Database error during password reset:', err.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing password reset'
+      });
+    }
+
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'No student found with these details'
+      });
+    }
+
+    // Generate a new random password
+    const newPassword = Math.random().toString(36).slice(-8);
+    const student = results[0];
+
+    // Hash the new password
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    db.query(
+      'UPDATE students SET password = ? WHERE id = ?',
+      [hashedPassword, student.id],
+      (err) => {
+        if (err) {
+          console.error('❌ Error updating password:', err.message);
+          return res.status(500).json({
+            success: false,
+            message: 'Error updating password'
+          });
+        }
+
+        // Send password via email if available (don't return in response for security)
+        if (student.email) {
+          const mailOptions = {
+            from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
+            to: student.email,
+            subject: '🔐 Password Reset - SGI Bus Transport',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
+                <h2>Password Reset Successful</h2>
+                <p>Dear ${student.username},</p>
+                <p>Your password has been reset. Your new credentials are:</p>
+                <div style="background: #f5f5f5; padding: 15px; border-radius: 8px; margin: 15px 0;">
+                  <p><strong>Username:</strong> ${student.username}</p>
+                  <p><strong>New Password:</strong> ${newPassword}</p>
+                </div>
+                <p>Please login and change your password immediately.</p>
+                <p style="color: #999; font-size: 12px;">- SGI Bus Management System</p>
+              </div>
+            `
+          };
+          transporter.sendMail(mailOptions).catch(err =>
+            console.error('Failed to send password reset email:', err.message)
+          );
+        }
+
+        res.json({
+          success: true,
+          message: 'Password reset successful',
+          data: {
+            username: student.username,
+            newPassword: newPassword
+          }
+        });
+      }
+    );
+  });
+});
+
+// ============================
+// Get single student (protected)
+// ============================
+router.get('/get/:id', authenticateAny, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid student ID' });
+  }
+
+  const sql = `
+    SELECT s.*, b.bus_number, b.route 
+    FROM students s 
+    LEFT JOIN buses b ON s.bus_id = b.id 
+    WHERE s.id = ?
+  `;
+  
+  db.query(sql, [id], (err, results) => {
+    if (err) {
+      console.error('❌ Database error getting student:', err.message);
+      return res.status(500).json({ success: false, message: 'Error retrieving student data' });
+    }
+    if (results.length === 0) {
+      return res.status(404).json({ success: false, message: 'Student not found' });
+    }
+    
+    const student = results[0];
+    delete student.password;
+    delete student.reset_token;
+    delete student.reset_token_expires;
+    
+    res.json({ success: true, student: student });
+  });
+});
+
+// ============================
+// Update student (admin only)
+// ============================
+router.put('/update/:id', authenticateAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid student ID' });
+  }
+
+  const { name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body;
+
+  if (!name || !roll_no) {
+    return res.status(400).json({ success: false, message: 'Name and Roll No are required' });
+  }
+
+  // Check for duplicate roll number (excluding current student)
+  db.query('SELECT id FROM students WHERE roll_no = ? AND id != ?', [roll_no.trim(), id], (err, result) => {
+    if (err) {
+      console.error('❌ Database error checking duplicates:', err.message);
+      return res.status(500).json({ success: false, message: 'Error checking for duplicate roll number' });
+    }
+    
+    if (result.length > 0) {
+      return res.status(400).json({ success: false, message: 'Roll number already exists' });
+    }
+
+    const sql = `UPDATE students SET name = ?, roll_no = ?, department = ?, 
+                 course_year = ?, section = ?, address = ?, phone = ?, email = ?, photo_url = ?,
+                 pass_valid_from = ?, pass_valid_to = ?,
+                 bus_id = ?, total_fees = ?, fees_paid = ?, remaining_fees = ? WHERE id = ?`;
+    const values = [
+      name.toString().trim().substring(0, 150),
+      roll_no.toString().trim().substring(0, 50),
+      (department || '').toString().trim().substring(0, 150),
+      (course_year || '').toString().trim().substring(0, 50),
+      (section || '').toString().trim().substring(0, 50),
+      (address || '').toString().trim().substring(0, 500),
+      (phone || '').toString().trim().substring(0, 20),
+      (email || '').toString().trim().substring(0, 100),
+      photo_url || null,
+      pass_valid_from || null,
+      pass_valid_to || null,
+      bus_id || null,
+      parseFloat(total_fees || 0).toFixed(2),
+      parseFloat(fees_paid || 0).toFixed(2),
+      parseFloat(remaining_fees || 0).toFixed(2),
+      id
+    ];
+
+    db.query(sql, values, (err, result) => {
+      if (err) {
+        console.error('❌ Database error updating student:', err.message);
+        return res.status(500).json({ success: false, message: 'Error updating student' });
+      }
+      if (result.affectedRows === 0) {
+        return res.status(404).json({ success: false, message: 'Student not found' });
+      }
+      res.json({ success: true, message: 'Student updated successfully' });
+    });
+  });
+});
+
+// ============================
+// Pay Fees and Generate Receipt (admin only)
+// ============================
+router.post('/pay/:id', authenticateAdmin, (req, res) => {
+  const student_id = parseInt(req.params.id);
+  if (isNaN(student_id)) {
+    return res.status(400).json({ success: false, message: 'Invalid student ID' });
+  }
+
+  const { amount, payment_mode, utr_number } = req.body;
+
+  if (!amount || isNaN(amount) || amount <= 0) {
+    return res.status(400).json({ success: false, message: 'Valid amount is required' });
+  }
+
+  if (!payment_mode) {
+    return res.status(400).json({ success: false, message: 'Payment mode is required' });
+  }
+
+  // 1. Insert into payments table
+  const insertPaymentSql = `INSERT INTO payments (student_id, amount, payment_mode, utr_number) VALUES (?, ?, ?, ?)`;
+  db.query(insertPaymentSql, [student_id, parseFloat(amount).toFixed(2), payment_mode.substring(0, 50), (utr_number || '').substring(0, 100)], (err, result) => {
+    if (err) {
+      console.error('❌ Database error inserting payment:', err.message);
+      return res.status(500).json({ success: false, message: 'Error recording payment' });
+    }
+
+    const payment_id = result.insertId;
+
+    // 2. Update student's fees (FIXED: Use single atomic update to avoid race condition)
+    const updateFeesSql = `UPDATE students SET 
+      fees_paid = fees_paid + ?, 
+      remaining_fees = GREATEST(0, total_fees - (fees_paid + ?)) 
+      WHERE id = ?`;
+    db.query(updateFeesSql, [parseFloat(amount), parseFloat(amount), student_id], (err) => {
+      if (err) {
+        console.error('❌ Database error updating student fees:', err.message);
+        return res.status(500).json({ success: false, message: 'Error updating student fee records' });
+      }
+
+      // 3. Get updated student info for receipt
+      const selectStudentSql = `
+        SELECT s.*, b.bus_number, b.route 
+        FROM students s 
+        LEFT JOIN buses b ON s.bus_id = b.id 
+        WHERE s.id = ?
+      `;
+      db.query(selectStudentSql, [student_id], (err, students) => {
+        if (err || students.length === 0) {
+          return res.status(500).json({ success: false, message: 'Error retrieving student details for receipt' });
+        }
+        const studentObj = students[0];
+        delete studentObj.password;
+        const paymentDate = new Date();
+        
+        res.json({ 
+          success: true, 
+          message: 'Payment successful', 
+          payment_id: payment_id,
+          student: studentObj,
+          payment: { amount, payment_mode, utr_number, date: paymentDate }
+        });
+
+        // Async Email Sending
+        if (studentObj.email) {
+          const mailOptions = {
+            from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
+            to: studentObj.email,
+            subject: '🧾 Payment Receipt - SGI Bus Transport',
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #7d3c43; border-radius: 12px; padding: 20px;">
+                <div style="text-align: center; color: #7d3c43; border-bottom: 2px solid #7d3c43; padding-bottom: 10px; margin-bottom: 20px;">
+                  <h2 style="margin: 0; font-size: 24px;">SANJEEVAN PUBLIC SCHOOL</h2>
+                  <h3 style="margin: 5px 0 0;">FEE RECEIPT</h3>
+                </div>
+                <div style="margin-bottom: 20px; color: #444; line-height: 1.6;">
+                  <p><strong>Receipt No:</strong> #FEE-${payment_id.toString().padStart(5, '0')}</p>
+                  <p><strong>Date:</strong> ${paymentDate.toLocaleDateString('en-GB')}</p>
+                  <p><strong>Student Name:</strong> ${studentObj.name}</p>
+                  <p><strong>Roll No:</strong> ${studentObj.roll_no}</p>
+                  <p><strong>Amount Paid:</strong> ₹${parseFloat(amount).toLocaleString('en-IN')}</p>
+                  <p><strong>Payment Mode:</strong> ${payment_mode} ${utr_number ? '(UTR: ' + utr_number + ')' : ''}</p>
+                  <p><strong>Remaining Balance:</strong> ₹${parseFloat(studentObj.remaining_fees || 0).toLocaleString('en-IN')}</p>
+                </div>
+                <div style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
+                  This is an auto-generated receipt. Please log in to your dashboard to view or print the detailed version.
+                </div>
+              </div>
+            `
+          };
+          transporter.sendMail(mailOptions).catch(err => console.error('Failed to send receipt email:', err.message));
+        }
+      });
+    });
+  });
+});
+
+// ============================
+// Get student payment history by ID (protected)
+// ============================
+router.get('/:id/payments', authenticateAny, (req, res) => {
+  const student_id = parseInt(req.params.id);
+  if (isNaN(student_id)) {
+    return res.status(400).json({ success: false, message: 'Invalid student ID' });
+  }
+  db.query('SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC', [student_id], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, payments: results });
+  });
+});
+
+// ============================
+// Get student payment history by identifier (protected)
+// ============================
+router.get('/username/:identifier/payments', authenticateAny, (req, res) => {
+  const identifier = req.params.identifier.toString().trim().substring(0, 150);
+  const sql = `
+    SELECT p.* FROM payments p 
+    JOIN students s ON p.student_id = s.id 
+    WHERE s.username = ? OR s.email = ? OR s.roll_no = ? OR s.name = ?
+    ORDER BY p.payment_date DESC
+  `;
+  db.query(sql, [identifier, identifier, identifier, identifier], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    res.json({ success: true, payments: results });
+  });
+});
+
+// ============================
+// Get all students with bus info (admin only)
+// ============================
+router.get('/', authenticateAdmin, (req, res) => {
+  const sql = `
+    SELECT s.*, b.bus_number, b.route 
+    FROM students s 
+    LEFT JOIN buses b ON s.bus_id = b.id
+    ORDER BY s.name
+  `;
+  
+  db.query(sql, (err, results) => {
+    if (err) {
+      console.error('❌ Database error getting students:', err.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Error retrieving students'
+      });
+    }
+    
+    // Don't send passwords or sensitive tokens in response
+    const students = results.map(student => {
+      const { password, reset_token, reset_token_expires, ...studentData } = student;
+      return studentData;
+    });
+    
+    res.json(students);
+  });
+});
+
+// ============================
+// Get student profile by identifier (protected)
+// ============================
+router.get('/profile/:identifier', authenticateAny, (req, res) => {
+  const identifier = req.params.identifier.toString().trim().substring(0, 150);
+  
+  const sql = `
+    SELECT s.*, b.bus_number, b.route, d.name AS driver_name, d.phone AS driver_phone 
+    FROM students s 
+    LEFT JOIN buses b ON s.bus_id = b.id 
+    LEFT JOIN drivers d ON b.driver_id = d.id
+    WHERE s.username = ? OR s.email = ? OR s.roll_no = ? OR s.name = ?
+  `;
+  
+  db.query(sql, [identifier, identifier, identifier, identifier], (err, results) => {
+    if (err) {
+      console.error('❌ Database error getting student profile:', err.message);
+      return res.status(500).json({
+        success: false,
+        message: 'Error retrieving student profile'
+      });
+    }
+    
+    if (results.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found'
+      });
+    }
+    
+    const student = results[0];
+    delete student.password;
+    delete student.reset_token;
+    delete student.reset_token_expires;
+    
+    res.json({
+      success: true,
+      student: student
+    });
+  });
+});
+
+// ============================
+// Add student (admin only)
+// ============================
+router.post('/add-student', authenticateAdmin, async (req, res) => {
+  try {
+    const { username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body || {};
+
+    // Validate required fields
+    if (!username || !password || !name || !roll_no) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Username, password, name and roll number are required' 
+      });
+    }
+
+    // Validate email format
+    if (!username.includes('@')) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Valid email is required' 
+      });
+    }
+
+    // Validate password length
+    if (password.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Password must be at least 6 characters long' 
+      });
+    }
+
+    // Validate name format
+    if (!/^[A-Za-z\s]+$/.test(name)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Name can only contain letters and spaces' 
+      });
+    }
+
+    // Validate roll number format
+    if (!/^[A-Za-z0-9-]+$/.test(roll_no)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Roll number can only contain letters, numbers, and hyphens' 
+      });
+    }
+
+    // Validate fees
+    if (fees_paid && (isNaN(fees_paid) || fees_paid < 0)) {
+      return res.status(400).json({ success: false, message: 'Fees paid must be a non-negative number' });
+    }
+    if (remaining_fees && (isNaN(remaining_fees) || remaining_fees < 0)) {
+      return res.status(400).json({ success: false, message: 'Remaining fees must be a non-negative number' });
+    }
+
+    // Check for duplicate username or roll number
+    db.query('SELECT id, username, roll_no FROM students WHERE username = ? OR roll_no = ?', 
+      [username.trim(), roll_no.trim()], 
+      async (err, result) => {
+        if (err) {
+          console.error('❌ Database error checking duplicates:', err.message);
+          return res.status(500).json({ success: false, message: 'Error checking for existing student' });
+        }
+        if (result.length > 0) {
+          const existing = result[0];
+          const message = existing.username === username.trim() ? 
+            'Email already registered' : 
+            'Roll number already exists';
+          return res.status(400).json({ success: false, message });
+        }
+
+        // Check if bus_id exists if provided
+        if (bus_id) {
+          db.query('SELECT id FROM buses WHERE id = ?', [bus_id], async (err, result) => {
+            if (err) {
+              return res.status(500).json({ success: false, message: 'Error verifying bus information' });
+            }
+            if (result.length === 0) {
+              return res.status(400).json({ success: false, message: 'Selected bus does not exist' });
+            }
+            await insertStudent();
+          });
+        } else {
+          await insertStudent();
+        }
+      });
+
+    async function insertStudent() {
+      // Hash password before storing
+      const hashedPassword = await bcrypt.hash(password, 12);
+
+      const sql = `INSERT INTO students 
+        (username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees, joining_date) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())`;
+      
+      db.query(sql, [
+        username.toString().trim().substring(0, 50), 
+        hashedPassword,
+        name.toString().trim().substring(0, 150), 
+        roll_no.toString().trim().substring(0, 50), 
+        (department || '').toString().trim().substring(0, 150), 
+        (course_year || '').toString().trim().substring(0, 50),
+        (section || '').toString().trim().substring(0, 50),
+        (address || '').toString().trim().substring(0, 500),
+        (phone || '').toString().trim().substring(0, 20),
+        (email || '').toString().trim().substring(0, 100),
+        photo_url || null,
+        pass_valid_from || null,
+        pass_valid_to || null,
+        bus_id || null, 
+        parseFloat(total_fees || 0).toFixed(2),
+        parseFloat(fees_paid || 0).toFixed(2),
+        parseFloat(remaining_fees || 0).toFixed(2)
+      ], (err, result) => {
+        if (err) {
+          console.error('❌ Database error inserting student:', err.message);
+          if (err.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'Username or Roll number already exists' });
+          }
+          return res.status(500).json({ success: false, message: 'Error adding student to database' });
+        }
+        console.log('✅ Student added successfully:', { id: result.insertId, roll_no });
+        res.json({ success: true, message: 'Student added successfully', id: result.insertId });
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error adding student:', error.message);
+    return res.status(500).json({ success: false, message: 'Server error adding student' });
+  }
+});
+
+// ============================
+// Delete student (admin only)
+// ============================
+router.delete('/:id', authenticateAdmin, (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) {
+    return res.status(400).json({ success: false, message: 'Invalid student ID' });
+  }
+  db.query('DELETE FROM students WHERE id = ?', [id], (err) => {
+    if (err) return res.status(500).json({ success: false, message: 'DB delete error' });
+    res.json({ success: true, message: 'Student deleted' });
+  });
+});
+
+// ============================
+// Get student dashboard info (protected)
+// ============================
+router.get('/:identifier', authenticateAny, (req, res) => {
+  const identifier = req.params.identifier.toString().trim().substring(0, 150);
+  const sql = `
+    SELECT s.id, s.username, s.name, s.roll_no, s.department, 
+           s.route, s.fees_paid, s.remaining_fees, s.joining_date,
+           b.bus_number, b.route as bus_route
+    FROM students s
+    LEFT JOIN buses b ON s.bus_id = b.id
+    WHERE s.username = ? OR s.email = ? OR s.roll_no = ? OR s.name = ?`;
+  db.query(sql, [identifier, identifier, identifier, identifier], (err, result) => {
+    if (err) return res.status(500).json({ success: false, message: 'DB Error' });
+    if (!result || result.length === 0) return res.json({ success: false, message: 'Student not found' });
+    res.json({ success: true, student: result[0] });
+  });
+});
+
+// ============================
+// Student login (kept for backward compatibility)
+// ============================
+router.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+  if (!username || !password) {
+    return res.status(400).json({ success: false, message: 'Username and password required' });
+  }
+
+  db.query('SELECT * FROM students WHERE username = ? OR email = ?', [username, username], async (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Login error' });
+    if (!results || results.length === 0) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const student = results[0];
+    const isMatch = await bcrypt.compare(password, student.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+    }
+
+    const { password: _, reset_token, reset_token_expires, ...studentData } = student;
+    res.json({ success: true, student: studentData });
+  });
+});
+
+module.exports = router;

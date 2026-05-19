@@ -1,0 +1,2463 @@
+// --- Common helpers (Production-Level with JWT Auth) ---
+function getAuthToken() {
+  return localStorage.getItem('authToken');
+}
+
+async function apiFetch(path, options = {}) {
+  // Auto-include JWT token in all requests
+  const token = getAuthToken();
+  if (token) {
+    options.headers = options.headers || {};
+    options.headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  try {
+    const res = await fetch(path, options);
+    
+    // Handle 401 Unauthorized - token expired or invalid
+    if (res.status === 401) {
+      // Don't redirect if we're on login page or reset pages
+      const currentPage = window.location.pathname;
+      if (!currentPage.includes('login') && !currentPage.includes('reset') && !currentPage.includes('forgot')) {
+        localStorage.clear();
+        window.location.href = '/login.html';
+        return { success: false, message: 'Session expired. Please login again.' };
+      }
+    }
+    
+    // Handle 429 Too Many Requests (rate limited)
+    if (res.status === 429) {
+      const data = await res.json().catch(() => ({}));
+      alert(data.message || 'Too many requests. Please wait and try again.');
+      return { success: false, message: 'Rate limited' };
+    }
+
+    const contentType = res.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      return res.json();
+    } else {
+      return res.text();
+    }
+  } catch (error) {
+    console.error('API request failed:', error);
+    return { success: false, message: 'Network error. Please check your connection.' };
+  }
+}
+
+function requireLogin() {
+  const token = localStorage.getItem('authToken');
+  const role = localStorage.getItem('loggedIn');
+  if (!token || !role) {
+    localStorage.clear();
+    window.location.href = '/login.html';
+  }
+}
+
+// --- MAIN APP LOGIC ---
+document.addEventListener('DOMContentLoaded', async () => {
+  // Show/hide forgot password links based on role selection (student vs admin)
+  const roleSelect = document.getElementById('role');
+  const forgotLink = document.getElementById('forgotLink');
+  const adminForgotLink = document.getElementById('adminForgotLink');
+  if (roleSelect) {
+    const updateForgotLinks = () => {
+      const role = roleSelect.value;
+      if (forgotLink) forgotLink.style.display = role === 'student' ? 'block' : 'none';
+      if (adminForgotLink) adminForgotLink.style.display = role === 'admin' ? 'block' : 'none';
+    };
+    roleSelect.addEventListener('change', updateForgotLinks);
+    // Set initial state
+    updateForgotLinks();
+  }
+
+  // Password Reset Form
+  const resetForm = document.getElementById('resetForm');
+  if (resetForm) {
+    resetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const resetMsg = document.getElementById('resetMsg');
+      resetMsg.textContent = '⏳ Processing...';
+
+      try {
+        const roll_no = document.getElementById('roll_no').value.trim();
+        const department = document.getElementById('department').value.trim();
+
+        const res = await apiFetch('/api/students/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ roll_no, department })
+        });
+
+        if (res.success) {
+          resetMsg.innerHTML = `
+            ✅ Password reset successful!<br>
+            Your username: <strong>${res.data.username}</strong><br>
+            Your new password: <strong>${res.data.newPassword}</strong><br>
+            <small>Please save these credentials and <a href="/">login</a> with them.</small>
+          `;
+          resetForm.reset();
+        } else {
+          resetMsg.textContent = `❌ ${res.message || 'Failed to reset password'}`;
+        }
+      } catch (error) {
+        console.error('Password reset error:', error);
+        resetMsg.textContent = '❌ Failed to process request. Please try again.';
+      }
+    });
+  }
+
+  // Admin Password Reset Form (Step 1)
+  const adminResetForm = document.getElementById('adminResetForm');
+  if (adminResetForm) {
+    adminResetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('adminResetMsg');
+      const email = document.getElementById('admin_email').value.trim();
+      
+      msgEl.textContent = '⏳ Sending reset code...';
+      
+      try {
+        const res = await apiFetch('/api/admin/request-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        
+        if (res.success) {
+          msgEl.textContent = '✅ ' + (res.message || 'Reset code sent to your email.');
+          adminResetForm.style.display = 'none';
+          document.getElementById('adminResetTokenForm').style.display = 'block';
+          window.adminResetEmail = email; // Store for step 2
+        } else {
+          msgEl.textContent = '❌ ' + (res.message || 'Error processing request.');
+        }
+      } catch (error) {
+        msgEl.textContent = '❌ Network error. Please try again.';
+      }
+    });
+  }
+
+  // Admin Password Reset Form (Step 2)
+  const adminResetTokenForm = document.getElementById('adminResetTokenForm');
+  if (adminResetTokenForm) {
+    adminResetTokenForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const msgEl = document.getElementById('adminResetMsg');
+      const token = document.getElementById('reset_token').value.trim();
+      const newPassword = document.getElementById('new_password').value.trim();
+      const confirmPassword = document.getElementById('confirm_password').value.trim();
+      const email = window.adminResetEmail || document.getElementById('admin_email').value.trim();
+      
+      if (newPassword !== confirmPassword) {
+        msgEl.textContent = '❌ Passwords do not match.';
+        return;
+      }
+      
+      msgEl.textContent = '⏳ Resetting password...';
+      
+      try {
+        const res = await apiFetch('/api/admin/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token, newPassword })
+        });
+        
+        if (res.success) {
+          msgEl.innerHTML = '✅ Password reset successfully! <br><a href="/" style="display:inline-block; margin-top:10px; padding:8px 16px; background:var(--primary-color, #ffb703); color:#fff; text-decoration:none; border-radius:8px;">Click here to login</a>';
+          adminResetTokenForm.reset();
+        } else {
+          msgEl.textContent = '❌ ' + (res.message || 'Error resetting password.');
+        }
+      } catch (error) {
+        msgEl.textContent = '❌ Network error. Please try again.';
+      }
+    });
+  }
+
+  // LOGIN PAGE (Admin + Student)
+  const loginForm = document.getElementById('loginForm');
+  if (loginForm) {
+    loginForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const roleSelect = document.getElementById('role');
+      const role = roleSelect ? roleSelect.value : 'admin'; // fallback
+
+      try {
+        console.log('Attempting login with:', { username, role });
+        const res = await apiFetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password, role })
+        });
+        console.log('Login response:', res);
+
+        if (res.success) {
+          // Store JWT token for authenticated requests
+          if (res.token) {
+            localStorage.setItem('authToken', res.token);
+          }
+          
+          if (role === 'admin') {
+            localStorage.setItem('loggedIn', 'admin');
+            window.location.href = '/dashboard.html';
+          } else if (role === 'student') {
+            localStorage.setItem('loggedIn', 'student');
+            localStorage.setItem('studentUser', res.student.email || res.student.username);
+            window.location.href = '/student_dashboard.html';
+          }
+        } else {
+          alert(res.message || 'Invalid credentials');
+        }
+      } catch (error) {
+        console.error('Login error:', error);
+        alert('Login failed. Please try again.');
+      }
+    });
+  }
+
+  // LOGOUT
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', () => {
+      // Clear all auth data on logout
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('loggedIn');
+      localStorage.removeItem('studentUser');
+      localStorage.clear();
+      window.location.href = '/login.html';
+    });
+  }
+
+  // --- ADMIN SIDE ---
+  // Add Bus
+  const busForm = document.getElementById('busForm');
+  if (busForm) {
+    requireLogin();
+    populateDriverSelect();
+    busForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const bus_number = document.getElementById('bus_number').value.trim();
+      const driver_id = document.getElementById('driver_id').value;
+      const capacity = parseInt(document.getElementById('capacity').value) || 0;
+      const route = document.getElementById('route').value.trim();
+
+      try {
+        const msgEl = document.getElementById('msg');
+        msgEl.textContent = '⏳ Adding bus...';
+
+        if (!bus_number) {
+          msgEl.textContent = '❌ Bus number is required';
+          return;
+        }
+
+        const res = await apiFetch('/api/buses/add-bus', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bus_number,
+            driver_id: driver_id ? parseInt(driver_id) : null,
+            capacity,
+            route
+          })
+        });
+
+        if (res.success) {
+          msgEl.textContent = '✅ Bus added successfully!';
+          busForm.reset();
+        } else {
+          msgEl.textContent = `❌ ${res.message || 'Error adding bus'}`;
+        }
+      } catch (error) {
+        console.error('Error adding bus:', error);
+        const msgEl = document.getElementById('msg');
+        msgEl.textContent = '❌ Failed to add bus. Please try again.';
+      }
+    });
+  }
+
+  // Add Driver
+  const driverForm = document.getElementById('driverForm');
+  if (driverForm) {
+    requireLogin();
+    driverForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const name = document.getElementById('driver_name').value.trim();
+      const phone = document.getElementById('driver_phone').value.trim();
+      const license_number = document.getElementById('driver_license').value.trim();
+      const address = document.getElementById('driver_address').value.trim();
+
+      try {
+        const msgEl = document.getElementById('dmsg');
+        msgEl.textContent = '⏳ Adding driver...';
+
+        const res = await apiFetch('/api/drivers/add-driver', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, phone, license_number, address })
+        });
+
+        if (res.success) {
+          msgEl.textContent = '✅ Driver added successfully!';
+          driverForm.reset();
+        } else {
+          msgEl.textContent = `❌ ${res.message || 'Error adding driver'}`;
+        }
+      } catch (error) {
+        console.error('Error adding driver:', error);
+        document.getElementById('dmsg').textContent = '❌ Failed to add driver. Please try again.';
+      }
+    });
+  }
+
+  // View Drivers
+  const driversTable = document.getElementById('driversTable');
+  if (driversTable) {
+    requireLogin();
+    loadDrivers();
+  }
+
+  // View Buses
+  const busesTable = document.getElementById('busesTable');
+  if (busesTable) {
+    requireLogin();
+    loadBuses();
+  }
+
+  // Add Student
+  const studentForm = document.getElementById('studentForm');
+  if (studentForm) {
+    requireLogin();
+    populateBusSelect();
+    studentForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const smsg = document.getElementById('smsg');
+      smsg.textContent = '⏳ Adding student...';
+
+      const email = document.getElementById('email').value.trim();
+      const username = email; // Use email as username internally
+      const password = document.getElementById('password').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const roll_no = document.getElementById('roll_no').value.trim();
+      const department = document.getElementById('department').value.trim();
+      const course_year = document.getElementById('course_year')?.value.trim();
+      const section = document.getElementById('section')?.value.trim();
+      const bus_id = document.getElementById('bus_select').value || null;
+      const fees_paid = parseFloat(document.getElementById('fees_paid').value) || 0;
+      const remaining_fees = parseFloat(document.getElementById('remaining_fees').value) || 0;
+
+      try {
+        // Basic validation
+        if (!email || !password || !name || !roll_no) {
+          smsg.textContent = '❌ Please fill in all required fields (Email, Password, Name, Roll No)';
+          return;
+        }
+
+        // Email check
+        if (!email.includes('@')) {
+          smsg.textContent = '❌ Please enter a valid email address';
+          return;
+        }
+
+        // Validate password length
+        if (password.length < 6) {
+          smsg.textContent = '❌ Password must be at least 6 characters long';
+          return;
+        }
+
+        // Validate name format
+        if (!/^[A-Za-z\s]+$/.test(name)) {
+          smsg.textContent = '❌ Name can only contain letters and spaces';
+          return;
+        }
+
+        // Validate roll number format
+        if (!/^[A-Za-z0-9-]+$/.test(roll_no)) {
+          smsg.textContent = '❌ Roll number can only contain letters, numbers, and hyphens';
+          return;
+        }
+
+        // Upload photo first if selected
+        let photo_url = document.getElementById('photo_url')?.value || '';
+        if (document.getElementById('photo')?.files?.length > 0) {
+          smsg.textContent = '📸 Uploading photo...';
+          photo_url = await uploadPhoto() || '';
+        }
+
+        const res = await apiFetch('/api/students/add-student', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            username,
+            password,
+            name,
+            roll_no,
+            department: department || '',
+            course_year: course_year || '',
+            section: section || '',
+            address: document.getElementById('address')?.value.trim() || '',
+            phone: document.getElementById('phone')?.value.trim() || '',
+            email: document.getElementById('email')?.value.trim() || '',
+            photo_url: photo_url,
+            pass_valid_from: document.getElementById('pass_valid_from')?.value || null,
+            pass_valid_to: document.getElementById('pass_valid_to')?.value || null,
+            bus_id: bus_id === '' ? null : parseInt(bus_id),
+            total_fees: parseFloat(document.getElementById('total_fees')?.value) || 0,
+            fees_paid: fees_paid || 0,
+            remaining_fees: parseFloat(document.getElementById('remaining_fees')?.value) || 0
+          })
+        });
+
+        if (res.success) {
+          smsg.textContent = '✅ Student added successfully!';
+          studentForm.reset();
+          await populateBusSelect(); // Refresh bus list
+        } else {
+          smsg.textContent = `❌ ${res.message || 'Error adding student'}`;
+        }
+      } catch (error) {
+        console.error('Error adding student:', error);
+        const smsg = document.getElementById('smsg');
+        smsg.textContent = '❌ Failed to add student. Please try again.';
+      }
+    });
+  }
+
+  // View Students
+  const studentsTable = document.getElementById('studentsTable');
+  if (studentsTable) {
+    requireLogin();
+    loadStudents();
+  }
+
+  // --- STUDENT SIDE ---
+  const studentPage = document.getElementById('studentInfo');
+  if (studentPage) {
+    const username = localStorage.getItem('studentUser');
+    if (!username) {
+      window.location.href = '/login.html';
+      return;
+    }
+
+    try {
+      const res = await apiFetch(`/api/students/profile/${username}`);
+      if (res && res.success) {
+        const s = res.student || {};
+        studentPage.innerHTML = `
+          <div class="content-card" style="margin-bottom: 20px;">
+            <h2 style="margin-top: 0;">Welcome, ${escapeHtml(s.name) || 'Student'} 👋</h2>
+            <div class="info-grid">
+              <div class="info-item">
+                <p><b>Roll No:</b> ${escapeHtml(s.roll_no) || 'N/A'}</p>
+                <p><b>Department:</b> ${escapeHtml(s.department) || 'N/A'}</p>
+                <p><b>Year/Sec:</b> ${escapeHtml(s.course_year || '')} ${s.section ? 'Sec ' + escapeHtml(s.section) : ''}</p>
+                <p><b>Joining Date:</b> ${formatDate(s.joining_date) || 'N/A'}</p>
+              </div>
+              <div class="info-item">
+                <p><b>Bus No:</b> ${escapeHtml(s.bus_number) || 'Not Assigned'}</p>
+                <p><b>Route:</b> ${escapeHtml(s.route) || 'N/A'}</p>
+              </div>
+              <div class="info-item fees">
+                <p><b>Fees Paid:</b> ₹${parseFloat(s.fees_paid || 0).toFixed(2)}</p>
+                <p><b>Remaining Fees:</b> ₹${parseFloat(s.remaining_fees || 0).toFixed(2)}</p>
+              </div>
+            </div>
+          </div>
+        `;
+
+        // Load payments
+        const paymentsRes = await apiFetch(`/api/students/username/${username}/payments`);
+        const paymentsTbody = document.querySelector('#paymentsTable tbody');
+        if (paymentsTbody) {
+          if (paymentsRes.success && paymentsRes.payments.length > 0) {
+            paymentsTbody.innerHTML = paymentsRes.payments.map(p => `
+              <tr>
+                <td>${new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                <td style="color: var(--success); font-weight: bold;">₹${parseFloat(p.amount).toFixed(2)}</td>
+                <td>${escapeHtml(p.payment_mode)}</td>
+                <td>${escapeHtml(p.utr_number || '-')}</td>
+              </tr>
+            `).join('');
+          } else {
+            paymentsTbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--gray);">No payment history found.</td></tr>';
+          }
+        }
+      } else {
+        studentPage.innerHTML = '<div class="content-card"><p class="error-message">❌ Failed to load student data. Please try logging in again.</p></div>';
+      }
+    } catch (error) {
+      console.error('Error loading student profile:', error);
+      studentPage.innerHTML = '<p class="error-message">❌ Failed to load student data. Please try again later.</p>';
+    }
+  }
+});
+
+// --- Utility Functions ---
+async function loadBuses() {
+  try {
+    const res = await apiFetch('/api/buses');
+    const tbody = document.querySelector('#busesTable tbody');
+    tbody.innerHTML = '';
+
+    if (Array.isArray(res)) {
+      const searchInput = document.getElementById('searchBus');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      const filteredBuses = res.filter(bus => {
+        return (bus.bus_number && bus.bus_number.toLowerCase().includes(searchTerm)) ||
+          (bus.driver_name && bus.driver_name.toLowerCase().includes(searchTerm)) ||
+          (bus.route && bus.route.toLowerCase().includes(searchTerm));
+      });
+
+      filteredBuses.forEach(bus => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td>${bus.id}</td>
+          <td><a href="#" onclick="viewBusDetails(${bus.id}); return false;" style="color: var(--primary); font-weight: bold; text-decoration: none;">${escapeHtml(bus.bus_number)}</a></td>
+          <td>${escapeHtml(bus.driver_name || 'N/A')}</td>
+          <td>${bus.capacity || 0}</td>
+          <td>${escapeHtml(bus.route || 'N/A')}</td>
+          <td>
+            <button onclick="editBus(${bus.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button onclick="deleteBus(${bus.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (filteredBuses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No buses found</td></tr>';
+      }
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6" class="error">Error loading buses</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error loading buses:', error);
+    document.querySelector('#busesTable tbody').innerHTML =
+      '<tr><td colspan="6" class="error">Failed to load buses. Please try again.</td></tr>';
+  }
+}
+
+async function loadDrivers() {
+  try {
+    const res = await apiFetch('/api/drivers');
+    const tbody = document.querySelector('#driversTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (Array.isArray(res)) {
+      const searchInput = document.getElementById('searchDriver');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      const filteredDrivers = res.filter(driver => {
+        return (driver.name && driver.name.toLowerCase().includes(searchTerm)) ||
+          (driver.phone && driver.phone.toLowerCase().includes(searchTerm)) ||
+          (driver.license_number && driver.license_number.toLowerCase().includes(searchTerm));
+      });
+
+      filteredDrivers.forEach(d => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="color: var(--clr-text, inherit);">${d.id}</td>
+          <td style="color: var(--clr-text, inherit); font-weight: 500;">${escapeHtml(d.name)}</td>
+          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.phone)} ${d.phone ? `<a href="https://wa.me/91${d.phone.replace(/\D/g, '')}" target="_blank" title="WhatsApp" style="color: #25d366; margin-left: 5px;"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</td>
+          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.license_number || 'N/A')}</td>
+          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.address || 'N/A')}</td>
+          <td>
+            <button onclick="editDriver(${d.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+            <button onclick="deleteDriver(${d.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+            ${d.phone ? `<button onclick="sendDriverWhatsApp(${d.id}, '${escapeHtml(d.name)}', '${d.phone.replace(/\D/g, '')}')" style="background: #25d366; padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: none; color: #fff; cursor: pointer;" title="Send WhatsApp Message"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (filteredDrivers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No drivers found</td></tr>';
+      }
+    } else {
+      tbody.innerHTML = '<tr><td colspan="6" class="error">Error loading drivers</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error loading drivers:', error);
+    const tbody = document.querySelector('#driversTable tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error">Failed to load drivers. Please try again.</td></tr>';
+  }
+}
+
+async function deleteDriver(id) {
+  if (confirm('Are you sure you want to delete this driver?')) {
+    try {
+      const res = await apiFetch(`/api/drivers/${id}`, { method: 'DELETE' });
+      if (res.success) {
+        alert('Driver deleted successfully');
+        loadDrivers();
+      } else {
+        alert(res.message || 'Error deleting driver');
+      }
+    } catch (e) {
+      alert('Error deleting driver');
+    }
+  }
+}
+
+async function editDriver(id) {
+  try {
+    const res = await apiFetch(`/api/drivers/get/${id}`);
+    if (!res || !res.success) {
+      alert('Failed to load driver data');
+      return;
+    }
+
+    const d = res.driver;
+    const content = `
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Name</label>
+        <input type="text" id="edit_d_name" value="${escapeHtml(d.name)}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Phone</label>
+        <input type="text" id="edit_d_phone" value="${escapeHtml(d.phone)}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">License No</label>
+        <input type="text" id="edit_d_license" value="${escapeHtml(d.license_number || '')}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Address</label>
+        <textarea id="edit_d_address" rows="3" class="modal-input">${escapeHtml(d.address || '')}</textarea>
+      </div>
+    `;
+
+    showModal(`Edit Driver: ${escapeHtml(d.name)}`, content, async () => {
+      try {
+        const updateRes = await apiFetch(`/api/drivers/update/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: document.getElementById('edit_d_name').value.trim(),
+            phone: document.getElementById('edit_d_phone').value.trim(),
+            license_number: document.getElementById('edit_d_license').value.trim(),
+            address: document.getElementById('edit_d_address').value.trim()
+          })
+        });
+
+        if (updateRes.success) {
+          alert('Driver updated successfully!');
+          closeModal();
+          loadDrivers();
+        } else {
+          alert(updateRes.message || 'Error updating driver');
+        }
+      } catch (e) {
+        alert('Error updating driver.');
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating driver:', error);
+    alert('Failed to load driver data. Please try again.');
+  }
+}
+
+async function populateDriverSelect() {
+  try {
+    const res = await apiFetch('/api/drivers');
+    const select = document.getElementById('driver_id');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">-- Select Driver (optional) --</option>';
+    if (Array.isArray(res)) {
+      res.forEach(d => {
+        const option = document.createElement('option');
+        option.value = d.id;
+        
+        option.textContent = `${d.name} (${d.phone})`;
+        select.appendChild(option);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading drivers:', error);
+  }
+}
+
+async function populateBusSelect() {
+  try {
+    const res = await apiFetch('/api/buses');
+    const sel = document.getElementById('bus_select');
+    sel.innerHTML = '<option value="">-- Select Bus (optional) --</option>';
+    if (Array.isArray(res)) {
+      res.forEach(b => {
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.text = `${b.bus_number} - ${b.route || 'No route'} (Capacity: ${b.capacity || 0})`;
+        sel.appendChild(opt);
+      });
+    }
+  } catch (error) {
+    console.error('Error loading buses for select:', error);
+    const sel = document.getElementById('bus_select');
+    sel.innerHTML = '<option value="">Error loading buses</option>';
+  }
+}
+
+async function loadStudents() {
+  try {
+    const res = await apiFetch('/api/students');
+    const tbody = document.querySelector('#studentsTable tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (Array.isArray(res)) {
+      const searchInput = document.getElementById('searchStudent');
+      const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+
+      const filteredStudents = res.filter(s => {
+        const fDept = document.getElementById('filterDept')?.value || '';
+        const fYear = document.getElementById('filterYear')?.value || '';
+        const fSec = document.getElementById('filterSec')?.value || '';
+        const matchesSearch = (s.name.toLowerCase().includes(searchTerm) || s.roll_no.toLowerCase().includes(searchTerm));
+        const matchesDept = fDept === '' || s.department === fDept || (fDept.includes(' - ') && s.department === fDept.split(' - ')[1]);
+        const matchesYear = fYear === '' || s.course_year === fYear;
+        const matchesSec = fSec === '' || s.section === fSec;
+        return matchesSearch && matchesDept && matchesYear && matchesSec;
+      });
+
+      window.currentFilteredStudents = filteredStudents;
+
+      filteredStudents.forEach(s => {
+        const tr = document.createElement('tr');
+        // Highlight overdue students
+        if (parseFloat(s.remaining_fees || 0) > 0) {
+          tr.style.borderLeft = '3px solid var(--error)';
+        }
+        tr.innerHTML = `
+          <td><a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-circle-user" style="color: var(--primary, var(--clr-accent)); font-size: 1.1rem; opacity: 0.8;"></i> ${escapeHtml(s.name)}</a></td>
+          <td style="font-family: monospace; font-size: 1rem; color: var(--clr-muted, var(--gray));">${escapeHtml(s.roll_no)}</td>
+          <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.department || 'N/A')}</span></td>
+          <td style="font-size: 0.9rem; color: var(--clr-text, inherit);">${escapeHtml(s.course_year || 'N/A')} <span style="color: var(--clr-muted, var(--gray)); margin: 0 5px;">|</span> ${escapeHtml(s.section || 'N/A')}</td>
+          <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
+          <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.route || 'N/A')}</td>
+          <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
+          <td style="color: ${parseFloat(s.remaining_fees || 0) > 0 ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${parseFloat(s.remaining_fees || 0) > 0 ? '700' : '600'};">
+            ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
+            ${parseFloat(s.remaining_fees || 0) > 0 ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
+          </td>
+          <td style="font-size: 0.85rem; color: var(--clr-muted, var(--gray));">${formatDate(s.joining_date)}</td>
+          <td>
+            <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
+            <button onclick="sendEmailReminder(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-accent-2, var(--accent)),#2563eb);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-envelope"></i> Email</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      if (filteredStudents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" class="no-data">No students found</td></tr>';
+      }
+    } else {
+      tbody.innerHTML = '<tr><td colspan="10" class="error">Error loading students</td></tr>';
+    }
+  } catch (error) {
+    console.error('Error loading students:', error);
+    const tbody = document.querySelector('#studentsTable tbody');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="error">Failed to load students. Please try again.</td></tr>';
+  }
+}
+
+// Helper function to format dates
+function formatDate(dateString) {
+  if (!dateString) return 'N/A';
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'N/A';
+    return date.toLocaleDateString('en-IN', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', error);
+    return 'N/A';
+  }
+}
+
+// Helper function to escape HTML
+function escapeHtml(str) {
+  if (!str) return '';
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+// Delete bus function
+async function deleteBus(id) {
+  if (!confirm('Are you sure you want to delete this bus?')) return;
+
+  try {
+    const res = await apiFetch(`/api/buses/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      alert('Bus deleted successfully');
+      loadBuses();
+    } else {
+      alert(res.message || 'Failed to delete bus');
+    }
+  } catch (error) {
+    console.error('Error deleting bus:', error);
+    alert('Failed to delete bus. Please try again.');
+  }
+}
+
+// Delete student function
+async function deleteStudent(id) {
+  if (!confirm('Are you sure you want to delete this student?')) return;
+
+  try {
+    const res = await apiFetch(`/api/students/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      alert('Student deleted successfully');
+      loadStudents();
+    } else {
+      alert(res.message || 'Failed to delete student');
+    }
+  } catch (error) {
+    console.error('Error deleting student:', error);
+    alert('Failed to delete student. Please try again.');
+  }
+}
+
+// Modal Helper
+function showModal(title, htmlContent, onSave) {
+  // Remove existing if any
+  const existing = document.getElementById('dynamicModal');
+  if (existing) existing.remove();
+
+  const modalHtml = `
+    <div class="modal-overlay" id="dynamicModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>${title}</h3>
+          <button class="modal-close" onclick="closeModal()">×</button>
+        </div>
+        <div class="modal-body">
+          ${htmlContent}
+        </div>
+        <div class="modal-footer" style="margin-top: 20px; display: flex; justify-content: flex-end; gap: 10px;">
+          <button class="secondary" onclick="closeModal()">Cancel</button>
+          <button id="modalSaveBtn">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.body.insertAdjacentHTML('beforeend', modalHtml);
+
+  const modal = document.getElementById('dynamicModal');
+  setTimeout(() => modal.classList.add('active'), 10);
+
+  document.getElementById('modalSaveBtn').onclick = () => {
+    onSave();
+  };
+}
+
+function closeModal() {
+  const modal = document.getElementById('dynamicModal');
+  if (modal) {
+    modal.classList.remove('active');
+    setTimeout(() => modal.remove(), 300);
+  }
+}
+
+// Edit bus function
+async function editBus(id) {
+  try {
+    const res = await apiFetch(`/api/buses/get/${id}`);
+    if (!res || !res.success) {
+      alert('Failed to load bus data');
+      return;
+    }
+
+    const b = res.bus;
+
+    // Fetch drivers for the dropdown
+    const driversRes = await apiFetch('/api/drivers');
+    let driverOptions = '';
+    if (Array.isArray(driversRes)) {
+      driverOptions = driversRes.map(d =>
+        `<option value="${d.id}" ${b.driver_id === d.id ? 'selected' : ''}>${escapeHtml(d.name)} (${escapeHtml(d.phone)})</option>`
+      ).join('');
+    }
+
+    const content = `
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Bus Number</label>
+        <input type="text" id="edit_bus_number" value="${escapeHtml(b.bus_number)}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Assign Driver</label>
+        <select id="edit_driver_id" class="modal-input">
+          <option value="">-- No Driver Assigned --</option>
+          ${driverOptions}
+        </select>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Capacity</label>
+        <input type="number" id="edit_capacity" value="${b.capacity || 0}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label">Route</label>
+        <input type="text" id="edit_route" value="${escapeHtml(b.route || '')}" class="modal-input">
+      </div>
+    `;
+
+    showModal('Edit Bus Data', content, async () => {
+      const updateData = {
+        bus_number: document.getElementById('edit_bus_number').value.trim(),
+        driver_id: document.getElementById('edit_driver_id').value || null,
+        capacity: parseInt(document.getElementById('edit_capacity').value) || 0,
+        route: document.getElementById('edit_route').value.trim()
+      };
+
+      if (!updateData.bus_number) {
+        alert('Bus number is required');
+        return;
+      }
+
+      try {
+        const res2 = await apiFetch(`/api/buses/update/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        });
+
+        if (res2.success) {
+          alert('Bus updated successfully');
+          closeModal();
+          loadBuses();
+        } else {
+          alert(res2.message || 'Failed to update bus');
+        }
+      } catch (e) {
+        alert('Error updating bus.');
+      }
+    });
+
+  } catch (error) {
+    console.error('Error loading bus:', error);
+    alert('Failed to load bus. Please try again.');
+  }
+}
+
+// Edit student function
+async function editStudent(id) {
+  try {
+    const res = await apiFetch(`/api/students/get/${id}`);
+    if (!res || !res.success) {
+      alert('Failed to load student data');
+      return;
+    }
+
+    const s = res.student;
+
+    // Fetch buses for the dropdown
+    const busesRes = await apiFetch('/api/buses');
+    let busOptions = '<option value="">-- No Bus --</option>';
+    if (Array.isArray(busesRes)) {
+      busesRes.forEach(b => {
+        const selected = (s.bus_id === b.id) ? 'selected' : '';
+        busOptions += `<option value="${b.id}" ${selected}>${b.bus_number} - ${b.route || ''}</option>`;
+      });
+    }
+
+    const content = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+        <div>
+          <label class="modal-label">Name</label>
+          <input type="text" id="edit_name" value="${escapeHtml(s.name)}" class="modal-input">
+        </div>
+        <div>
+          <label class="modal-label">Roll No</label>
+          <input type="text" id="edit_roll_no" value="${escapeHtml(s.roll_no)}" class="modal-input">
+        </div>
+      </div>
+      <div style="margin-top: 15px;">
+        <label class="modal-label">Department</label>
+        <select id="edit_department" class="modal-input">
+          <option value="">-- Select Dept --</option>
+          <option value="CSE" ${s.department === 'CSE' ? 'selected' : ''}>Computer Science (CSE)</option>
+          <option value="IT" ${s.department === 'IT' ? 'selected' : ''}>Information Technology (IT)</option>
+          <option value="ECE" ${s.department === 'ECE' ? 'selected' : ''}>Electronics (ECE)</option>
+          <option value="MECH" ${s.department === 'MECH' ? 'selected' : ''}>Mechanical (MECH)</option>
+          <option value="CIVIL" ${s.department === 'CIVIL' ? 'selected' : ''}>Civil (CIVIL)</option>
+        </select>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div>
+          <label class="modal-label">Course / Year</label>
+          <select id="edit_course_year" class="modal-input">
+            <option value="">-- Select Year --</option>
+            <option value="1st Year" ${s.course_year === '1st Year' ? 'selected' : ''}>1st Year</option>
+            <option value="2nd Year" ${s.course_year === '2nd Year' ? 'selected' : ''}>2nd Year</option>
+            <option value="3rd Year" ${s.course_year === '3rd Year' ? 'selected' : ''}>3rd Year</option>
+            <option value="4th Year" ${s.course_year === '4th Year' ? 'selected' : ''}>4th Year</option>
+          </select>
+        </div>
+        <div>
+          <label class="modal-label">Section</label>
+          <select id="edit_section" class="modal-input">
+            <option value="">-- Select Section --</option>
+            <option value="A" ${s.section === 'A' ? 'selected' : ''}>Section A</option>
+            <option value="B" ${s.section === 'B' ? 'selected' : ''}>Section B</option>
+            <option value="C" ${s.section === 'C' ? 'selected' : ''}>Section C</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top: 15px;">
+        <label class="modal-label">Address</label>
+        <textarea id="edit_address" placeholder="Student Address" rows="3" class="modal-input">${escapeHtml(s.address || '')}</textarea>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div>
+          <label class="modal-label">Mobile / WhatsApp</label>
+          <input type="tel" id="edit_phone" value="${escapeHtml(s.phone || '')}" placeholder="10 digit number" class="modal-input">
+        </div>
+        <div>
+          <label class="modal-label">Email</label>
+          <input type="email" id="edit_email" value="${escapeHtml(s.email || '')}" placeholder="student@email.com" class="modal-input">
+        </div>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div>
+          <label class="modal-label">Pass Valid From</label>
+          <input type="date" id="edit_pass_valid_from" value="${s.pass_valid_from ? new Date(s.pass_valid_from).toISOString().split('T')[0] : ''}" class="modal-input">
+        </div>
+        <div>
+          <label class="modal-label">Pass Valid To</label>
+          <input type="date" id="edit_pass_valid_to" value="${s.pass_valid_to ? new Date(s.pass_valid_to).toISOString().split('T')[0] : ''}" class="modal-input">
+        </div>
+      </div>
+      <input type="hidden" id="edit_photo_url" value="${s.photo_url || ''}">
+      <div style="margin-top: 15px;">
+        <label class="modal-label">Assign Bus</label>
+        <select id="edit_bus_id" class="modal-input">
+          ${busOptions}
+        </select>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div>
+          <label class="modal-label">Total Fees</label>
+          <input type="number" id="edit_total_fees" value="${s.total_fees || 0}" class="modal-input" oninput="calcEditRemaining()">
+        </div>
+        <div>
+          <label class="modal-label">Fees Paid</label>
+          <input type="number" id="edit_fees_paid" value="${s.fees_paid || 0}" class="modal-input" oninput="calcEditRemaining()">
+        </div>
+        <div>
+          <label class="modal-label">Remaining</label>
+          <input type="number" id="edit_remaining_fees" value="${s.remaining_fees || 0}" readonly class="modal-input">
+        </div>
+      </div>
+      <script>
+        window.calcEditRemaining = function() {
+          const t = parseFloat(document.getElementById('edit_total_fees').value) || 0;
+          const p = parseFloat(document.getElementById('edit_fees_paid').value) || 0;
+          const r = t - p;
+          document.getElementById('edit_remaining_fees').value = r > 0 ? r : 0;
+        }
+      </script>
+    `;
+
+    showModal('Edit Student Data', content, async () => {
+      const updateData = {
+        name: document.getElementById('edit_name').value.trim(),
+        roll_no: document.getElementById('edit_roll_no').value.trim(),
+        department: document.getElementById('edit_department').value.trim(),
+        course_year: document.getElementById('edit_course_year').value.trim(),
+        section: document.getElementById('edit_section').value.trim(),
+        address: document.getElementById('edit_address').value.trim(),
+        phone: document.getElementById('edit_phone').value.trim(),
+        email: document.getElementById('edit_email').value.trim(),
+        photo_url: document.getElementById('edit_photo_url').value || null,
+        pass_valid_from: document.getElementById('edit_pass_valid_from').value || null,
+        pass_valid_to: document.getElementById('edit_pass_valid_to').value || null,
+        bus_id: document.getElementById('edit_bus_id').value || null,
+        total_fees: parseFloat(document.getElementById('edit_total_fees').value) || 0,
+        fees_paid: parseFloat(document.getElementById('edit_fees_paid').value) || 0,
+        remaining_fees: parseFloat(document.getElementById('edit_remaining_fees').value) || 0
+      };
+
+      if (!updateData.name || !updateData.roll_no) {
+        alert('Name and Roll No are required');
+        return;
+      }
+
+      try {
+        const res2 = await apiFetch(`/api/students/update/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        });
+
+        if (res2.success) {
+          alert('Student updated successfully');
+          closeModal();
+          loadStudents();
+        } else {
+          alert(res2.message || 'Failed to update student');
+        }
+      } catch (e) {
+        alert('Error updating student.');
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating student:', error);
+    alert('Failed to load student data. Please try again.');
+  }
+}
+
+// View Student Details Function
+async function viewStudentDetails(id) {
+  try {
+    const res = await apiFetch(`/api/students/get/${id}`);
+    const paymentsRes = await apiFetch(`/api/students/${id}/payments`);
+
+    if (!res || !res.success) {
+      alert('Failed to load student data');
+      return;
+    }
+
+    const s = res.student;
+    const payments = paymentsRes.success ? paymentsRes.payments : [];
+
+    let paymentsHtml = '';
+    if (payments.length > 0) {
+      paymentsHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left;">
+              <th style="padding: 8px;">Date</th>
+              <th style="padding: 8px;">Amount</th>
+              <th style="padding: 8px;">Mode</th>
+              <th style="padding: 8px;">UTR</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(p => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;">${new Date(p.payment_date).toLocaleDateString('en-IN')}</td>
+                <td style="padding: 8px; color: var(--success);">₹${p.amount}</td>
+                <td style="padding: 8px;">${escapeHtml(p.payment_mode)}</td>
+                <td style="padding: 8px;">${escapeHtml(p.utr_number || '-')}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      paymentsHtml = '<p class="modal-label">No payments recorded yet.</p>';
+    }
+
+    const content = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+          <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
+            ${s.photo_url ? `<img src="${s.photo_url}" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary);">` : `<div style="width: 60px; height: 60px; border-radius: 50%; background: rgba(255,255,255,0.1); display: flex; align-items: center; justify-content: center;"><i class='fa-solid fa-user' style='font-size: 1.5rem; color: var(--gray);'></i></div>`}
+            <div>
+              <h4 style="margin: 0; color: var(--primary);">${escapeHtml(s.name)}</h4>
+              <p style="margin: 2px 0; font-size: 0.85rem; color: var(--gray);">${escapeHtml(s.roll_no)} | ${escapeHtml(s.department || 'N/A')}</p>
+            </div>
+          </div>
+          <p style="margin: 5px 0;"><strong>Year/Sec:</strong> ${escapeHtml(s.course_year || '')} ${s.section ? 'Sec ' + escapeHtml(s.section) : ''}</p>
+          <p style="margin: 5px 0;"><strong>Address:</strong> ${escapeHtml(s.address || 'N/A')}</p>
+          <p style="margin: 5px 0;"><strong>Phone:</strong> ${escapeHtml(s.phone || 'N/A')} ${s.phone ? `<a href="https://wa.me/91${s.phone}?text=Dear%20${encodeURIComponent(s.name)},%20your%20pending%20bus%20fee%20is%20₹${s.remaining_fees}.%20Please%20pay%20at%20the%20earliest.%20-%20SGI%20Bus%20Transport" target="_blank" style="color: #25D366; margin-left: 8px;" title="Send WhatsApp Reminder"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</p>
+          <p style="margin: 5px 0;"><strong>Email:</strong> ${escapeHtml(s.email || 'N/A')} ${s.email && parseFloat(s.remaining_fees || 0) > 0 ? `<button onclick="sendEmailReminder(${s.id})" style="background: #ef4444; color: white; border: none; padding: 2px 8px; border-radius: 4px; cursor: pointer; font-size: 0.75rem; margin-left: 8px;">📧 Send Reminder</button>` : ''}</p>
+          <p style="margin: 5px 0;"><strong>Joined:</strong> ${formatDate(s.joining_date)}</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+          <h4 style="margin-top: 0; color: var(--primary);"><i class="fa-solid fa-indian-rupee-sign"></i> Financials</h4>
+          <p style="margin: 5px 0;"><strong>Total Fees:</strong> ₹${parseFloat(s.total_fees || 0).toLocaleString('en-IN')}</p>
+          <p style="margin: 5px 0;"><strong>Fees Paid:</strong> <span style="color: var(--success);">₹${parseFloat(s.fees_paid || 0).toLocaleString('en-IN')}</span></p>
+          <p style="margin: 5px 0;"><strong>Remaining:</strong> <span style="color: ${parseFloat(s.remaining_fees || 0) > 0 ? 'var(--error)' : 'var(--success)'};">₹${parseFloat(s.remaining_fees || 0).toLocaleString('en-IN')}</span></p>
+          <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
+          <h4 style="margin: 0 0 10px 0; color: var(--primary);"><i class="fa-solid fa-bus"></i> Bus Info</h4>
+          <p style="margin: 5px 0;"><strong>Bus No:</strong> ${escapeHtml(s.bus_number || 'Not Assigned')}</p>
+          <p style="margin: 5px 0;"><strong>Route:</strong> ${escapeHtml(s.route || 'N/A')}</p>
+          <p style="margin: 5px 0;"><strong>Pass Valid:</strong> ${s.pass_valid_from ? formatDate(s.pass_valid_from) + ' to ' + formatDate(s.pass_valid_to) : 'Not Set'}</p>
+          <button onclick="generateBusPass(${s.id})" style="width: 100%; margin-top: 10px; background: var(--accent); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600;"><i class="fa-solid fa-id-card"></i> Generate Bus Pass</button>
+        </div>
+      </div>
+      
+      <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: var(--primary); display: flex; justify-content: space-between;">
+          Payment History
+          <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" class="edit-btn" style="background: var(--success); color: white; padding: 2px 10px; font-size: 0.8rem;">Pay Fees</button>
+        </h4>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${paymentsHtml}
+        </div>
+      </div>
+    `;
+
+    showModal(`Student Details: ${escapeHtml(s.roll_no)}`, content, () => {
+      closeModal();
+      setTimeout(() => editStudent(s.id), 300); // Save Changes button will trigger Edit modal
+    });
+
+    // Change Save button text to "Edit Student"
+    document.getElementById('modalSaveBtn').textContent = 'Edit Student';
+
+  } catch (error) {
+    console.error('Error viewing student details:', error);
+    alert('Failed to load student details.');
+  }
+}
+
+// View Bus Details Function
+async function viewBusDetails(id) {
+  try {
+    const res = await apiFetch(`/api/buses/get/${id}`);
+    const studentsRes = await apiFetch(`/api/buses/${id}/students`);
+
+    if (!res || !res.success) {
+      alert('Failed to load bus data');
+      return;
+    }
+
+    const bus = res.bus;
+    const students = studentsRes.success ? studentsRes.students : [];
+
+    let studentsHtml = '';
+    if (students.length > 0) {
+      studentsHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;">
+          <thead>
+            <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left;">
+              <th style="padding: 8px;">Name</th>
+              <th style="padding: 8px;">Roll No</th>
+              <th style="padding: 8px;">Dept</th>
+              <th style="padding: 8px;">Pending Fee</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${students.map(s => `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                <td style="padding: 8px;"><a href="#" onclick="closeModal(); setTimeout(()=>viewStudentDetails(${s.id}),300); return false;" style="color: var(--primary);">${escapeHtml(s.name)}</a></td>
+                <td style="padding: 8px;">${escapeHtml(s.roll_no)}</td>
+                <td style="padding: 8px;">${escapeHtml(s.department || '-')}</td>
+                <td style="padding: 8px; color: ${s.remaining_fees > 0 ? 'var(--danger)' : 'var(--success)'};">₹${s.remaining_fees}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      studentsHtml = '<p class="modal-label">No students assigned to this bus yet.</p>';
+    }
+
+    const content = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: var(--primary);">Bus Info</h4>
+          <p style="margin: 5px 0;"><strong>Bus Number:</strong> ${escapeHtml(bus.bus_number)}</p>
+          <p style="margin: 5px 0;"><strong>Route:</strong> ${escapeHtml(bus.route || 'N/A')}</p>
+          <p style="margin: 5px 0;"><strong>Capacity:</strong> ${bus.capacity || 0} seats</p>
+          <p style="margin: 5px 0;"><strong>Assigned:</strong> ${students.length} students</p>
+        </div>
+        <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+          <h4 style="margin: 0 0 10px 0; color: var(--primary);">Driver Info</h4>
+          <p style="margin: 5px 0;"><strong>Name:</strong> ${escapeHtml(bus.driver_name || 'N/A')}</p>
+          <p style="margin: 5px 0;"><strong>Phone:</strong> ${escapeHtml(bus.driver_phone || 'N/A')}</p>
+        </div>
+      </div>
+      
+      <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
+        <h4 style="margin: 0 0 10px 0; color: var(--primary);">Assigned Students</h4>
+        <div style="max-height: 200px; overflow-y: auto;">
+          ${studentsHtml}
+        </div>
+      </div>
+    `;
+
+    showModal(`Bus Details: ${escapeHtml(bus.bus_number)}`, content, () => {
+      closeModal();
+      setTimeout(() => editBus(bus.id), 300);
+    });
+
+    document.getElementById('modalSaveBtn').textContent = 'Edit Bus';
+
+  } catch (error) {
+    console.error('Error viewing bus details:', error);
+    alert('Failed to load bus details.');
+  }
+}
+
+// Pay fees function
+async function payFees(id) {
+  try {
+    const res = await apiFetch(`/api/students/get/${id}`);
+    if (!res || !res.success) {
+      alert('Failed to load student data');
+      return;
+    }
+
+    const s = res.student;
+
+    const content = `
+      <div style="margin-bottom: 20px; padding: 15px; background: rgba(255,183,3,0.05); border: 1px solid rgba(255,183,3,0.1); border-radius: 12px; display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <p style="margin: 0; color: var(--gray); font-size: 0.85rem; text-transform: uppercase;">Student</p>
+          <p style="margin: 2px 0 0; font-weight: 700; color: #fff; font-size: 1.1rem;">${escapeHtml(s.name)}</p>
+        </div>
+        <div style="text-align: right;">
+          <p style="margin: 0; color: var(--gray); font-size: 0.85rem; text-transform: uppercase;">Outstanding</p>
+          <p style="margin: 2px 0 0; font-weight: 800; color: #f87171; font-size: 1.2rem;">₹${parseFloat(s.remaining_fees || 0).toLocaleString()}</p>
+        </div>
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label"><i class="fa-solid fa-coins" style="margin-right: 5px; color: var(--primary);"></i> Payment Amount (₹) *</label>
+        <input type="number" id="pay_amount" placeholder="Enter amount..." min="1" step="0.01" class="modal-input" style="font-size: 1.1rem; font-weight: 600;">
+      </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label"><i class="fa-solid fa-wallet" style="margin-right: 5px; color: var(--primary);"></i> Payment Mode *</label>
+        <select id="pay_mode" onchange="document.getElementById('utr_container').style.display = this.value === 'Online' ? 'block' : 'none';" class="modal-select">
+          <option value="Cash">Cash</option>
+          <option value="Online">Online (UPI/Bank Transfer)</option>
+          <option value="Cheque">Cheque</option>
+        </select>
+      </div>
+      <div id="utr_container" style="margin-bottom: 15px; display: none; animation: fadeIn 0.3s ease;">
+        <label class="modal-label"><i class="fa-solid fa-barcode" style="margin-right: 5px; color: var(--primary);"></i> UTR / Transaction Number *</label>
+        <input type="text" id="pay_utr" placeholder="Enter Transaction ID" class="modal-input">
+      </div>
+    `;
+
+    showModal('Pay Fees & Generate Receipt', content, async () => {
+      const amount = parseFloat(document.getElementById('pay_amount').value);
+      const payment_mode = document.getElementById('pay_mode').value;
+      const utr_number = document.getElementById('pay_utr').value.trim();
+
+      if (!amount || amount <= 0) {
+        alert('Please enter a valid amount');
+        return;
+      }
+
+      if (payment_mode === 'Online' && !utr_number) {
+        alert('UTR Number is required for online payments');
+        return;
+      }
+
+      try {
+        const payRes = await apiFetch(`/api/students/pay/${id}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ amount, payment_mode, utr_number })
+        });
+
+        if (payRes.success) {
+          alert('Payment successful!');
+          closeModal();
+          loadStudents();
+          generateReceipt(payRes.student, payRes.payment, payRes.payment_id);
+        } else {
+          alert(payRes.message || 'Payment failed');
+        }
+      } catch (e) {
+        alert('Error processing payment.');
+      }
+    });
+
+  } catch (error) {
+    console.error('Error preparing payment:', error);
+    alert('Failed to load student data for payment.');
+  }
+}
+
+// Number to words helper for receipt
+function numberToWords(num) {
+  const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
+  const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+  if ((num = num.toString()).length > 9) return 'overflow';
+  let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
+  if (!n) return;
+  let str = '';
+  str += (n[1] != 0) ? (a[Number(n[1])] || b[n[1][0]] + ' ' + a[n[1][1]]) + 'Crore ' : '';
+  str += (n[2] != 0) ? (a[Number(n[2])] || b[n[2][0]] + ' ' + a[n[2][1]]) + 'Lakh ' : '';
+  str += (n[3] != 0) ? (a[Number(n[3])] || b[n[3][0]] + ' ' + a[n[3][1]]) + 'Thousand ' : '';
+  str += (n[4] != 0) ? (a[Number(n[4])] || b[n[4][0]] + ' ' + a[n[4][1]]) + 'Hundred ' : '';
+  str += (n[5] != 0) ? ((str != '') ? 'and ' : '') + (a[Number(n[5])] || b[n[5][0]] + ' ' + a[n[5][1]]) : '';
+  return str.trim() ? str.trim() + ' Only' : 'Zero Only';
+}
+
+function generateReceipt(student, payment, receiptNo) {
+  const dateStr = new Date(payment.date).toLocaleDateString('en-GB'); // DD/MM/YYYY
+  const receiptWindow = window.open('', '_blank', 'width=650,height=850');
+  receiptWindow.document.write(`
+    <html>
+      <head>
+        <title>Fee Receipt - ${student.name}</title>
+        <style>
+          * { box-sizing: border-box; }
+          body { 
+            font-family: 'Arial', sans-serif; 
+            background: #f0f2f5; 
+            padding: 10px; 
+            margin: 0; 
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important; 
+            color-adjust: exact !important;
+          }
+          .print-area { 
+            background: #fff; 
+            width: 148mm; 
+            height: 210mm; 
+            padding: 6px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); 
+            display: flex;
+            flex-direction: column;
+          }
+          .receipt-wrapper { 
+            border: 2px solid #7d3c43; 
+            border-radius: 12px; 
+            padding: 3px; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+          }
+          .inner-border { 
+            border: 1.5px solid #7d3c43; 
+            border-radius: 9px; 
+            padding: 10px 14px; 
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative; 
+          }
+          
+          .header-section { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; color: #7d3c43; }
+          .logo-area { width: 60px; height: 60px; display: flex; align-items: center; justify-content: center; text-align: center; }
+          .logo-area img { max-height: 100%; max-width: 100%; object-fit: contain; }
+          
+          .titles { text-align: center; flex: 1; margin: 0 10px; }
+          .small-text { font-size: 10px; font-weight: bold; margin-bottom: 1px; color: #555; text-transform: uppercase; letter-spacing: 0.5px; }
+          .main-title { font-size: 24px; font-weight: bold; letter-spacing: 1.5px; font-family: 'Times New Roman', serif; margin-bottom: 1px; line-height: 1.1; }
+          .sub-title { font-size: 11px; font-weight: bold; display: flex; align-items: center; justify-content: center; gap: 6px; color: #7d3c43; }
+          .sub-title::before, .sub-title::after { content: ""; height: 3px; width: 15px; background: #7d3c43; }
+          
+          .right-info { font-size: 8.5px; font-weight: bold; line-height: 1.3; border-left: 1.5px solid #7d3c43; padding-left: 10px; color: #555; min-width: 140px; }
+          .right-info .red-text { color: #7d3c43; font-size: 9px; margin-top: 3px; font-weight: 800; }
+          
+          .address-bar { background-color: #9c7b7e; color: #fff; text-align: center; font-size: 9px; padding: 3px 5px; margin: 0 -14px 10px -14px; border-top: 1.5px solid #7d3c43; border-bottom: 1.5px solid #7d3c43; }
+          
+          .receipt-info { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: bold; font-size: 11.5px; color: #444; }
+          .fee-receipt-badge { background: #7d3c43; color: white; padding: 3px 12px; border-radius: 4px; font-size: 12.5px; font-weight: 700; letter-spacing: 0.5px; }
+          
+          .field-row { display: flex; align-items: flex-end; margin-bottom: 7px; font-weight: bold; font-size: 11.5px; color: #444; }
+          .field-row.multi { gap: 12px; }
+          .field-row.multi > div { display: flex; align-items: flex-end; flex: 1; }
+          .underline { border-bottom: 1px dashed #999; display: inline-block; margin-left: 4px; flex: 1; min-height: 15px; padding-bottom: 1px; }
+          .flex-1 { flex: 1; }
+          
+          .receipt-value { font-family: 'Arial', sans-serif; color: #000; font-weight: bold; font-size: 12px; padding-left: 4px; }
+          
+          .particulars-table { width: 100%; border-collapse: collapse; margin: 10px 0; border: 1.5px solid #7d3c43; }
+          .particulars-table th, .particulars-table td { border: 1px solid #7d3c43; padding: 5px 8px; }
+          .particulars-table th { color: #7d3c43; font-size: 12px; text-align: left; background: #fcf8f8; }
+          .particulars-table td { color: #444; font-weight: bold; font-size: 11px; }
+          .particulars-table td:nth-child(2), .particulars-table th:nth-child(2) { text-align: center; width: 120px; }
+          .particulars-table tfoot th, .particulars-table tfoot td { color: #7d3c43; font-size: 12px; font-weight: bold; background: #fcf8f8; }
+          
+          .footer-sigs { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; }
+          .note { font-size: 9px; font-weight: bold; color: #7d3c43; font-style: italic; }
+          .sig-box { text-align: center; }
+          .sig-line { border-top: 1px solid #7d3c43; padding-top: 3px; font-weight: bold; font-size: 10.5px; color: #7d3c43; margin-top: 2px; width: 150px; }
+          .sig-fake { display: block; font-size: 16px; color: #000; font-style: italic; margin-bottom: -3px; font-family: 'Georgia', serif; }
+          
+          @media print {
+            body { padding: 0; background: white; min-height: auto; display: block; }
+            .print-area { box-shadow: none; padding: 0; width: 148mm; height: 210mm; margin: 0; page-break-inside: avoid; }
+            @page { size: A5 portrait; margin: 0; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="print-area">
+          <div class="receipt-wrapper">
+            <div class="inner-border">
+              <div class="header-section">
+                <div class="logo-area" style="display: flex; align-items: center; justify-content: center;">
+                  <img src="/images/sgilogo.png" alt="SGI Logo">
+                </div>
+                <div class="titles">
+                  <div class="small-text">Holy-Wood Academy's</div>
+                  <div class="main-title">SANJEEVAN</div>
+                  <div class="sub-title">PUBLIC SCHOOL, PANHALA.</div>
+                </div>
+                <div class="right-info">
+                  <div>Affiliation No. : 1130172</div>
+                  <div>UDISE No. : 27340202704</div>
+                  <div>School Code : 30128</div>
+                  <div class="red-text">DAY SECTION - CBSE CURRICULUM</div>
+                </div>
+              </div>
+              
+              <div class="address-bar">
+                At. Sanjeevan Group of Schools, Somwar Peth-Injole, Post. & Tal. Panhala, Dist. Kolhapur - 416201.
+              </div>
+
+              <div class="receipt-info">
+                <div style="color: #7d3c43;">Rec. No. <span class="receipt-value" style="margin-left: 10px;">${receiptNo}</span></div>
+                <div class="fee-receipt-badge">FEE RECEIPT</div>
+                <div style="color: #7d3c43;">Date: <span class="receipt-value" style="margin-left: 10px;">${dateStr}</span></div>
+              </div>
+              
+              <div class="field-row">
+                Name: <span class="underline flex-1 receipt-value" style="text-align: center;">${student.name}</span>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Branch/Standard: <span class="underline receipt-value">${student.course_year || student.department || ''}</span></div>
+                <div>Class: <span class="underline receipt-value">${student.section || ''}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Academic Year: <span class="underline receipt-value">2024-25</span></div>
+                <div>Bus No.: <span class="underline receipt-value">${student.bus_number || ''}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div style="flex: 1.5;">Bus Route: <span class="underline receipt-value">${student.route || ''}</span></div>
+                <div style="flex: 1;">Pickup Point: <span class="underline receipt-value"></span></div>
+              </div>
+
+              <table class="particulars-table">
+                <thead>
+                  <tr>
+                    <th>Particulars</th>
+                    <th>Amount Rs. (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Registration Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                  <tr>
+                    <td>Tuition Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                  <tr>
+                    <td>Bus Fee</td>
+                    <td class="receipt-value">${payment.amount} /-</td>
+                  </tr>
+                  <tr>
+                    <td>Miscellaneous Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td style="text-align: right; padding-right: 15px;">Total Amount ₹</td>
+                    <td class="receipt-value">${payment.amount} /-</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div class="field-row" style="margin-top: 10px;">
+                In Words: <span class="underline flex-1 receipt-value">${numberToWords(payment.amount)}</span>
+              </div>
+              
+              <div class="field-row">
+                Payment Mode: 
+                <span style="font-family: Arial; font-weight: normal; margin-left: 10px; color: #444; font-size: 12px;">
+                  Cash ${payment.payment_mode === 'Cash' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''} / 
+                  D.D. / Cheque ${payment.payment_mode === 'Cheque' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''} / 
+                  NEFT / UTR ${payment.payment_mode === 'Online' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''}
+                </span>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Bank Name : <span class="underline receipt-value"></span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Branch Name : <span class="underline receipt-value"></span></div>
+                <div>D.D./Cheque No.: <span class="underline receipt-value"></span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Date of DD or Cheque: <span class="underline receipt-value"></span></div>
+                <div>Dues Fees ₹: <span class="underline receipt-value">${student.remaining_fees > 0 ? student.remaining_fees + ' /-' : 'Nil'}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div style="max-width: 60%;">UTR No. : <span class="underline receipt-value">${payment.utr_number || ''}</span></div>
+              </div>
+              
+              <div class="footer-sigs">
+                <div class="note">Note:- Fees Once Paid Will Not Be Refunded.</div>
+                <div class="sig-box">
+                  <span class="receipt-value sig-fake">SGI</span>
+                  <div class="sig-line">Signature of the Accountant</div>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+        <script>
+          window.onload = function() {
+            setTimeout(() => {
+              window.print();
+            }, 800);
+          }
+        </script>
+      </body>
+    </html>
+  `);
+  receiptWindow.document.close();
+}
+
+// Generate Bus Pass / ID Card - Professional Horizontal ID Card Design
+async function generateBusPass(id) {
+  try {
+    const res = await apiFetch(`/api/students/get/${id}`);
+    if (!res || !res.success) { alert('Failed to load student data'); return; }
+    const s = res.student;
+    const validFrom = s.pass_valid_from ? new Date(s.pass_valid_from).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+    const validTo = s.pass_valid_to ? new Date(s.pass_valid_to).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'N/A';
+
+    const passWindow = window.open('', '_blank', 'width=750,height=600');
+    passWindow.document.write(`
+      <html>
+        <head>
+          <title>Bus Pass - ${s.name}</title>
+          <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+          <style>
+            * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
+            
+            body { 
+              font-family: 'Outfit', 'Segoe UI', sans-serif; 
+              padding: 30px; 
+              background: #e2e8f0; 
+              margin: 0; 
+              display: flex; 
+              justify-content: center; 
+              align-items: center; 
+              min-height: 100vh; 
+            }
+            
+            .id-card { 
+              width: 580px; 
+              height: 350px; 
+              border-radius: 18px; 
+              overflow: hidden; 
+              box-shadow: 0 15px 40px rgba(0,0,0,0.2); 
+              display: flex; 
+              position: relative; 
+              background-color: #ffffff !important;
+            }
+            
+            /* LEFT PANEL */
+            .card-left { 
+              width: 60%; 
+              background-color: #023047 !important;
+              color: white; 
+              padding: 25px 30px; 
+              display: flex; 
+              flex-direction: column; 
+              justify-content: space-between; 
+              position: relative; 
+              overflow: hidden; 
+            }
+            
+            /* Watermark photo - actual img tag so it prints in PDF */
+            .watermark-img {
+              position: absolute;
+              top: 0; left: 0;
+              width: 100%; height: 100%;
+              object-fit: cover;
+              opacity: 0.12;
+              z-index: 0;
+              pointer-events: none;
+            }
+            
+            /* Dark overlay for text readability */
+            .card-left::before { 
+              content: ''; 
+              position: absolute; 
+              top: 0; left: 0; right: 0; bottom: 0;
+              background-color: rgba(2, 48, 71, 0.55) !important; 
+              z-index: 1;
+            }
+            
+            .card-top { position: relative; z-index: 2; }
+            
+            .card-logo { 
+              display: flex; 
+              align-items: center; 
+              gap: 12px; 
+              margin-bottom: 12px; 
+            }
+            
+            .logo-badge {
+              display: inline-block;
+              background-color: #ffb703 !important;
+              color: #023047 !important;
+              padding: 6px 18px;
+              border-radius: 8px;
+              font-size: 26px;
+              font-weight: 900;
+              letter-spacing: 2px;
+              line-height: 1;
+            }
+            
+            .college-name { 
+              font-size: 11px; 
+              font-weight: 600; 
+              letter-spacing: 1.5px; 
+              text-transform: uppercase; 
+              color: rgba(255,255,255,0.75); 
+              line-height: 1.5; 
+            }
+            
+            .card-type-badge { 
+              display: inline-block; 
+              margin-top: 10px; 
+              padding: 4px 14px; 
+              background-color: rgba(255,183,3,0.25) !important; 
+              border: 2px solid #ffb703 !important; 
+              border-radius: 5px; 
+              font-size: 10px; 
+              font-weight: 800; 
+              color: #ffb703 !important; 
+              letter-spacing: 2.5px; 
+              text-transform: uppercase; 
+            }
+            
+            .card-info { position: relative; z-index: 2; }
+            .info-row { margin-bottom: 7px; }
+            .info-label { 
+              font-size: 9px; 
+              color: rgba(255,255,255,0.5); 
+              text-transform: uppercase; 
+              letter-spacing: 1.5px; 
+              font-weight: 600; 
+            }
+            .info-value { 
+              font-size: 15px; 
+              font-weight: 700; 
+              color: #ffffff !important; 
+            }
+            
+            .card-validity { 
+              position: relative; 
+              z-index: 2; 
+              display: flex; 
+              gap: 25px; 
+              padding-top: 10px; 
+              border-top: 1px solid rgba(255,255,255,0.3); 
+            }
+            .v-label { 
+              font-size: 8px; 
+              color: rgba(255,255,255,0.5); 
+              text-transform: uppercase; 
+              letter-spacing: 1px; 
+            }
+            .v-date { 
+              font-size: 13px; 
+              font-weight: 800; 
+              color: #ffb703 !important; 
+            }
+            
+            /* RIGHT PANEL */
+            .card-right { 
+              width: 40%; 
+              background-color: #f0f4f8 !important; 
+              display: flex; 
+              flex-direction: column; 
+              align-items: center; 
+              justify-content: center; 
+              padding: 20px; 
+              position: relative; 
+            }
+            
+            .card-right-accent {
+              position: absolute;
+              top: 0; left: 0; right: 0;
+              height: 6px;
+              background: linear-gradient(90deg, #ffb703, #fb8500) !important;
+            }
+            
+            .photo-frame { 
+              width: 130px; 
+              height: 150px; 
+              border-radius: 12px; 
+              overflow: hidden; 
+              border: 3px solid #219ebc !important; 
+              box-shadow: 0 5px 15px rgba(0,0,0,0.15); 
+              margin-bottom: 12px; 
+              background-color: #ffffff !important; 
+            }
+            .photo-frame img { width: 100%; height: 100%; object-fit: cover; }
+            .photo-frame .no-photo { 
+              width: 100%; height: 100%; 
+              display: flex; align-items: center; justify-content: center; 
+              background-color: #e2e8f0 !important; 
+              font-size: 50px; color: #94a3b8; 
+            }
+            
+            .student-name { font-size: 16px; font-weight: 800; color: #023047 !important; text-align: center; margin-bottom: 3px; }
+            .student-roll { font-size: 12px; color: #0f172a !important; font-weight: 700; letter-spacing: 1.5px; margin-bottom: 2px; text-align: center; }
+            .student-dept { font-size: 11px; color: #334155 !important; font-weight: 600; margin-top: 2px; text-align: center; }
+            
+            /* BOTTOM STRIP */
+            .card-strip { 
+              position: absolute; 
+              bottom: 0; left: 0; right: 0; 
+              height: 28px; 
+              background-color: #023047 !important; 
+              display: flex; 
+              align-items: center; 
+              justify-content: center; 
+            }
+            .card-strip p { 
+              color: rgba(255,255,255,0.6) !important; 
+              font-size: 8px; 
+              letter-spacing: 1px; 
+              text-transform: uppercase; 
+              margin: 0; 
+            }
+            
+            @media print { 
+              body { padding: 0; background: white !important; } 
+              .id-card { box-shadow: none; margin: 20px auto; } 
+              .no-print { display: none !important; } 
+              @page { margin: 10mm; size: landscape; }
+            }
+          </style>
+        </head>
+        <body>
+          <div style="text-align: center;">
+            <div class="id-card">
+              <!-- Left Panel with SGI Photo Watermark -->
+              <div class="card-left">
+                <img src="/images/sgiphoto.jpg" class="watermark-img" alt="">
+                <div class="card-top">
+                  <div class="card-logo">
+                    <span class="logo-badge">SGI</span>
+                  </div>
+                  <div class="college-name">Sanjeevan Engineering &amp;<br>Technology Institute</div>
+                  <div class="card-type-badge">Bus Transport Pass</div>
+                </div>
+                <div class="card-info">
+                  <div class="info-row"><div class="info-label">Bus Number</div><div class="info-value">${s.bus_number || 'Not Assigned'}</div></div>
+                  <div class="info-row"><div class="info-label">Route</div><div class="info-value">${s.route || 'N/A'}</div></div>
+                  <div class="info-row"><div class="info-label">Phone</div><div class="info-value">${s.phone || 'N/A'}</div></div>
+                </div>
+                <div class="card-validity">
+                  <div><div class="v-label">Valid From</div><div class="v-date">${validFrom}</div></div>
+                  <div><div class="v-label">Valid To</div><div class="v-date">${validTo}</div></div>
+                </div>
+              </div>
+              
+              <!-- Right Panel with Photo -->
+              <div class="card-right">
+                <div class="card-right-accent"></div>
+                <div class="photo-frame">${s.photo_url ? '<img src="' + s.photo_url + '" alt="Photo">' : '<div class="no-photo">&#128100;</div>'}</div>
+                <div class="student-name">${s.name}</div>
+                <div class="student-roll">${s.roll_no}</div>
+                <div class="student-dept">${s.department || ''} ${s.course_year ? '| ' + s.course_year : ''} ${s.section ? '| Sec ' + s.section : ''}</div>
+              </div>
+              
+              <!-- Bottom Strip -->
+              <div class="card-strip"><p>Sanjeevan Knowledge City, Panhala &bull; Computer Generated Pass</p></div>
+            </div>
+            
+            <div class="no-print" style="margin-top: 25px; display: flex; gap: 10px; justify-content: center;">
+              <button onclick="window.print()" style="padding: 14px 40px; background: #023047; color: white; border: none; border-radius: 10px; cursor: pointer; font-size: 15px; font-weight: 700; font-family: inherit; display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 18px;">&#128424;</span> Print / Save as PDF
+              </button>
+            </div>
+          </div>
+          <script>window.onload = function() { setTimeout(function(){ window.print(); }, 1000); }<\/script>
+        </body>
+      </html>
+    `);
+    passWindow.document.close();
+  } catch (error) {
+    console.error('Error generating bus pass:', error);
+    alert('Failed to generate bus pass.');
+  }
+}
+
+// Send email fee reminder
+async function sendEmailReminder(studentId) {
+  if (!confirm('Send fee reminder email to this student?')) return;
+  try {
+    const res = await apiFetch(`/api/reminders/send-email-reminder/${studentId}`, { method: 'POST' });
+    if (res.success) {
+      alert(res.message);
+    } else {
+      alert(res.message || 'Failed to send reminder');
+    }
+  } catch (error) {
+    console.error('Error sending reminder:', error);
+    alert('Failed to send email reminder. Check email configuration.');
+  }
+}
+
+// --- Bulk WhatsApp Messaging ---
+async function bulkWhatsApp() {
+  try {
+    const res = await apiFetch('/api/students');
+    if (!Array.isArray(res)) { alert('Failed to load students'); return; }
+    const studentsWithPhone = res.filter(s => s.phone && s.phone.trim());
+    if (studentsWithPhone.length === 0) { alert('No students have phone numbers saved.'); return; }
+
+    const defaultMsg = 'Dear Student, this is a reminder from SGI Bus Transport regarding your bus fees. Please clear your pending dues at the earliest. Thank you.';
+    const message = prompt('Enter message to send to ALL students via WhatsApp (' + studentsWithPhone.length + ' students):', defaultMsg);
+    if (!message) return;
+
+    // Build a modal with individual send buttons (avoids popup blockers)
+    const rows = studentsWithPhone.map((s, i) => {
+      const phone = '91' + s.phone.replace(/\D/g, '');
+      const personalMsg = encodeURIComponent('Hi ' + s.name + ', ' + message);
+      const waUrl = `https://wa.me/${phone}?text=${personalMsg}`;
+      return `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
+          <td style="padding:8px 6px;font-weight:600;">${i+1}</td>
+          <td style="padding:8px 6px;">${s.name}</td>
+          <td style="padding:8px 6px;color:#94a3b8;">${s.phone}</td>
+          <td style="padding:8px 6px;">
+            <a href="${waUrl}" target="_blank" rel="noopener" 
+               style="display:inline-flex;align-items:center;gap:6px;background:#25d366;color:white;padding:6px 14px;border-radius:8px;text-decoration:none;font-size:13px;font-weight:600;">
+              <i class="fa-brands fa-whatsapp"></i> Send
+            </a>
+          </td>
+        </tr>`;
+    }).join('');
+
+    const modalHtml = `
+      <div id="waModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;box-sizing:border-box;">
+        <div style="background:#1e293b;border-radius:16px;padding:28px;width:100%;max-width:600px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;">
+            <h3 style="color:#ffb703;margin:0;display:flex;align-items:center;gap:10px;">
+              <i class="fa-brands fa-whatsapp" style="color:#25d366;font-size:1.3rem;"></i>
+              Bulk WhatsApp — ${studentsWithPhone.length} Students
+            </h3>
+            <button onclick="document.getElementById('waModal').remove()" 
+              style="background:transparent;border:none;color:#94a3b8;font-size:1.6rem;cursor:pointer;line-height:1;">&times;</button>
+          </div>
+          <div style="background:rgba(255,255,255,0.05);border-radius:8px;padding:12px 14px;margin-bottom:16px;color:#e2e8f0;font-size:13px;word-break:break-word;">
+            <span style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:4px;">Message Preview</span>
+            Hi [Student Name], ${message}
+          </div>
+          <p style="color:#94a3b8;font-size:12px;margin:0 0 12px;">
+            <i class="fa-solid fa-circle-info"></i>
+            Click <strong style="color:#25d366;">Send</strong> next to each student. WhatsApp will open in a new tab with the message pre-filled.
+          </p>
+          <div style="overflow-y:auto;flex:1;">
+            <table style="width:100%;border-collapse:collapse;color:#e2e8f0;font-size:14px;">
+              <thead>
+                <tr style="color:#94a3b8;font-size:11px;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);">
+                  <th style="padding:8px 6px;text-align:left;">#</th>
+                  <th style="padding:8px 6px;text-align:left;">Name</th>
+                  <th style="padding:8px 6px;text-align:left;">Phone</th>
+                  <th style="padding:8px 6px;text-align:left;">Action</th>
+                </tr>
+              </thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <div style="margin-top:16px;text-align:right;">
+            <button onclick="document.getElementById('waModal').remove()" 
+              style="padding:10px 24px;background:#334155;color:white;border:none;border-radius:8px;cursor:pointer;font-size:14px;">Close</button>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  } catch (e) {
+    console.error(e);
+    alert('Error loading students for bulk WhatsApp.');
+  }
+}
+
+// --- Bulk Email Reminder ---
+async function bulkEmailReminder() {
+  if (!confirm('Send fee reminder emails to ALL students with pending fees?')) return;
+  try {
+    const res = await apiFetch('/api/reminders/send-bulk-reminders', { method: 'POST' });
+    if (res.success) {
+      alert(res.message || 'Bulk reminders sent successfully!');
+    } else {
+      alert(res.message || 'Failed to send bulk reminders. Check email config.');
+    }
+  } catch (e) {
+    console.error(e);
+    alert('Error sending bulk email reminders. Make sure email is configured in server.');
+  }
+}
+
+// --- Send WhatsApp to Driver ---
+function sendDriverWhatsApp(id, name, phone) {
+  const defaultMsg = 'Hello ' + name + ', this is a message from SGI Bus Transport Admin.';
+  const message = prompt('Enter message to send to driver ' + name + ':', defaultMsg);
+  if (!message) return;
+  const url = 'https://wa.me/91' + phone + '?text=' + encodeURIComponent(message);
+  window.open(url, '_blank');
+}
+
+// --- Theme Toggle Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+  const savedTheme = localStorage.getItem('sgiTheme') || 'dark';
+  if (savedTheme === 'light') {
+    document.body.classList.add('light-theme');
+  }
+  const userProfile = document.querySelector('.user-profile');
+  if (userProfile) {
+    userProfile.style.display = 'flex';
+    userProfile.style.alignItems = 'center';
+    userProfile.style.gap = '15px';
+    const themeBtn = document.createElement('button');
+    themeBtn.className = 'theme-toggle';
+    themeBtn.style.cssText = 'background:transparent;border:none;cursor:pointer;font-size:1.2rem;color:var(--gray);';
+    themeBtn.innerHTML = savedTheme === 'light' ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    userProfile.insertBefore(themeBtn, userProfile.firstChild);
+    themeBtn.addEventListener('click', () => {
+      document.body.classList.toggle('light-theme');
+      const isLight = document.body.classList.contains('light-theme');
+      localStorage.setItem('sgiTheme', isLight ? 'light' : 'dark');
+      themeBtn.innerHTML = isLight ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>';
+    });
+  }
+});
+
+// --- Mobile Menu Drawer Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+  const topHeader = document.querySelector('.top-header');
+  const dashboardLayout = document.querySelector('.dashboard-layout');
+  const sidebar = document.querySelector('.sidebar');
+
+  if (topHeader && dashboardLayout && sidebar) {
+    const mobileBtn = document.createElement('button');
+    mobileBtn.className = 'mobile-menu-btn';
+    mobileBtn.innerHTML = '<i class="fa-solid fa-bars"></i>';
+    topHeader.insertBefore(mobileBtn, topHeader.firstChild);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sidebar-overlay';
+    dashboardLayout.appendChild(overlay);
+
+    mobileBtn.addEventListener('click', () => {
+      sidebar.classList.add('open');
+      overlay.classList.add('active');
+    });
+
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.remove('active');
+    });
+
+    sidebar.querySelectorAll('.sidebar-menu a').forEach(link => {
+      link.addEventListener('click', () => {
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      });
+    });
+  }
+});
+
+// --- Password Reset Logic ---
+document.addEventListener('DOMContentLoaded', () => {
+  // Admin Request Reset
+  const adminResetForm = document.getElementById('adminResetForm');
+  if (adminResetForm) {
+    adminResetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('admin_email').value;
+      const msgEl = document.getElementById('adminResetMsg');
+      try {
+        const res = await apiFetch('/api/admin/request-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (res.success) {
+          msgEl.innerHTML = '<span style="color:#4ade80;">? ' + res.message + '</span>';
+          adminResetForm.style.display = 'none';
+          document.getElementById('adminResetTokenForm').style.display = 'block';
+        } else {
+          msgEl.innerHTML = '<span style="color:#f87171;">? ' + res.message + '</span>';
+        }
+      } catch (err) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Error sending request.</span>';
+      }
+    });
+  }
+
+  // Admin Submit Token
+  const adminResetTokenForm = document.getElementById('adminResetTokenForm');
+  if (adminResetTokenForm) {
+    adminResetTokenForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('admin_email').value;
+      const token = document.getElementById('reset_token').value;
+      const newPassword = document.getElementById('new_password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+      const msgEl = document.getElementById('adminResetMsg');
+
+      if (newPassword !== confirmPassword) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Passwords do not match.</span>';
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/admin/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token, newPassword })
+        });
+        if (res.success) {
+          alert('✅ ' + res.message);
+          window.location.href = 'admin_secure_login.html';
+        } else {
+          msgEl.innerHTML = '<span style="color:#f87171;">❌ ' + res.message + '</span>';
+        }
+      } catch (err) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Error resetting password.</span>';
+      }
+    });
+  }
+
+  // Student Request Reset
+  const studentResetForm = document.getElementById('studentResetForm');
+  if (studentResetForm) {
+    studentResetForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('student_email').value;
+      const msgEl = document.getElementById('studentResetMsg');
+      try {
+        const res = await apiFetch('/api/student-reset/request-reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email })
+        });
+        if (res.success) {
+          msgEl.innerHTML = '<span style="color:#4ade80;">? ' + res.message + '</span>';
+          studentResetForm.style.display = 'none';
+          document.getElementById('studentResetTokenForm').style.display = 'block';
+        } else {
+          msgEl.innerHTML = '<span style="color:#f87171;">? ' + res.message + '</span>';
+        }
+      } catch (err) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Error sending request.</span>';
+      }
+    });
+  }
+
+  // Student Submit Token
+  const studentResetTokenForm = document.getElementById('studentResetTokenForm');
+  if (studentResetTokenForm) {
+    studentResetTokenForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('student_email').value;
+      const token = document.getElementById('reset_token').value;
+      const newPassword = document.getElementById('new_password').value;
+      const confirmPassword = document.getElementById('confirm_password').value;
+      const msgEl = document.getElementById('studentResetMsg');
+
+      if (newPassword !== confirmPassword) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Passwords do not match.</span>';
+        return;
+      }
+
+      try {
+        const res = await apiFetch('/api/student-reset/reset-password', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, token, newPassword })
+        });
+        if (res.success) {
+          alert('✅ ' + res.message);
+          window.location.href = 'login.html';
+        } else {
+          msgEl.innerHTML = '<span style="color:#f87171;">❌ ' + res.message + '</span>';
+        }
+      } catch (err) {
+        msgEl.innerHTML = '<span style="color:#f87171;">? Error resetting password.</span>';
+      }
+    });
+  }
+});
+
+// View Student Details Function
+async function viewStudentDetails(id) {
+  try {
+    const res = await apiFetch('/api/students/get/' + id);
+    if (!res || !res.success) { alert('Failed to load student details'); return; }
+    const s = res.student;
+
+    const content = `
+      <div class="student-profile-modal-content">
+        <div class="student-profile-header">
+          <div class="student-profile-avatar">
+            <img src="${s.photo_url || 'images/sgiphoto.jpg'}" alt="Student Photo" onerror="this.src='images/sgiphoto.jpg'">
+          </div>
+          <div class="student-profile-info">
+            <h2>${escapeHtml(s.name)}</h2>
+            <p class="student-profile-roll">Roll No: ${escapeHtml(s.roll_no)}</p>
+            <div class="student-profile-badges">
+              <span class="badge badge-primary">${escapeHtml(s.department || 'N/A')}</span>
+              <span class="badge badge-blue">${escapeHtml(s.course_year || 'N/A')}${s.section ? ' - ' + escapeHtml(s.section) : ''}</span>
+            </div>
+          </div>
+        </div>
+        <div class="student-profile-details">
+          <div class="student-profile-section">
+            <h4><i class="fa-solid fa-route"></i> Transport</h4>
+            <div><b>Bus No:</b> ${escapeHtml(s.bus_number || 'Not Assigned')}</div>
+            <div><b>Route:</b> ${escapeHtml(s.route || 'N/A')}</div>
+          </div>
+          <div class="student-profile-section">
+            <h4><i class="fa-solid fa-address-book"></i> Contact</h4>
+            <div><b>Phone:</b> ${escapeHtml(s.phone || 'N/A')}</div>
+            <div><b>Email:</b> ${escapeHtml(s.email || 'N/A')}</div>
+          </div>
+          <div class="student-profile-section">
+            <h4><i class="fa-solid fa-money-check-dollar"></i> Fees</h4>
+            <div><b>Paid:</b> <span style="color: #4ade80;">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</span></div>
+            <div><b>Remaining:</b> <span style="color: #f87171;">₹${parseFloat(s.remaining_fees || 0).toLocaleString()}</span></div>
+          </div>
+        </div>
+        <div class="student-profile-actions">
+          <button onclick="editStudent(${id})" class="profile-action-btn edit"><i class="fa-solid fa-user-pen"></i> Edit</button>
+          <button onclick="deleteStudent(${id})" class="profile-action-btn delete"><i class="fa-solid fa-trash-can"></i> Delete</button>
+          <button onclick="payFees(${id})" class="profile-action-btn pay"><i class="fa-solid fa-file-invoice-dollar"></i> Pay</button>
+        </div>
+      </div>
+      <style>
+        .student-profile-modal-content {
+          max-width: 600px;
+          width: 98vw;
+          max-height: 95vh;
+          overflow-y: auto;
+          background: var(--dark);
+          border-radius: 18px;
+          padding: 32px 18px;
+          margin: 0 auto;
+          display: flex;
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .student-profile-header {
+          display: flex;
+          gap: 24px;
+          align-items: center;
+          margin-bottom: 18px;
+          flex-wrap: wrap;
+        }
+        .student-profile-avatar {
+          width: 90px;
+          height: 90px;
+          border-radius: 50%;
+          overflow: hidden;
+          border: 3px solid var(--primary);
+          background: rgba(255,255,255,0.08);
+          flex-shrink: 0;
+        }
+        .student-profile-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+        .student-profile-info h2 {
+          margin: 0;
+          font-size: 1.5rem;
+          color: var(--primary);
+        }
+        .student-profile-roll {
+          color: var(--gray);
+          margin: 2px 0 8px 0;
+        }
+        .student-profile-badges {
+          display: flex;
+          gap: 10px;
+          flex-wrap: wrap;
+        }
+        .student-profile-details {
+          display: grid;
+          grid-template-columns: 1fr 1fr 1fr;
+          gap: 18px;
+          margin-bottom: 22px;
+        }
+        .student-profile-section h4 {
+          margin: 0 0 8px 0;
+          font-size: 1rem;
+          color: var(--primary);
+          display: flex;
+          align-items: center;
+          gap: 7px;
+        }
+        .student-profile-section > div {
+          font-size: 0.97rem;
+          margin-bottom: 5px;
+        }
+        .student-profile-actions {
+          display: flex;
+          gap: 14px;
+          justify-content: flex-end;
+          flex-wrap: wrap;
+        }
+        .profile-action-btn {
+          padding: 10px 22px;
+          border-radius: 8px;
+          border: none;
+          font-weight: 700;
+          font-size: 1rem;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          transition: 0.2s;
+        }
+        .profile-action-btn.edit {
+          background: var(--primary);
+          color: #000;
+        }
+        .profile-action-btn.delete {
+          background: #ef4444;
+          color: #fff;
+        }
+        .profile-action-btn.pay {
+          background: #22c55e;
+          color: #fff;
+        }
+        @media (max-width: 900px) {
+          .student-profile-details {
+            grid-template-columns: 1fr;
+          }
+        }
+        @media (max-width: 600px) {
+          .student-profile-modal-content {
+            max-width: 100vw;
+            padding: 12px 2vw;
+            border-radius: 0;
+          }
+          .student-profile-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+          }
+          .student-profile-details {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          .student-profile-actions {
+            flex-direction: column;
+            gap: 10px;
+            align-items: stretch;
+          }
+        }
+      </style>
+    `;
+
+    showModal(`Student Profile: ${s.roll_no}`, content, () => closeModal());
+    const saveBtn = document.getElementById('modalSaveBtn');
+    if (saveBtn) {
+      saveBtn.style.display = 'none';
+      saveBtn.parentElement.querySelector('.secondary').textContent = 'Close Profile';
+    }
+
+} catch (err) {
+    console.error('Error viewing student:', err);
+    alert('Failed to open student profile');
+  }
+}
+
+window.downloadStudentPDF = function() {
+  if (!window.jspdf) {
+    alert('PDF library not loaded yet.');
+    return;
+  }
+  const students = window.currentFilteredStudents || [];
+  if (students.length === 0) {
+    alert('No students to download.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+
+  doc.setFontSize(18);
+  doc.text('Student Directory', 14, 22);
+
+  let filtersText = '';
+  const fDeptEl = document.getElementById('filterDept');
+  const fYearEl = document.getElementById('filterYear');
+  const fSecEl = document.getElementById('filterSec');
+  
+  const fDept = fDeptEl && fDeptEl.selectedIndex > 0 ? fDeptEl.options[fDeptEl.selectedIndex].text : 'All Departments';
+  const fYear = fYearEl && fYearEl.selectedIndex > 0 ? fYearEl.options[fYearEl.selectedIndex].text : 'All Years';
+  const fSec = fSecEl && fSecEl.selectedIndex > 0 ? fSecEl.options[fSecEl.selectedIndex].text : 'All Sections';
+  
+  filtersText = `Filters: ${fDept} | ${fYear} | ${fSec}`;
+  
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(filtersText, 14, 30);
+
+  const tableColumn = ["Name", "Roll No", "Dept", "Year/Sec", "Bus No", "Route", "Total Fees", "Fees Paid", "Remaining", "Joining Date"];
+  const tableRows = [];
+
+  students.forEach(s => {
+    const studentData = [
+      s.name,
+      s.roll_no,
+      s.department || 'N/A',
+      `${s.course_year || 'N/A'} - ${s.section || 'N/A'}`,
+      s.bus_number || 'None',
+      s.route || 'N/A',
+      `${parseFloat(s.total_fees || 0)}`,
+      `${parseFloat(s.fees_paid || 0)}`,
+      `${parseFloat(s.remaining_fees || 0)}`,
+      formatDate(s.joining_date)
+    ];
+    tableRows.push(studentData);
+  });
+
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 35,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+  });
+
+  doc.save('student_list.pdf');
+}
+
+window.printStudentReceipt = function(paymentId) {
+  if (!window.currentStudentData || !window.currentPayments) return;
+  const p = window.currentPayments.find(pay => pay.id === paymentId);
+  if (p) {
+    const paymentObj = {
+      amount: parseFloat(p.amount),
+      payment_mode: p.payment_mode,
+      utr_number: p.utr_number,
+      date: p.payment_date
+    };
+    generateReceipt(window.currentStudentData, paymentObj, p.id);
+  }
+};

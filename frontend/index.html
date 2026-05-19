@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sanjeevan Group of Institutions - Transport Management</title>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #ffb703;
+      --secondary: #fb8500;
+      --dark: #023047;
+      --light: #f8fafc;
+      --gray: #64748b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Outfit', sans-serif;
+    }
+
+    body {
+      background-color: var(--light);
+      color: #333;
+      overflow-x: hidden;
+    }
+
+    /* Navbar */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 5%;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      position: fixed;
+      width: 100%;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    }
+
+    .nav-logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--dark);
+      text-decoration: none;
+    }
+
+    .nav-logo i {
+      color: var(--primary);
+      font-size: 28px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 30px;
+      align-items: center;
+    }
+
+    .nav-links a {
+      text-decoration: none;
+      color: var(--dark);
+      font-weight: 600;
+      transition: 0.3s;
+    }
+
+    .nav-links a:hover {
+      color: var(--primary);
+    }
+
+    .btn-login {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white !important;
+      padding: 10px 24px;
+      border-radius: 50px;
+      font-weight: 700;
+      box-shadow: 0 4px 15px rgba(255, 183, 3, 0.3);
+    }
+
+    .btn-login:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(255, 183, 3, 0.4);
+    }
+
+    /* Hero Section */
+    .hero {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      position: relative;
+      padding: 0 5%;
+      margin-top: 40px; /* Offset for navbar */
+    }
+
+    .hero-bg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: url('images/sgiphoto.jpg');
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+      z-index: -2;
+    }
+
+    .hero-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(to right, rgba(2, 48, 71, 0.95) 0%, rgba(2, 48, 71, 0.7) 50%, rgba(2, 48, 71, 0.4) 100%);
+      z-index: -1;
+    }
+
+    .hero-content {
+      max-width: 600px;
+      color: white;
+      animation: slideUp 1s ease forwards;
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    @keyframes slideUp {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 8px 16px;
+      background: rgba(255, 183, 3, 0.2);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+      border-radius: 50px;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    .hero-content h1 {
+      font-size: 56px;
+      line-height: 1.1;
+      font-weight: 800;
+      margin-bottom: 20px;
+    }
+
+    .hero-content h1 span {
+      color: var(--primary);
+    }
+
+    .hero-content p {
+      font-size: 18px;
+      line-height: 1.6;
+      color: rgba(255,255,255,0.8);
+      margin-bottom: 40px;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 20px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      color: white;
+      padding: 16px 32px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 16px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      transition: 0.3s;
+      box-shadow: 0 10px 25px rgba(255, 183, 3, 0.3);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 15px 30px rgba(255, 183, 3, 0.4);
+    }
+
+    .btn-outline {
+      background: rgba(255,255,255,0.1);
+      backdrop-filter: blur(5px);
+      color: white;
+      border: 2px solid rgba(255,255,255,0.3);
+      padding: 14px 32px;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 16px;
+      transition: 0.3s;
+    }
+
+    .btn-outline:hover {
+      background: rgba(255,255,255,0.2);
+      border-color: white;
+    }
+
+    /* Features */
+    .features {
+      padding: 80px 5%;
+      background: white;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 40px;
+    }
+
+    .feature-card {
+      padding: 40px;
+      background: var(--light);
+      border-radius: 20px;
+      transition: 0.3s;
+      border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    .feature-card:hover {
+      transform: translateY(-10px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.05);
+      background: white;
+    }
+
+    .feature-icon {
+      width: 70px;
+      height: 70px;
+      background: rgba(255, 183, 3, 0.1);
+      color: var(--secondary);
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin-bottom: 25px;
+    }
+
+    .feature-card h3 {
+      font-size: 22px;
+      color: var(--dark);
+      margin-bottom: 15px;
+    }
+
+    .feature-card p {
+      color: var(--gray);
+      line-height: 1.6;
+    }
+
+    /* Footer */
+    footer {
+      background: var(--dark);
+      color: white;
+      padding: 40px 5%;
+      text-align: center;
+      border-top: 5px solid var(--primary);
+    }
+
+    footer p {
+      color: rgba(255,255,255,0.6);
+      margin-top: 10px;
+    }
+
+    /* Mobile */
+    @media (max-width: 768px) {
+      .hero-bg {
+        background-attachment: scroll; /* Fixed bg is problematic on mobile */
+        background-position: center;
+      }
+      .hero-overlay {
+        background: linear-gradient(to bottom, rgba(2, 48, 71, 0.8) 0%, rgba(2, 48, 71, 0.6) 100%);
+      }
+      .hero-content {
+        text-align: center;
+        padding-top: 60px;
+      }
+      .hero-content h1 { 
+        font-size: 36px; 
+        margin-bottom: 15px;
+      }
+      .hero-content p {
+        font-size: 16px;
+        margin-bottom: 30px;
+      }
+      .hero-buttons { 
+        flex-direction: column; 
+        gap: 15px;
+      }
+      .nav-links { display: none; }
+      .navbar { padding: 15px 5%; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav class="navbar">
+    <a href="#" class="nav-logo">
+      <i class="fa-solid fa-bus-simple"></i>
+      SGI Transport
+    </a>
+    <div class="nav-links">
+      <a href="#about">About</a>
+      <a href="#features">Features</a>
+      <a href="login.html" class="btn-login">Login Portal <i class="fa-solid fa-arrow-right"></i></a>
+    </div>
+  </nav>
+
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <div class="badge">Sanjeevan Engineering & Technology Institute</div>
+      <h1>Smart <span>Transport</span> Management System</h1>
+      <p>A unified digital platform for managing college bus fleets, student passes, secure fee collections, and real-time administrative reporting.</p>
+      <div class="hero-buttons">
+        <a href="login.html" class="btn-primary">
+          Access Portal <i class="fa-solid fa-right-to-bracket"></i>
+        </a>
+        <a href="#features" class="btn-outline">
+          Explore Features
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section id="features" class="features">
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-id-card"></i></div>
+      <h3>Digital Bus Passes</h3>
+      <p>Students can instantly view, download, and print their digital bus passes complete with profile photos and validity dates directly from their dashboard.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-file-invoice-dollar"></i></div>
+      <h3>Smart Fee Tracking</h3>
+      <p>Automated calculation of total fees, paid amounts, and remaining balances. Admins can send one-click email and WhatsApp payment reminders.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon"><i class="fa-solid fa-route"></i></div>
+      <h3>Route & Fleet Control</h3>
+      <p>Administrators have full oversight of all college buses, assigned drivers, student allocations per route, and comprehensive financial analytics.</p>
+    </div>
+  </section>
+
+  <footer>
+    <h2>SGI Transport Department</h2>
+    <p>&copy; 2026 Sanjeevan Group of Institutions. All rights reserved. <span id="adminLockIcon" style="color: rgba(255,255,255,0.1); cursor: pointer; user-select: none;"><i class="fa-solid fa-lock"></i></span></p>
+  </footer>
+
+  <script>
+    let lockClickCount = 0;
+    let lockClickTimer;
+    
+    document.getElementById('adminLockIcon').addEventListener('click', function() {
+      lockClickCount++;
+      
+      clearTimeout(lockClickTimer);
+      
+      if (lockClickCount >= 5) {
+        window.location.href = 'admin_secure_login.html';
+      }
+      
+      lockClickTimer = setTimeout(() => {
+        lockClickCount = 0;
+      }, 1500); // Require 5 clicks within 1.5 seconds
+    });
+  </script>
+
+</body>
+</html>

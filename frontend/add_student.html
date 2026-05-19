@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Student — College Bus Management</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    html { font-size:15px; scroll-behavior:smooth; }
+    body { font-family:'Poppins','Segoe UI',system-ui,sans-serif; background:#0b1120; color:#e2e8f0; min-height:100vh; overflow-x:hidden; }
+    :root { --sidebar-w:260px; --sidebar-collapsed:72px; --header-h:64px; --clr-bg:#0b1120; --clr-surface:#111a2e; --clr-surface-2:#162032; --clr-border:rgba(255,255,255,0.06); --clr-border-strong:rgba(255,255,255,0.10); --clr-text:#e2e8f0; --clr-muted:#94a3b8; --clr-accent:#f59e0b; --clr-accent-2:#3b82f6; --clr-green:#10b981; --clr-red:#ef4444; --clr-orange:#f97316; --clr-purple:#8b5cf6; --radius-sm:8px; --radius-md:12px; --radius-lg:16px; --shadow-card:0 4px 24px rgba(0,0,0,0.30); --shadow-elevated:0 8px 40px rgba(0,0,0,0.45); --transition:0.25s cubic-bezier(0.4,0,0.2,1); }
+    .app-shell { display:flex; min-height:100vh; }
+    .sidebar { width:var(--sidebar-w); min-width:var(--sidebar-w); background:var(--clr-surface); border-right:1px solid var(--clr-border); display:flex; flex-direction:column; position:fixed; top:0; left:0; bottom:0; z-index:100; transition:width var(--transition), min-width var(--transition); overflow-x:hidden; }
+    .sidebar.collapsed { width:var(--sidebar-collapsed); min-width:var(--sidebar-collapsed); }
+    .sidebar-brand { display:flex; align-items:center; gap:12px; padding:20px 20px 18px 20px; border-bottom:1px solid var(--clr-border); white-space:nowrap; }
+    .sidebar-brand .brand-icon { width:40px; height:40px; min-width:40px; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); border-radius:var(--radius-sm); display:flex; align-items:center; justify-content:center; font-size:1.25rem; color:#000; }
+    .sidebar-brand .brand-text h3 { font-size:1rem; font-weight:700; color:#f1f5f9; line-height:1.2; }
+    .sidebar-brand .brand-text span { font-size:0.72rem; color:var(--clr-muted); font-weight:400; }
+    .sidebar.collapsed .brand-text { display:none; }
+    .sidebar-nav { flex:1; overflow-y:auto; padding:16px 12px; }
+    .sidebar-nav .nav-section { font-size:0.68rem; text-transform:uppercase; letter-spacing:0.08em; color:var(--clr-muted); padding:12px 12px 6px 12px; font-weight:600; white-space:nowrap; }
+    .sidebar.collapsed .nav-section { display:none; }
+    .sidebar-nav a { display:flex; align-items:center; gap:12px; padding:11px 12px; margin-bottom:2px; border-radius:var(--radius-sm); color:#cbd5e1; text-decoration:none; font-weight:500; font-size:0.88rem; transition:all var(--transition); white-space:nowrap; position:relative; }
+    .sidebar-nav a i { width:20px; min-width:20px; text-align:center; font-size:1rem; }
+    .sidebar-nav a:hover { background:rgba(255,255,255,0.05); color:#f1f5f9; }
+    .sidebar-nav a.active { background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05)); color:var(--clr-accent); font-weight:600; box-shadow:inset 3px 0 0 var(--clr-accent); }
+    .sidebar.collapsed .sidebar-nav a span:not(.badge) { display:none; }
+    .sidebar.collapsed .sidebar-nav a { justify-content:center; padding:12px; }
+    .sidebar-footer { padding:12px; border-top:1px solid var(--clr-border); display:flex; flex-direction:column; gap:8px; }
+    .sidebar-footer .user-mini { display:flex; align-items:center; gap:10px; padding:8px; border-radius:var(--radius-sm); background:var(--clr-surface-2); white-space:nowrap; overflow:hidden; }
+    .sidebar-footer .user-mini .avatar { width:36px; height:36px; min-width:36px; border-radius:50%; background:linear-gradient(135deg,var(--clr-accent-2),var(--clr-purple)); display:flex; align-items:center; justify-content:center; font-weight:700; color:#fff; font-size:0.85rem; }
+    .sidebar-footer .user-mini .user-info { overflow:hidden; }
+    .sidebar-footer .user-mini .user-info strong { font-size:0.82rem; display:block; color:#f1f5f9; }
+    .sidebar-footer .user-mini .user-info small { font-size:0.7rem; color:var(--clr-muted); }
+    .sidebar.collapsed .user-info, .sidebar.collapsed .sidebar-footer .btn-logout span { display:none; }
+    .sidebar-footer .btn-logout { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:10px; border:1px solid rgba(239,68,68,0.25); background:rgba(239,68,68,0.06); color:#f87171; border-radius:var(--radius-sm); cursor:pointer; font-weight:600; font-size:0.82rem; transition:all var(--transition); font-family:inherit; }
+    .sidebar-footer .btn-logout:hover { background:rgba(239,68,68,0.18); border-color:rgba(239,68,68,0.45); }
+    .main-wrap { flex:1; margin-left:var(--sidebar-w); transition:margin-left var(--transition); min-height:100vh; display:flex; flex-direction:column; }
+    .sidebar.collapsed ~ .main-wrap { margin-left:var(--sidebar-collapsed); }
+    .topbar { position:sticky; top:0; z-index:50; background:rgba(11,17,32,0.85); backdrop-filter:blur(14px); border-bottom:1px solid var(--clr-border); padding:0 28px; height:var(--header-h); display:flex; align-items:center; justify-content:space-between; gap:16px; }
+    .topbar-left { display:flex; align-items:center; gap:14px; }
+    .btn-sidebar-toggle { width:36px; height:36px; border-radius:var(--radius-sm); background:var(--clr-surface-2); border:1px solid var(--clr-border-strong); color:var(--clr-muted); cursor:pointer; font-size:1.1rem; display:flex; align-items:center; justify-content:center; transition:all var(--transition); }
+    .btn-sidebar-toggle:hover { color:#f1f5f9; border-color:rgba(255,255,255,0.2); }
+    .topbar-left .page-title { font-size:1.15rem; font-weight:700; color:#f1f5f9; }
+    .topbar-right { display:flex; align-items:center; gap:12px; }
+    .btn-icon { width:38px; height:38px; border-radius:50%; background:var(--clr-surface-2); border:1px solid var(--clr-border-strong); color:var(--clr-muted); cursor:pointer; font-size:1rem; display:flex; align-items:center; justify-content:center; transition:all var(--transition); }
+    .btn-icon:hover { color:#f1f5f9; background:rgba(255,255,255,0.06); }
+    .page-content { padding:24px 28px 40px 28px; flex:1; }
+    .page-content h2 { font-size:1.25rem; font-weight:700; color:#f1f5f9; display:flex; align-items:center; gap:10px; margin-bottom:24px; }
+    .page-content h2 i { color:var(--clr-accent); }
+    .form-card { background:var(--clr-surface); border:1px solid var(--clr-border); border-radius:var(--radius-lg); padding:28px; max-width:680px; margin:0 auto; }
+    .form-card label { display:block; color:var(--clr-muted); font-size:0.82rem; font-weight:500; margin-bottom:5px; }
+    .form-card input, .form-card select, .form-card textarea { width:100%; padding:11px 14px; margin-bottom:16px; border-radius:var(--radius-sm); border:1px solid var(--clr-border-strong); background:var(--clr-surface-2); color:#e2e8f0; font-family:inherit; font-size:0.88rem; outline:none; transition:border-color var(--transition); }
+    .form-card input:focus, .form-card select:focus, .form-card textarea:focus { border-color:var(--clr-accent); }
+    .form-card textarea { resize:vertical; min-height:70px; }
+    .form-card .form-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    .form-card .form-row-3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:16px; }
+    .form-card .btn-submit { width:100%; padding:12px; margin-top:8px; border:none; border-radius:var(--radius-sm); background:linear-gradient(135deg,var(--clr-accent),#f97316); color:#000; font-weight:700; font-size:0.92rem; cursor:pointer; font-family:inherit; display:flex; align-items:center; justify-content:center; gap:8px; transition:filter var(--transition); }
+    .form-card .btn-submit:hover { filter:brightness(1.1); }
+    .form-card .msg { margin-top:14px; text-align:center; font-weight:500; font-size:0.88rem; }
+    .photo-upload { display:flex; align-items:center; gap:16px; }
+    .photo-preview { width:80px; height:80px; border-radius:50%; background:rgba(255,255,255,0.05); border:2px dashed var(--clr-border-strong); display:flex; align-items:center; justify-content:center; overflow:hidden; flex-shrink:0; }
+    .photo-preview i { color:var(--clr-muted); font-size:1.5rem; }
+    .photo-preview img { width:100%; height:100%; object-fit:cover; }
+    .photo-input-wrap { flex:1; }
+    .photo-input-wrap small { color:var(--clr-muted); font-size:0.73rem; }
+    body.light-theme { --clr-bg:#f1f5f9; --clr-surface:#ffffff; --clr-surface-2:#f8fafc; --clr-border:rgba(0,0,0,0.06); --clr-border-strong:rgba(0,0,0,0.10); --clr-text:#0f172a; --clr-muted:#64748b; }
+    body.light-theme .topbar { background:rgba(255,255,255,0.85); border-bottom:1px solid #e2e8f0; }
+    body.light-theme .sidebar { background:#fff; border-right:1px solid #e2e8f0; }
+    body.light-theme .sidebar-nav a { color:#475569; }
+    body.light-theme .sidebar-nav a:hover { background:#f1f5f9; }
+    body.light-theme .sidebar-nav a.active { color:#b45309; background:#fffbeb; box-shadow:inset 3px 0 0 #f59e0b; }
+    body.light-theme .sidebar-footer .user-mini { background:#f1f5f9; }
+    body.light-theme .form-card { background:#fff; border-color:#e2e8f0; }
+    body.light-theme .form-card input, body.light-theme .form-card select, body.light-theme .form-card textarea { background:#f8fafc; border-color:#cbd5e1; color:#0f172a; }
+    body.light-theme .form-card label { color:#475569; }
+    body.light-theme .page-content h2 { color:#0f172a; }
+    @media (max-width:768px) {
+      .sidebar { position:fixed; left:-280px; z-index:200; transition:left var(--transition); width:260px; min-width:260px; }
+      .sidebar.mobile-open { left:0; }
+      .sidebar.collapsed { left:-280px; }
+      .main-wrap { margin-left:0 !important; }
+      .page-content { padding:16px; }
+      .topbar { padding:0 16px; }
+      .form-card .form-row, .form-card .form-row-3 { grid-template-columns:1fr; }
+      .sidebar-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:150; }
+      .sidebar-overlay.show { display:block; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
+        <div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main Menu</div>
+        <a href="dashboard.html"><i class="fa-solid fa-grid-2"></i> <span>Dashboard</span></a>
+        <div class="nav-section">Buses & Drivers</div>
+        <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
+        <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
+        <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
+        <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
+        <div class="nav-section">Students</div>
+        <a href="add_student.html" class="active"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-mini"><div class="avatar"><i class="fa-solid fa-user-shield"></i></div><div class="user-info"><strong>Admin</strong><small>Super Admin</small></div></div>
+        <button class="btn-logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left"><button class="btn-sidebar-toggle" id="btnSidebarToggle"><i class="fa-solid fa-bars"></i></button><span class="page-title">Add New Student</span></div>
+        <div class="topbar-right"><button class="btn-icon" id="btnThemeToggle"><i class="fa-solid fa-moon"></i></button></div>
+      </header>
+      <div class="page-content">
+        <h2><i class="fa-solid fa-user-plus"></i> Add New Student</h2>
+        <div class="form-card">
+          <form id="studentForm">
+            <label>Student Name *</label>
+            <input type="text" id="name" placeholder="Required" required pattern="[A-Za-z\s]+" title="Only letters and spaces">
+            <div class="form-row">
+              <div><label>Department</label>
+                <select id="department">
+                  <option value="">-- Select Dept --</option>
+                  <optgroup label="Degree"><option value="Degree - CSE">Computer Science (CSE)</option><option value="Degree - AIML">AI & ML (AIML)</option><option value="Degree - CIVIL">Civil</option><option value="Degree - MECH">Mechanical</option><option value="Degree - ELECTRICAL">Electrical</option><option value="Degree - ECE">Electronics (ECE)</option><option value="Degree - MBA">MBA</option><option value="Degree - BFA">BFA</option></optgroup>
+                  <optgroup label="Polytechnic"><option value="Poly - CSE">Computer Science (CSE)</option><option value="Poly - CIVIL">Civil</option><option value="Poly - MECH">Mechanical</option><option value="Poly - ELECTRICAL">Electrical</option></optgroup>
+                </select>
+              </div>
+              <div><label>Course / Year</label><select id="course_year"><option value="">-- Select Year --</option><option value="1st Year">1st Year</option><option value="2nd Year">2nd Year</option><option value="3rd Year">3rd Year</option><option value="4th Year">4th Year</option></select></div>
+            </div>
+            <div class="form-row">
+              <div><label>Section</label><select id="section"><option value="">-- Select --</option><option value="A">Section A</option><option value="B">Section B</option><option value="C">Section C</option></select></div>
+              <div><label>Roll No *</label><input type="text" id="roll_no" placeholder="Required" required pattern="[A-Za-z0-9-]+" title="Letters, numbers, and hyphens"></div>
+            </div>
+            <label>Password *</label>
+            <input type="password" id="password" placeholder="Min 6 characters" required minlength="6">
+            <label>Address</label>
+            <textarea id="address" placeholder="Student address"></textarea>
+            <div class="form-row">
+              <div><label>Mobile / WhatsApp</label><input type="tel" id="phone" placeholder="e.g. 9876543210" pattern="[0-9]{10}" title="10 digit number"></div>
+              <div><label>Email *</label><input type="email" id="email" placeholder="student@email.com" required></div>
+            </div>
+            <label>Student Photo (for Bus Pass)</label>
+            <div class="photo-upload">
+              <div class="photo-preview" id="photoPreview"><i class="fa-solid fa-camera" id="cameraIcon"></i></div>
+              <div class="photo-input-wrap"><input type="file" id="photo" accept="image/*" style="width:100%;" onchange="previewPhoto(this)"><small>Max 5MB. JPG/PNG.</small><input type="hidden" id="photo_url"></div>
+            </div>
+            <div class="form-row">
+              <div><label>Pass Valid From</label><input type="date" id="pass_valid_from"></div>
+              <div><label>Pass Valid To</label><input type="date" id="pass_valid_to"></div>
+            </div>
+            <label>Assign Bus</label>
+            <select id="bus_select"><option value="">-- Select Bus (optional) --</option></select>
+            <div class="form-row-3">
+              <div><label>Total Fees (₹)</label><input type="number" id="total_fees" placeholder="e.g. 10000" step="0.01" min="0" oninput="calcRemaining()"></div>
+              <div><label>Fees Paid (₹)</label><input type="number" id="fees_paid" placeholder="Optional" step="0.01" min="0" oninput="calcRemaining()"></div>
+              <div><label>Remaining (₹)</label><input type="number" id="remaining_fees" placeholder="Auto" step="0.01" readonly style="background:rgba(0,0,0,0.2);cursor:not-allowed;"></div>
+            </div>
+            <button type="submit" class="btn-submit"><i class="fa-solid fa-user-plus"></i> Add Student</button>
+          </form>
+          <div id="smsg" class="msg" style="color:var(--clr-green);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/script.js"></script>
+  <script>
+    function calcRemaining(){const t=parseFloat(document.getElementById('total_fees').value)||0,p=parseFloat(document.getElementById('fees_paid').value)||0,r=t-p;document.getElementById('remaining_fees').value=r>0?r:0;}
+    function previewPhoto(i){if(i.files&&i.files[0]){const r=new FileReader();r.onload=function(e){document.getElementById('photoPreview').innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`};r.readAsDataURL(i.files[0]);}}
+    async function uploadPhoto(){const p=document.getElementById('photo');if(!p.files||!p.files[0])return null;const f=new FormData();f.append('photo',p.files[0]);try{const r=await fetch('/api/upload/student-photo',{method:'POST',body:f});const d=await r.json();if(d.success){document.getElementById('photo_url').value=d.photo_url;return d.photo_url;}}catch(e){console.error(e);}return null;}
+    document.addEventListener('DOMContentLoaded',()=>{const t=new Date(),n=new Date(t);n.setFullYear(t.getFullYear()+1);document.getElementById('pass_valid_from').value=t.toISOString().split('T')[0];document.getElementById('pass_valid_to').value=n.toISOString().split('T')[0];});
+    const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
+    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
+    function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
+    document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
+    const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');
+    if(savedTheme==='light'){document.body.classList.add('light-theme');btnTheme.innerHTML='<i class="fa-solid fa-sun"></i>';}
+    btnTheme.addEventListener('click',()=>{document.body.classList.toggle('light-theme');const il=document.body.classList.contains('light-theme');localStorage.setItem('theme',il?'light':'dark');btnTheme.innerHTML=il?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>';});
+  </script>
+</body>
+</html>

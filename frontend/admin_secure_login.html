@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SGI Bus System - Admin Secure Login</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <style>
+    :root {
+      --primary-color: #ef4444; /* Red for Admin */
+      --secondary-color: #b91c1c;
+      --dark-bg: #0f172a; /* Darker slate */
+    }
+    
+    body.login-page {
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: linear-gradient(135deg, #020617, #0f172a, #1e293b);
+      font-family: 'Outfit', sans-serif;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* Animated Background Particles - Hexagons for Admin */
+    .bg-particles {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      z-index: 0;
+    }
+
+    .particle {
+      position: absolute;
+      display: block;
+      list-style: none;
+      width: 20px;
+      height: 20px;
+      background: rgba(239, 68, 68, 0.1);
+      border-radius: 4px;
+      animation: floatUp 20s linear infinite;
+      bottom: -150px;
+    }
+
+    .particle:nth-child(1) { left: 25%; width: 80px; height: 80px; animation-delay: 0s; }
+    .particle:nth-child(2) { left: 10%; width: 20px; height: 20px; animation-delay: 2s; animation-duration: 12s; }
+    .particle:nth-child(3) { left: 70%; width: 20px; height: 20px; animation-delay: 4s; }
+    .particle:nth-child(4) { left: 40%; width: 60px; height: 60px; animation-delay: 0s; animation-duration: 18s; }
+    .particle:nth-child(5) { left: 65%; width: 20px; height: 20px; animation-delay: 0s; }
+    .particle:nth-child(6) { left: 75%; width: 110px; height: 110px; animation-delay: 3s; }
+    .particle:nth-child(7) { left: 35%; width: 150px; height: 150px; animation-delay: 7s; }
+
+    @keyframes floatUp {
+      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(-1000px) rotate(360deg); opacity: 0; }
+    }
+
+    /* Premium Glassmorphism Card */
+    .login-container {
+      position: relative;
+      z-index: 10;
+      background: rgba(15, 23, 42, 0.6);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 24px;
+      padding: 50px 40px;
+      width: 100%;
+      max-width: 450px;
+      box-shadow: 0 25px 50px -12px rgba(239, 68, 68, 0.2);
+      animation: popIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes popIn {
+      0% { opacity: 0; transform: scale(0.9) translateY(30px); }
+      100% { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .logo-container {
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .logo-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 80px;
+      height: 80px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border-radius: 20px;
+      transform: rotate(-10deg);
+      margin-bottom: 20px;
+      box-shadow: 0 10px 20px rgba(239, 68, 68, 0.3);
+      transition: 0.3s;
+    }
+
+    .logo-badge:hover {
+      transform: rotate(0deg) scale(1.05);
+    }
+
+    .logo-badge i {
+      font-size: 40px;
+      color: white;
+      transform: rotate(10deg);
+      transition: 0.3s;
+    }
+    
+    .logo-badge:hover i {
+      transform: rotate(0deg);
+    }
+
+    .login-container h1 {
+      color: white;
+      margin: 0;
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    .login-container p {
+      color: rgba(255, 255, 255, 0.7);
+      margin-top: 8px;
+      font-size: 14px;
+      font-weight: 300;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      color: var(--primary-color);
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 25px;
+    }
+
+    .input-group i {
+      position: absolute;
+      left: 18px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: rgba(255, 255, 255, 0.5);
+      transition: 0.3s;
+      z-index: 2;
+    }
+
+    .input-group input {
+      width: 100%;
+      padding: 16px 16px 16px 50px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      color: white;
+      font-size: 15px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.3s ease;
+      box-sizing: border-box;
+    }
+
+    .input-group input:focus {
+      background: rgba(0, 0, 0, 0.6);
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.1);
+    }
+
+    .input-group input:focus + i {
+      color: var(--primary-color);
+    }
+
+    .login-btn {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 8px 20px rgba(239, 68, 68, 0.3);
+      text-transform: uppercase;
+      font-family: inherit;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .login-btn:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 12px 25px rgba(239, 68, 68, 0.4);
+    }
+
+    .login-btn:active {
+      transform: translateY(0);
+    }
+
+    .forgot-links {
+      display: flex;
+      justify-content: center;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .forgot-links a {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .forgot-links a:hover {
+      color: var(--primary-color);
+    }
+
+    #loginMsg {
+      margin-top: 15px;
+      text-align: center;
+      font-size: 14px;
+      font-weight: 500;
+      border-radius: 8px;
+    }
+  </style>
+</head>
+<body class="login-page">
+
+  <!-- Animated Background -->
+  <ul class="bg-particles">
+    <li class="particle"></li>
+    <li class="particle"></li>
+    <li class="particle"></li>
+    <li class="particle"></li>
+    <li class="particle"></li>
+    <li class="particle"></li>
+    <li class="particle"></li>
+  </ul>
+
+  <!-- Login Card -->
+  <div class="login-container">
+    <div class="logo-container">
+      <div class="logo-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <h1>System Access</h1>
+      <p>Authorized Personnel Only</p>
+    </div>
+
+    <form id="loginForm">
+      <input type="hidden" id="role" value="admin">
+
+      <div class="input-group">
+        <i class="fa-solid fa-envelope"></i>
+        <input type="email" id="username" placeholder="Admin Email" required>
+      </div>
+
+      <div class="input-group">
+        <i class="fa-solid fa-key"></i>
+        <input type="password" id="password" placeholder="Admin Password" required>
+      </div>
+
+      <button type="submit" class="login-btn">
+        Authorize Access <i class="fa-solid fa-lock-open"></i>
+      </button>
+
+      <div class="forgot-links">
+        <a href="/admin_forgot_password.html" id="adminForgotLink"><i class="fa-solid fa-key"></i> Recover Admin Access</a>
+      </div>
+    </form>
+    
+    <div id="loginMsg" class="message"></div>
+  </div>
+
+  <script src="js/script.js"></script>
+</body>
+</html>

@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>View Drivers — College Bus Management</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      font-size: 15px;
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+      background: #0b1120;
+      color: #e2e8f0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    :root {
+      --sidebar-w: 260px;
+      --sidebar-collapsed: 72px;
+      --header-h: 64px;
+      --clr-bg: #0b1120;
+      --clr-surface: #111a2e;
+      --clr-surface-2: #162032;
+      --clr-border: rgba(255, 255, 255, 0.06);
+      --clr-border-strong: rgba(255, 255, 255, 0.10);
+      --clr-text: #e2e8f0;
+      --clr-muted: #94a3b8;
+      --clr-accent: #f59e0b;
+      --clr-accent-2: #3b82f6;
+      --clr-green: #10b981;
+      --clr-red: #ef4444;
+      --clr-orange: #f97316;
+      --clr-purple: #8b5cf6;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-card: 0 4px 24px rgba(0, 0, 0, 0.30);
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .app-shell {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      width: var(--sidebar-w);
+      min-width: var(--sidebar-w);
+      background: var(--clr-surface);
+      border-right: 1px solid var(--clr-border);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      z-index: 100;
+      transition: width var(--transition), min-width var(--transition);
+      overflow-x: hidden;
+    }
+
+    .sidebar.collapsed {
+      width: var(--sidebar-collapsed);
+      min-width: var(--sidebar-collapsed);
+    }
+
+    .sidebar-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 20px 20px 18px 20px;
+      border-bottom: 1px solid var(--clr-border);
+      white-space: nowrap;
+    }
+
+    .sidebar-brand .brand-icon {
+      width: 40px;
+      height: 40px;
+      min-width: 40px;
+      background: linear-gradient(135deg, var(--clr-accent), #fbbf24);
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      color: #000;
+    }
+
+    .sidebar-brand .brand-text h3 {
+      font-size: 1rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .sidebar-brand .brand-text span {
+      font-size: 0.72rem;
+      color: var(--clr-muted);
+    }
+
+    .sidebar.collapsed .brand-text {
+      display: none;
+    }
+
+    .sidebar-nav {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px 12px;
+    }
+
+    .sidebar-nav .nav-section {
+      font-size: 0.68rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--clr-muted);
+      padding: 12px 12px 6px 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .sidebar.collapsed .nav-section {
+      display: none;
+    }
+
+    .sidebar-nav a {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 12px;
+      margin-bottom: 2px;
+      border-radius: var(--radius-sm);
+      color: #cbd5e1;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.88rem;
+      transition: all var(--transition);
+      white-space: nowrap;
+      position: relative;
+    }
+
+    .sidebar-nav a i {
+      width: 20px;
+      min-width: 20px;
+      text-align: center;
+      font-size: 1rem;
+    }
+
+    .sidebar-nav a:hover {
+      background: rgba(255, 255, 255, 0.05);
+      color: #f1f5f9;
+    }
+
+    .sidebar-nav a.active {
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+      color: var(--clr-accent);
+      font-weight: 600;
+      box-shadow: inset 3px 0 0 var(--clr-accent);
+    }
+
+    .sidebar.collapsed .sidebar-nav a span:not(.badge) {
+      display: none;
+    }
+
+    .sidebar.collapsed .sidebar-nav a {
+      justify-content: center;
+      padding: 12px;
+    }
+
+    .sidebar-footer {
+      padding: 12px;
+      border-top: 1px solid var(--clr-border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .sidebar-footer .user-mini {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px;
+      border-radius: var(--radius-sm);
+      background: var(--clr-surface-2);
+      white-space: nowrap;
+    }
+
+    .sidebar-footer .user-mini .avatar {
+      width: 36px;
+      height: 36px;
+      min-width: 36px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--clr-accent-2), var(--clr-purple));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: #fff;
+      font-size: 0.85rem;
+    }
+
+    .sidebar-footer .user-mini .user-info strong {
+      font-size: 0.82rem;
+      display: block;
+      color: #f1f5f9;
+    }
+
+    .sidebar-footer .user-mini .user-info small {
+      font-size: 0.7rem;
+      color: var(--clr-muted);
+    }
+
+    .sidebar.collapsed .user-info,
+    .sidebar.collapsed .sidebar-footer .btn-logout span {
+      display: none;
+    }
+
+    .sidebar-footer .btn-logout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 10px;
+      border: 1px solid rgba(239, 68, 68, 0.25);
+      background: rgba(239, 68, 68, 0.06);
+      color: #f87171;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.82rem;
+      transition: all var(--transition);
+      font-family: inherit;
+    }
+
+    .sidebar-footer .btn-logout:hover {
+      background: rgba(239, 68, 68, 0.18);
+      border-color: rgba(239, 68, 68, 0.45);
+    }
+
+    .main-wrap {
+      flex: 1;
+      margin-left: var(--sidebar-w);
+      transition: margin-left var(--transition);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .sidebar.collapsed~.main-wrap {
+      margin-left: var(--sidebar-collapsed);
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(11, 17, 32, 0.85);
+      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--clr-border);
+      padding: 0 28px;
+      height: var(--header-h);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .btn-sidebar-toggle {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--radius-sm);
+      background: var(--clr-surface-2);
+      border: 1px solid var(--clr-border-strong);
+      color: var(--clr-muted);
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .btn-sidebar-toggle:hover {
+      color: #f1f5f9;
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .topbar-left .page-title {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    .topbar-right {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .btn-icon {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: var(--clr-surface-2);
+      border: 1px solid var(--clr-border-strong);
+      color: var(--clr-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition);
+    }
+
+    .btn-icon:hover {
+      color: #f1f5f9;
+      background: rgba(255, 255, 255, 0.06);
+    }
+
+    .page-content {
+      padding: 24px 28px 40px 28px;
+      flex: 1;
+    }
+
+    .panel {
+      background: var(--clr-surface);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .panel-header {
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--clr-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .panel-header h3 {
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header h3 i {
+      color: var(--clr-accent);
+    }
+
+    .search-box {
+      position: relative;
+      min-width: 220px;
+    }
+
+    .search-box i {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--clr-muted);
+      font-size: 0.85rem;
+    }
+
+    .search-box input {
+      width: 100%;
+      padding: 10px 14px 10px 38px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--clr-border-strong);
+      background: var(--clr-surface-2);
+      color: #e2e8f0;
+      font-family: inherit;
+      font-size: 0.82rem;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+
+    .search-box input:focus {
+      border-color: var(--clr-accent);
+    }
+
+    .panel-body {
+      padding: 0;
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    table th {
+      background: var(--clr-surface-2);
+      color: var(--clr-muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 600;
+      padding: 12px 16px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--clr-border);
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      white-space: nowrap;
+    }
+
+    table tr:hover td {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .btn-table {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.73rem;
+      font-family: inherit;
+      transition: all var(--transition);
+      margin-right: 4px;
+    }
+
+    .btn-edit {
+      background: rgba(59, 130, 246, 0.12);
+      border-color: rgba(59, 130, 246, 0.25);
+      color: #60a5fa;
+    }
+
+    .btn-edit:hover {
+      background: rgba(59, 130, 246, 0.22);
+    }
+
+    .btn-del {
+      background: rgba(239, 68, 68, 0.10);
+      border-color: rgba(239, 68, 68, 0.20);
+      color: #f87171;
+    }
+
+    .btn-del:hover {
+      background: rgba(239, 68, 68, 0.20);
+    }
+
+    .btn-wa {
+      background: rgba(37, 211, 102, 0.12);
+      border-color: rgba(37, 211, 102, 0.25);
+      color: #25d366;
+    }
+
+    .btn-wa:hover {
+      background: rgba(37, 211, 102, 0.22);
+    }
+
+    .wa-link {
+      color: #25d366;
+      margin-left: 6px;
+      font-size: 0.9rem;
+    }
+
+    .wa-link:hover {
+      color: #2ecc71;
+    }
+
+    body.light-theme {
+      --clr-bg: #f1f5f9;
+      --clr-surface: #ffffff;
+      --clr-surface-2: #f8fafc;
+      --clr-border: rgba(0, 0, 0, 0.06);
+      --clr-border-strong: rgba(0, 0, 0, 0.10);
+      --clr-text: #0f172a;
+      --clr-muted: #64748b;
+    }
+
+    body.light-theme .topbar {
+      background: rgba(255, 255, 255, 0.85);
+      border-bottom: 1px solid #e2e8f0;
+    }
+
+    body.light-theme .sidebar {
+      background: #fff;
+      border-right: 1px solid #e2e8f0;
+    }
+
+    body.light-theme .sidebar-nav a {
+      color: #475569;
+    }
+
+    body.light-theme .sidebar-nav a:hover {
+      background: #f1f5f9;
+    }
+
+    body.light-theme .sidebar-nav a.active {
+      color: #b45309;
+      background: #fffbeb;
+      box-shadow: inset 3px 0 0 #f59e0b;
+    }
+
+    body.light-theme .sidebar-footer .user-mini {
+      background: #f1f5f9;
+    }
+
+    body.light-theme .panel {
+      background: #fff;
+      border-color: #e2e8f0;
+    }
+
+    body.light-theme table th {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    body.light-theme table td {
+      color: #334155;
+      border-bottom-color: #e2e8f0;
+    }
+
+    body.light-theme .search-box input {
+      background: #f8fafc;
+      border-color: #cbd5e1;
+      color: #0f172a;
+    }
+
+    body.light-theme .panel-header h3 {
+      color: #0f172a;
+    }
+
+    @media(max-width:768px) {
+      .sidebar {
+        position: fixed;
+        left: -280px;
+        z-index: 200;
+        transition: left var(--transition);
+        width: 260px;
+        min-width: 260px;
+      }
+
+      .sidebar.mobile-open {
+        left: 0;
+      }
+
+      .sidebar.collapsed {
+        left: -280px;
+      }
+
+      .main-wrap {
+        margin-left: 0 !important;
+      }
+
+      .page-content {
+        padding: 16px;
+      }
+
+      .topbar {
+        padding: 0 16px;
+      }
+
+      .sidebar-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 150;
+      }
+
+      .sidebar-overlay.show {
+        display: block;
+      }
+
+      .search-box {
+        min-width: 150px;
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
+        <div class="brand-text">
+          <h3>BusAdmin</h3><span>Management Panel</span>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main Menu</div>
+        <a href="dashboard.html"><i class="fa-solid fa-grid-2"></i> <span>Dashboard</span></a>
+        <div class="nav-section">Buses & Drivers</div>
+        <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
+        <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
+        <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
+        <a href="view_drivers.html" class="active"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
+        <div class="nav-section">Students</div>
+        <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-mini">
+          <div class="avatar"><i class="fa-solid fa-user-shield"></i></div>
+          <div class="user-info"><strong>Admin</strong><small>Super Admin</small></div>
+        </div>
+        <button class="btn-logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i>
+          <span>Logout</span></button>
+      </div>
+    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left"><button class="btn-sidebar-toggle" id="btnSidebarToggle"><i
+              class="fa-solid fa-bars"></i></button><span class="page-title">All Drivers</span></div>
+        <div class="topbar-right"><button class="btn-icon" id="btnThemeToggle"><i class="fa-solid fa-moon"></i></button>
+        </div>
+      </header>
+      <div class="page-content">
+        <div class="panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-id-card"></i> Drivers Directory</h3>
+            <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchDriver"
+                placeholder="Search drivers..." oninput="loadDrivers()"></div>
+          </div>
+          <div class="panel-body">
+            <table id="driversTable">
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>License</th>
+                  <th>Address</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="js/script.js"></script>
+  <script>
+    const sidebar = document.getElementById('sidebar'), btnToggle = document.getElementById('btnSidebarToggle'), overlay = document.getElementById('sidebarOverlay');
+    btnToggle.addEventListener('click', () => { if (window.innerWidth <= 768) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); } else { sidebar.classList.toggle('collapsed'); } });
+    function closeMobileSidebar() { sidebar.classList.remove('mobile-open'); overlay.classList.remove('show'); }
+    document.querySelectorAll('.sidebar-nav a').forEach(l => l.addEventListener('click', () => { if (window.innerWidth <= 768) closeMobileSidebar(); }));
+    const btnTheme = document.getElementById('btnThemeToggle'), savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'light') { document.body.classList.add('light-theme'); btnTheme.innerHTML = '<i class="fa-solid fa-sun"></i>'; }
+    btnTheme.addEventListener('click', () => { document.body.classList.toggle('light-theme'); const il = document.body.classList.contains('light-theme'); localStorage.setItem('theme', il ? 'light' : 'dark'); btnTheme.innerHTML = il ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>'; });
+  </script>
+</body>
+
+</html>
