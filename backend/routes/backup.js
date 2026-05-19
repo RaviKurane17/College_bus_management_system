@@ -10,11 +10,17 @@ const fs = require('fs');
 const db = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
 
-const BACKUP_DIR = path.join(__dirname, '../../backups');
+const BACKUP_DIR = process.env.VERCEL 
+  ? '/tmp/backups' 
+  : path.join(__dirname, '../../backups');
 
-// Ensure backup directory exists
-if (!fs.existsSync(BACKUP_DIR)) {
-  fs.mkdirSync(BACKUP_DIR, { recursive: true });
+// Ensure backup directory exists safely
+try {
+  if (!fs.existsSync(BACKUP_DIR)) {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+  }
+} catch (err) {
+  console.warn('⚠️ Warning: Failed to create backup directory:', err.message);
 }
 
 // Helper: Sanitize filename to prevent path traversal
