@@ -14,13 +14,15 @@ const BACKUP_DIR = process.env.VERCEL
   ? '/tmp/backups' 
   : path.join(__dirname, '../../backups');
 
-// Ensure backup directory exists safely
-try {
-  if (!fs.existsSync(BACKUP_DIR)) {
-    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+// Helper: Ensure backup directory exists safely before operations
+function ensureBackupDir() {
+  try {
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    }
+  } catch (err) {
+    console.warn('⚠️ Warning: Failed to create backup directory:', err.message);
   }
-} catch (err) {
-  console.warn('⚠️ Warning: Failed to create backup directory:', err.message);
 }
 
 // Helper: Sanitize filename to prevent path traversal
@@ -32,6 +34,7 @@ function sanitizeFilename(filename) {
 // GET /api/backup/create - Create a new backup (Admin only)
 // =============================
 router.get('/create', authenticateAdmin, (req, res) => {
+  ensureBackupDir();
   const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
   const filename = `backup-${timestamp}.sql`;
   const filepath = path.join(BACKUP_DIR, filename);
