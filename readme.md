@@ -26,30 +26,4 @@ This project helps manage bus routes, student details, driver info, and fees eff
 | **Server** | Localhost (XAMPP / MySQL Server) |
 ---
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Stop-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess -Force
-
-
-
-App password e....: qzlu mhmo kztk qojg
