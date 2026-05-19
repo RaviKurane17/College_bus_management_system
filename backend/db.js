@@ -33,7 +33,8 @@ const promisePool = pool.promise();
 pool.getConnection((err, connection) => {
   if (err) {
     console.error('❌ MySQL connection pool error:', err.message);
-    process.exit(1);
+    // Removed process.exit(1) so Vercel does not crash with a generic 500 error!
+    return;
   }
   console.log('✅ MySQL connection pool established');
   connection.release();
