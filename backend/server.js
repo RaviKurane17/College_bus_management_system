@@ -159,10 +159,15 @@ app.use((err, req, res, next) => {
 // =========================
 // 🚀 Server Startup
 // =========================
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`\n✅ Server running on http://localhost:${PORT}`);
-  console.log(`🛡️  Security: Helmet, Rate-Limiting, HPP enabled`);
-  console.log(`🔐 Auth: JWT-based authentication active`);
-  console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}\n`);
-});
+if (process.env.VERCEL) {
+  console.log('📦 Running on Vercel Serverless Environment');
+  module.exports = app;
+} else {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`\n✅ Server running on http://localhost:${PORT}`);
+    console.log(`🛡️  Security: Helmet, Rate-Limiting, HPP enabled`);
+    console.log(`🔐 Auth: JWT-based authentication active`);
+    console.log(`📦 Environment: ${process.env.NODE_ENV || 'development'}\n`);
+  });
+}
