@@ -44,6 +44,79 @@ pool.getConnection((err, connection) => {
 
 async function initializeDatabase() {
   try {
+    // Create base tables if they don't exist
+    await promisePool.query(`
+      CREATE TABLE IF NOT EXISTS admins (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        email VARCHAR(100) UNIQUE NOT NULL,
+        reset_token VARCHAR(100),
+        reset_token_expires DATETIME,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_email (email),
+        INDEX idx_username (username)
+      ) ENGINE=InnoDB;
+    `);
+
+    await promisePool.query(`
+      CREATE TABLE IF NOT EXISTS drivers (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        phone VARCHAR(20) NOT NULL,
+        license_number VARCHAR(50),
+        address TEXT,
+        joined_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        INDEX idx_phone (phone)
+      ) ENGINE=InnoDB;
+    `);
+
+    await promisePool.query(`
+      CREATE TABLE IF NOT EXISTS buses (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        bus_number VARCHAR(20) NOT NULL UNIQUE,
+        driver_name VARCHAR(100),
+        driver_phone VARCHAR(20),
+        driver_id INT,
+        capacity INT NOT NULL DEFAULT 0,
+        route VARCHAR(255),
+        FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL,
+        INDEX idx_bus_number (bus_number)
+      ) ENGINE=InnoDB;
+    `);
+
+    await promisePool.query(`
+      CREATE TABLE IF NOT EXISTS students (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        username VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) NOT NULL,
+        name VARCHAR(150) NOT NULL,
+        roll_no VARCHAR(50) UNIQUE NOT NULL,
+        department VARCHAR(150),
+        course_year VARCHAR(50),
+        section VARCHAR(50),
+        address TEXT,
+        phone VARCHAR(20),
+        email VARCHAR(100),
+        photo_url VARCHAR(500),
+        pass_valid_from DATE,
+        pass_valid_to DATE,
+        bus_id INT,
+        total_fees DECIMAL(10,2) DEFAULT 0,
+        fees_paid DECIMAL(10,2) DEFAULT 0,
+        remaining_fees DECIMAL(10,2) DEFAULT 0,
+        joining_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        reset_token VARCHAR(100),
+        reset_token_expires DATETIME,
+        FOREIGN KEY (bus_id) REFERENCES buses(id) ON DELETE SET NULL,
+        INDEX idx_roll_no (roll_no),
+        INDEX idx_email (email),
+        INDEX idx_department (department),
+        INDEX idx_remaining_fees (remaining_fees)
+      ) ENGINE=InnoDB;
+    `);
+
     // Verify admin table and credentials
     const [admins] = await promisePool.query('SELECT * FROM admins');
     if (admins.length === 0) {
