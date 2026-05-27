@@ -70,13 +70,13 @@ router.get('/template', authenticateAdmin, (req, res) => {
       { 'Instructions': '  * Roll No - Unique roll number (letters, numbers, hyphens)' },
       { 'Instructions': '  * Email - Valid email address (used as login username)' },
       { 'Instructions': '  * Password - Minimum 6 characters' },
+      { 'Instructions': '  * Phone - Contact number' },
+      { 'Instructions': '  * Department - e.g., Degree - CSE, Poly - MECH' },
+      { 'Instructions': '  * Address - Home/Hostel address' },
       { 'Instructions': '' },
       { 'Instructions': 'Optional Fields:' },
-      { 'Instructions': '  - Department (e.g., Degree - CSE, Poly - MECH)' },
       { 'Instructions': '  - Course Year (1st Year, 2nd Year, 3rd Year, 4th Year)' },
       { 'Instructions': '  - Section (A, B, C)' },
-      { 'Instructions': '  - Phone (10 digit number)' },
-      { 'Instructions': '  - Address' },
       { 'Instructions': '  - Bus Number (must match existing bus in the system)' },
       { 'Instructions': '  - Total Fees (numeric)' },
       { 'Instructions': '  - Fees Paid (numeric)' },
@@ -171,6 +171,10 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       
       if (!password) errors.push('Password is required');
       else if (password.length < 6) errors.push('Password: minimum 6 characters');
+      
+      if (!phone) errors.push('Phone is required');
+      if (!department) errors.push('Department is required');
+      if (!address) errors.push('Address is required');
 
       // Duplicate checks
       if (email && existingEmails.has(email.toLowerCase())) errors.push('Email already registered');
@@ -280,6 +284,9 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       if (!roll_no || !/^[A-Za-z0-9\-]+$/.test(roll_no)) errors.push('Invalid roll no');
       if (!email || !email.includes('@')) errors.push('Invalid email');
       if (!password || password.length < 6) errors.push('Password too short');
+      if (!phone) errors.push('Phone is required');
+      if (!department) errors.push('Department is required');
+      if (!address) errors.push('Address is required');
       if (existingEmails.has(email.toLowerCase()) || fileEmails.has(email.toLowerCase())) errors.push('Duplicate email');
       if (existingRolls.has(roll_no.toLowerCase()) || fileRolls.has(roll_no.toLowerCase())) errors.push('Duplicate roll no');
 
