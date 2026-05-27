@@ -340,36 +340,36 @@ router.post('/resend-receipt/:paymentId', authenticateAdmin, (req, res) => {
     const paymentDate = new Date(p.payment_date);
     const receiptNo = p.receipt_number || `REC-${paymentId.toString().padStart(5, '0')}`;
 
-    const subject = \`🧾 Payment Receipt \${receiptNo} - SGI Bus Transport\`;
-    const htmlContent = \`
+    const subject = `🧾 Payment Receipt ${receiptNo} - SGI Bus Transport`;
+    const htmlContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #7d3c43; border-radius: 12px; padding: 20px;">
           <div style="text-align: center; color: #7d3c43; border-bottom: 2px solid #7d3c43; padding-bottom: 10px; margin-bottom: 20px;">
             <h2 style="margin: 0; font-size: 24px;">SANJEEVANI PUBLIC SCHOOL</h2>
             <h3 style="margin: 5px 0 0;">FEE RECEIPT</h3>
           </div>
           <div style="margin-bottom: 20px; color: #444; line-height: 1.8;">
-            <p><strong>Receipt No:</strong> \${receiptNo}</p>
-            <p><strong>Date:</strong> \${paymentDate.toLocaleDateString('en-GB')}</p>
-            <p><strong>Student Name:</strong> \${p.name}</p>
-            <p><strong>Roll No:</strong> \${p.roll_no}</p>
-            <p><strong>Department:</strong> \${p.department || 'N/A'} | \${p.course_year || ''} \${p.section ? 'Sec ' + p.section : ''}</p>
+            <p><strong>Receipt No:</strong> ${receiptNo}</p>
+            <p><strong>Date:</strong> ${paymentDate.toLocaleDateString('en-GB')}</p>
+            <p><strong>Student Name:</strong> ${p.name}</p>
+            <p><strong>Roll No:</strong> ${p.roll_no}</p>
+            <p><strong>Department:</strong> ${p.department || 'N/A'} | ${p.course_year || ''} ${p.section ? 'Sec ' + p.section : ''}</p>
             <hr style="border-color: #eee;">
-            <p><strong>Amount Paid:</strong> ₹\${parseFloat(p.amount).toLocaleString('en-IN')}</p>
-            <p><strong>Payment Mode:</strong> \${p.payment_mode} \${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
-            <p><strong>Total Fees:</strong> ₹\${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
-            <p><strong>Total Paid:</strong> ₹\${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
-            <p><strong>Remaining Balance:</strong> ₹\${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Amount Paid:</strong> ₹${parseFloat(p.amount).toLocaleString('en-IN')}</p>
+            <p><strong>Payment Mode:</strong> ${p.payment_mode} ${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
+            <p><strong>Total Fees:</strong> ₹${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Total Paid:</strong> ₹${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Remaining Balance:</strong> ₹${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
           </div>
           <div style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
             This is an auto-generated receipt from SGI Bus Management System.
           </div>
         </div>
-      \`;
+      `;
 
     sendEmail(p.email, subject, htmlContent, p.name)
       .then((success) => {
         if (success) {
-          res.json({ success: true, message: \`Receipt email sent to \${p.email}\` });
+          res.json({ success: true, message: `Receipt email sent to ${p.email}` });
         } else {
           res.status(500).json({ success: false, message: 'Failed to send email via Brevo API.' });
         }
