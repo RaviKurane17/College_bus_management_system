@@ -412,8 +412,31 @@
       resultsContainer.style.display = 'none';
     }
 
-    function downloadBulkTemplate() {
-      window.location.href = '/api/students/bulk-upload/template';
+    async function downloadBulkTemplate() {
+      const token = localStorage.getItem('authToken');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      try {
+        const res = await fetch('/api/students/bulk-upload/template', { headers });
+        if (res.status === 401 || res.status === 403) {
+          alert('Session expired. Please login again.');
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'students_bulk_upload_template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (err) {
+        alert('Failed to download template: ' + err.message);
+      }
     }
 
     // Call API helper (from script.js) but override for FormData
