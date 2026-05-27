@@ -10,25 +10,7 @@ const bcrypt = require('bcryptjs');
 const db = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
 
-// Configure multer for in-memory file storage
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB max
-  fileFilter: (req, file, cb) => {
-    const allowedMimes = [
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
-      'application/vnd.ms-excel', // .xls
-      'application/octet-stream'
-    ];
-    const ext = file.originalname.toLowerCase();
-    if (allowedMimes.includes(file.mimetype) || ext.endsWith('.xlsx') || ext.endsWith('.xls')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only Excel files (.xlsx, .xls) are allowed'), false);
-    }
-  }
-});
+// (Multer removed - using base64 JSON for Vercel Serverless compatibility)
 
 // ============================
 // Download Excel template
@@ -125,13 +107,15 @@ router.get('/template', authenticateAdmin, (req, res) => {
 // ============================
 // Preview uploaded Excel (parse & validate without inserting)
 // ============================
-router.post('/preview', authenticateAdmin, upload.single('file'), async (req, res) => {
+router.post('/preview', authenticateAdmin, async (req, res) => {
   try {
-    if (!req.file) {
+    const { fileData } = req.body;
+    if (!fileData) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const buffer = Buffer.from(fileData, 'base64');
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
@@ -235,13 +219,15 @@ router.post('/preview', authenticateAdmin, upload.single('file'), async (req, re
 // ============================
 // Bulk upload (insert validated students)
 // ============================
-router.post('/upload', authenticateAdmin, upload.single('file'), async (req, res) => {
+router.post('/upload', authenticateAdmin, async (req, res) => {
   try {
-    if (!req.file) {
+    const { fileData } = req.body;
+    if (!fileData) {
       return res.status(400).json({ success: false, message: 'No file uploaded' });
     }
 
-    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const buffer = Buffer.from(fileData, 'base64');
+    const workbook = XLSX.read(buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
@@ -364,18 +350,6 @@ router.post('/upload', authenticateAdmin, upload.single('file'), async (req, res
   }
 });
 
-// Multer error handler
-router.use((err, req, res, next) => {
-  if (err instanceof multer.MulterError) {
-    if (err.code === 'LIMIT_FILE_SIZE') {
-      return res.status(400).json({ success: false, message: 'File too large. Maximum 10MB.' });
-    }
-    return res.status(400).json({ success: false, message: err.message });
-  }
-  if (err) {
-    return res.status(400).json({ success: false, message: err.message });
-  }
-  next();
-});
+// Removed Multer error handler
 
 module.exports = router;

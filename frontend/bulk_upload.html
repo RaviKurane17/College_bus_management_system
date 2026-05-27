@@ -439,16 +439,16 @@
       }
     }
 
-    // Call API helper (from script.js) but override for FormData
-    async function uploadFormData(url, formData) {
+    // Call API helper (from script.js) but override for JSON
+    async function uploadJsonData(url, bodyObj) {
       const token = localStorage.getItem('authToken');
-      const headers = {};
+      const headers = { 'Content-Type': 'application/json' };
       if (token) headers['Authorization'] = `Bearer ${token}`;
       
       const res = await fetch(url, {
         method: 'POST',
         headers: headers,
-        body: formData
+        body: JSON.stringify(bodyObj)
       });
       if (res.status === 401 || res.status === 403) {
         localStorage.clear();
@@ -458,6 +458,20 @@
       return res.json();
     }
 
+    // Helper to read file as base64
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const result = e.target.result;
+          const base64 = result.substring(result.indexOf(',') + 1);
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
     async function previewUpload() {
       if (!currentFile) return;
       
@@ -465,11 +479,9 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
       btn.disabled = true;
       
-      const formData = new FormData();
-      formData.append('file', currentFile);
-      
       try {
-        const res = await uploadFormData('/api/students/bulk-upload/preview', formData);
+        const fileData = await readFileAsBase64(currentFile);
+        const res = await uploadJsonData('/api/students/bulk-upload/preview', { fileData });
         
         btn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
         btn.disabled = false;
@@ -545,11 +557,9 @@
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
       btn.disabled = true;
       
-      const formData = new FormData();
-      formData.append('file', currentFile);
-      
       try {
-        const res = await uploadFormData('/api/students/bulk-upload/upload', formData);
+        const fileData = await readFileAsBase64(currentFile);
+        const res = await uploadJsonData('/api/students/bulk-upload/upload', { fileData });
         
         if (res.success) {
           alert(`✅ Success!\n${res.summary.inserted} students added successfully.\n${res.summary.skipped} rows skipped due to errors.`);
