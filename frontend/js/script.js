@@ -2348,6 +2348,13 @@ async function viewStudentDetails(id) {
 
     // Change Save button text to "Edit Student"
     document.getElementById('modalSaveBtn').textContent = 'Edit Student';
+    
+    // Make modal wider for student details
+    const modalContent = document.querySelector('#dynamicModal .modal-content');
+    if (modalContent) {
+      modalContent.style.maxWidth = '850px';
+      modalContent.style.width = '95%';
+    }
 
   } catch (error) {
     console.error('Error viewing student details:', error);
