@@ -735,18 +735,24 @@ async function loadStudents() {
           tr.style.borderLeft = '3px solid var(--error)';
         }
         tr.innerHTML = `
-          <td><a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;"><i class="fa-solid fa-circle-user" style="color: var(--primary, var(--clr-accent)); font-size: 1.1rem; opacity: 0.8;"></i> ${escapeHtml(s.name)}</a></td>
-          <td style="font-family: monospace; font-size: 1rem; color: var(--clr-muted, var(--gray));">${escapeHtml(s.roll_no)}</td>
+          <td>
+            <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
+              <i class="fa-solid fa-circle-user" style="color: var(--primary, var(--clr-accent)); font-size: 1.1rem; opacity: 0.8;"></i> 
+              <div>
+                ${escapeHtml(s.name)}
+                <div style="font-family: monospace; font-size: 0.8rem; color: var(--clr-muted, var(--gray)); margin-top: 2px;">${escapeHtml(s.roll_no)}</div>
+              </div>
+            </a>
+          </td>
           <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.department || 'N/A')}</span></td>
-          <td style="font-size: 0.9rem; color: var(--clr-text, inherit);">${escapeHtml(s.course_year || 'N/A')} <span style="color: var(--clr-muted, var(--gray)); margin: 0 5px;">|</span> ${escapeHtml(s.section || 'N/A')}</td>
           <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.route || 'N/A')}</td>
+          <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
           <td style="color: ${parseFloat(s.remaining_fees || 0) > 0 ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${parseFloat(s.remaining_fees || 0) > 0 ? '700' : '600'};">
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
             ${parseFloat(s.remaining_fees || 0) > 0 ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
           </td>
-          <td style="font-size: 0.85rem; color: var(--clr-muted, var(--gray));">${formatDate(s.joining_date)}</td>
           <td>
             <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
             <button onclick="sendEmailReminder(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-accent-2, var(--accent)),#2563eb);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-envelope"></i> Email</button>
@@ -756,10 +762,10 @@ async function loadStudents() {
       });
 
       if (filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="no-data">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No students found</td></tr>';
       }
     } else {
-      tbody.innerHTML = '<tr><td colspan="10" class="error">Error loading students</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="error">Error loading students</td></tr>';
     }
   } catch (error) {
     console.error('Error loading students:', error);
