@@ -223,15 +223,25 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ success: false, message: 'Payment mode is required' });
   }
 
-  // 1. Insert into payments table
-  const insertPaymentSql = `INSERT INTO payments (student_id, amount, payment_mode, utr_number) VALUES (?, ?, ?, ?)`;
-  db.query(insertPaymentSql, [student_id, parseFloat(amount).toFixed(2), payment_mode.substring(0, 50), (utr_number || '').substring(0, 100)], (err, result) => {
+  // 1. Generate receipt number
+  const now = new Date();
+  const dateStr = now.getFullYear().toString() + (now.getMonth()+1).toString().padStart(2,'0') + now.getDate().toString().padStart(2,'0');
+  
+  // 1b. Insert into payments table with receipt number
+  const insertPaymentSql = `INSERT INTO payments (student_id, amount, payment_mode, utr_number, receipt_number) VALUES (?, ?, ?, ?, ?)`;
+  const receiptPrefix = `REC-${dateStr}-`;
+  
+  db.query(insertPaymentSql, [student_id, parseFloat(amount).toFixed(2), payment_mode.substring(0, 50), (utr_number || '').substring(0, 100), ''], (err, result) => {
     if (err) {
       console.error('❌ Database error inserting payment:', err.message);
       return res.status(500).json({ success: false, message: 'Error recording payment' });
     }
 
     const payment_id = result.insertId;
+    const receipt_number = `${receiptPrefix}${payment_id.toString().padStart(5, '0')}`;
+    
+    // Update receipt number
+    db.query('UPDATE payments SET receipt_number = ? WHERE id = ?', [receipt_number, payment_id]);
 
     // 2. Update student's fees (FIXED: Use single atomic update to avoid race condition)
     const updateFeesSql = `UPDATE students SET 
@@ -263,8 +273,9 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
           success: true, 
           message: 'Payment successful', 
           payment_id: payment_id,
+          receipt_number: receipt_number,
           student: studentObj,
-          payment: { amount, payment_mode, utr_number, date: paymentDate }
+          payment: { amount, payment_mode, utr_number, date: paymentDate, receipt_number }
         });
 
         // Async Email Sending
@@ -312,6 +323,77 @@ router.get('/:id/payments', authenticateAny, (req, res) => {
   db.query('SELECT * FROM payments WHERE student_id = ? ORDER BY payment_date DESC', [student_id], (err, results) => {
     if (err) return res.status(500).json({ success: false, message: 'Database error' });
     res.json({ success: true, payments: results });
+  });
+});
+
+// ============================
+// Resend receipt email for a payment (admin only)
+// ============================
+router.post('/resend-receipt/:paymentId', authenticateAdmin, (req, res) => {
+  const paymentId = parseInt(req.params.paymentId);
+  if (isNaN(paymentId)) {
+    return res.status(400).json({ success: false, message: 'Invalid payment ID' });
+  }
+
+  const sql = `
+    SELECT p.*, s.name, s.roll_no, s.email, s.remaining_fees, s.total_fees, s.fees_paid,
+           s.department, s.course_year, s.section, s.bus_id,
+           b.bus_number, b.route
+    FROM payments p
+    JOIN students s ON p.student_id = s.id
+    LEFT JOIN buses b ON s.bus_id = b.id
+    WHERE p.id = ?
+  `;
+  db.query(sql, [paymentId], (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (results.length === 0) return res.status(404).json({ success: false, message: 'Payment not found' });
+
+    const p = results[0];
+    if (!p.email) {
+      return res.status(400).json({ success: false, message: 'Student does not have an email address' });
+    }
+
+    const paymentDate = new Date(p.payment_date);
+    const receiptNo = p.receipt_number || `REC-${paymentId.toString().padStart(5, '0')}`;
+
+    const mailOptions = {
+      from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
+      to: p.email,
+      subject: `🧾 Payment Receipt ${receiptNo} - SGI Bus Transport`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #7d3c43; border-radius: 12px; padding: 20px;">
+          <div style="text-align: center; color: #7d3c43; border-bottom: 2px solid #7d3c43; padding-bottom: 10px; margin-bottom: 20px;">
+            <h2 style="margin: 0; font-size: 24px;">SANJEEVANI PUBLIC SCHOOL</h2>
+            <h3 style="margin: 5px 0 0;">FEE RECEIPT</h3>
+          </div>
+          <div style="margin-bottom: 20px; color: #444; line-height: 1.8;">
+            <p><strong>Receipt No:</strong> ${receiptNo}</p>
+            <p><strong>Date:</strong> ${paymentDate.toLocaleDateString('en-GB')}</p>
+            <p><strong>Student Name:</strong> ${p.name}</p>
+            <p><strong>Roll No:</strong> ${p.roll_no}</p>
+            <p><strong>Department:</strong> ${p.department || 'N/A'} | ${p.course_year || ''} ${p.section ? 'Sec ' + p.section : ''}</p>
+            <hr style="border-color: #eee;">
+            <p><strong>Amount Paid:</strong> ₹${parseFloat(p.amount).toLocaleString('en-IN')}</p>
+            <p><strong>Payment Mode:</strong> ${p.payment_mode} ${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
+            <p><strong>Total Fees:</strong> ₹${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Total Paid:</strong> ₹${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Remaining Balance:</strong> ₹${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
+          </div>
+          <div style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
+            This is an auto-generated receipt from SGI Bus Management System.
+          </div>
+        </div>
+      `
+    };
+
+    transporter.sendMail(mailOptions)
+      .then(() => {
+        res.json({ success: true, message: `Receipt email sent to ${p.email}` });
+      })
+      .catch(err => {
+        console.error('Failed to send receipt email:', err.message);
+        res.status(500).json({ success: false, message: 'Failed to send email: ' + err.message });
+      });
   });
 });
 

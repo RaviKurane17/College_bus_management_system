@@ -194,14 +194,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         console.log('Login response:', res);
 
-        if (res.success) {
+         if (res.success) {
           // Store JWT token for authenticated requests
           if (res.token) {
             localStorage.setItem('authToken', res.token);
           }
           
-          if (role === 'admin') {
-            localStorage.setItem('loggedIn', 'admin');
+          if (role === 'admin' || res.role === 'admin' || res.role === 'super_admin') {
+            localStorage.setItem('loggedIn', res.role || 'admin');
+            localStorage.setItem('adminRole', res.role || 'admin');
             window.location.href = '/dashboard.html';
           } else if (role === 'student') {
             localStorage.setItem('loggedIn', 'student');
@@ -2201,187 +2202,193 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 });
 
-// View Student Details Function
+// Enhanced View Student Details with Full Fee Management
 async function viewStudentDetails(id) {
   try {
-    const res = await apiFetch('/api/students/get/' + id);
-    if (!res || !res.success) { alert('Failed to load student details'); return; }
-    const s = res.student;
+    const res = await apiFetch(`/api/students/get/${id}`);
+    const paymentsRes = await apiFetch(`/api/students/${id}/payments`);
 
-    const content = `
-      <div class="student-profile-modal-content">
-        <div class="student-profile-header">
-          <div class="student-profile-avatar">
-            <img src="${s.photo_url || 'images/sgiphoto.jpg'}" alt="Student Photo" onerror="this.src='images/sgiphoto.jpg'">
-          </div>
-          <div class="student-profile-info">
-            <h2>${escapeHtml(s.name)}</h2>
-            <p class="student-profile-roll">Roll No: ${escapeHtml(s.roll_no)}</p>
-            <div class="student-profile-badges">
-              <span class="badge badge-primary">${escapeHtml(s.department || 'N/A')}</span>
-              <span class="badge badge-blue">${escapeHtml(s.course_year || 'N/A')}${s.section ? ' - ' + escapeHtml(s.section) : ''}</span>
-            </div>
-          </div>
-        </div>
-        <div class="student-profile-details">
-          <div class="student-profile-section">
-            <h4><i class="fa-solid fa-route"></i> Transport</h4>
-            <div><b>Bus No:</b> ${escapeHtml(s.bus_number || 'Not Assigned')}</div>
-            <div><b>Route:</b> ${escapeHtml(s.route || 'N/A')}</div>
-          </div>
-          <div class="student-profile-section">
-            <h4><i class="fa-solid fa-address-book"></i> Contact</h4>
-            <div><b>Phone:</b> ${escapeHtml(s.phone || 'N/A')}</div>
-            <div><b>Email:</b> ${escapeHtml(s.email || 'N/A')}</div>
-          </div>
-          <div class="student-profile-section">
-            <h4><i class="fa-solid fa-money-check-dollar"></i> Fees</h4>
-            <div><b>Paid:</b> <span style="color: #4ade80;">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</span></div>
-            <div><b>Remaining:</b> <span style="color: #f87171;">₹${parseFloat(s.remaining_fees || 0).toLocaleString()}</span></div>
-          </div>
-        </div>
-        <div class="student-profile-actions">
-          <button onclick="editStudent(${id})" class="profile-action-btn edit"><i class="fa-solid fa-user-pen"></i> Edit</button>
-          <button onclick="deleteStudent(${id})" class="profile-action-btn delete"><i class="fa-solid fa-trash-can"></i> Delete</button>
-          <button onclick="payFees(${id})" class="profile-action-btn pay"><i class="fa-solid fa-file-invoice-dollar"></i> Pay</button>
-        </div>
-      </div>
-      <style>
-        .student-profile-modal-content {
-          max-width: 600px;
-          width: 98vw;
-          max-height: 95vh;
-          overflow-y: auto;
-          background: var(--dark);
-          border-radius: 18px;
-          padding: 32px 18px;
-          margin: 0 auto;
-          display: flex;
-          flex-direction: column;
-          align-items: stretch;
-        }
-        .student-profile-header {
-          display: flex;
-          gap: 24px;
-          align-items: center;
-          margin-bottom: 18px;
-          flex-wrap: wrap;
-        }
-        .student-profile-avatar {
-          width: 90px;
-          height: 90px;
-          border-radius: 50%;
-          overflow: hidden;
-          border: 3px solid var(--primary);
-          background: rgba(255,255,255,0.08);
-          flex-shrink: 0;
-        }
-        .student-profile-avatar img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-        }
-        .student-profile-info h2 {
-          margin: 0;
-          font-size: 1.5rem;
-          color: var(--primary);
-        }
-        .student-profile-roll {
-          color: var(--gray);
-          margin: 2px 0 8px 0;
-        }
-        .student-profile-badges {
-          display: flex;
-          gap: 10px;
-          flex-wrap: wrap;
-        }
-        .student-profile-details {
-          display: grid;
-          grid-template-columns: 1fr 1fr 1fr;
-          gap: 18px;
-          margin-bottom: 22px;
-        }
-        .student-profile-section h4 {
-          margin: 0 0 8px 0;
-          font-size: 1rem;
-          color: var(--primary);
-          display: flex;
-          align-items: center;
-          gap: 7px;
-        }
-        .student-profile-section > div {
-          font-size: 0.97rem;
-          margin-bottom: 5px;
-        }
-        .student-profile-actions {
-          display: flex;
-          gap: 14px;
-          justify-content: flex-end;
-          flex-wrap: wrap;
-        }
-        .profile-action-btn {
-          padding: 10px 22px;
-          border-radius: 8px;
-          border: none;
-          font-weight: 700;
-          font-size: 1rem;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          transition: 0.2s;
-        }
-        .profile-action-btn.edit {
-          background: var(--primary);
-          color: #000;
-        }
-        .profile-action-btn.delete {
-          background: #ef4444;
-          color: #fff;
-        }
-        .profile-action-btn.pay {
-          background: #22c55e;
-          color: #fff;
-        }
-        @media (max-width: 900px) {
-          .student-profile-details {
-            grid-template-columns: 1fr;
-          }
-        }
-        @media (max-width: 600px) {
-          .student-profile-modal-content {
-            max-width: 100vw;
-            padding: 12px 2vw;
-            border-radius: 0;
-          }
-          .student-profile-header {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-          }
-          .student-profile-details {
-            grid-template-columns: 1fr;
-            gap: 12px;
-          }
-          .student-profile-actions {
-            flex-direction: column;
-            gap: 10px;
-            align-items: stretch;
-          }
-        }
-      </style>
-    `;
-
-    showModal(`Student Profile: ${s.roll_no}`, content, () => closeModal());
-    const saveBtn = document.getElementById('modalSaveBtn');
-    if (saveBtn) {
-      saveBtn.style.display = 'none';
-      saveBtn.parentElement.querySelector('.secondary').textContent = 'Close Profile';
+    if (!res || !res.success) {
+      alert('Failed to load student data');
+      return;
     }
 
-} catch (err) {
-    console.error('Error viewing student:', err);
-    alert('Failed to open student profile');
+    const s = res.student;
+    const payments = paymentsRes.success ? paymentsRes.payments : [];
+    
+    // Store for receipt printing
+    window.currentStudentData = s;
+    window.currentPayments = payments;
+
+    // Calculate fee progress
+    const totalFees = parseFloat(s.total_fees || 0);
+    const feesPaid = parseFloat(s.fees_paid || 0);
+    const remainingFees = parseFloat(s.remaining_fees || 0);
+    const feeProgress = totalFees > 0 ? Math.min(100, (feesPaid / totalFees) * 100) : 0;
+    const progressColor = feeProgress >= 100 ? '#10b981' : feeProgress >= 50 ? '#f59e0b' : '#ef4444';
+
+    let paymentsHtml = '';
+    if (payments.length > 0) {
+      paymentsHtml = `
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem;">
+          <thead>
+            <tr style="border-bottom: 2px solid rgba(255,255,255,0.15); text-align: left;">
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">Receipt</th>
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">Date</th>
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">Amount</th>
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">Mode</th>
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">UTR</th>
+              <th style="padding: 8px 6px; color: var(--clr-muted, #94a3b8); font-size: 0.72rem; text-transform: uppercase;">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${payments.map(p => {
+              const receiptNo = p.receipt_number || 'REC-' + p.id.toString().padStart(5, '0');
+              return `
+              <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
+                <td style="padding: 8px 6px; font-weight: 600; color: var(--clr-accent, #f59e0b);">${escapeHtml(receiptNo)}</td>
+                <td style="padding: 8px 6px;">${new Date(p.payment_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</td>
+                <td style="padding: 8px 6px; color: #34d399; font-weight: 700;">₹${parseFloat(p.amount).toLocaleString('en-IN')}</td>
+                <td style="padding: 8px 6px;">${escapeHtml(p.payment_mode)}</td>
+                <td style="padding: 8px 6px; color: var(--clr-muted, #94a3b8);">${escapeHtml(p.utr_number || '-')}</td>
+                <td style="padding: 6px; display: flex; gap: 4px; flex-wrap: wrap;">
+                  <button onclick="window.printStudentReceipt(${p.id})" style="padding:4px 8px;background:rgba(139,92,246,0.15);color:#a78bfa;border:1px solid rgba(139,92,246,0.3);border-radius:4px;cursor:pointer;font-size:0.72rem;font-weight:600;" title="Print Receipt"><i class="fa-solid fa-print"></i></button>
+                  <button onclick="resendReceiptEmail(${p.id})" style="padding:4px 8px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:4px;cursor:pointer;font-size:0.72rem;font-weight:600;" title="Email Receipt"><i class="fa-solid fa-envelope"></i></button>
+                  <button onclick="sendReceiptWhatsApp(${p.id})" style="padding:4px 8px;background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3);border-radius:4px;cursor:pointer;font-size:0.72rem;font-weight:600;" title="WhatsApp Receipt"><i class="fa-brands fa-whatsapp"></i></button>
+                </td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      `;
+    } else {
+      paymentsHtml = '<p style="text-align:center;color:var(--clr-muted,#94a3b8);padding:20px;"><i class="fa-solid fa-receipt" style="font-size:1.5rem;opacity:0.3;display:block;margin-bottom:8px;"></i>No payments recorded yet.</p>';
+    }
+
+    const content = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
+        <!-- Student Info -->
+        <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+          <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px;">
+            ${s.photo_url ? '<img src="' + s.photo_url + '" style="width: 55px; height: 55px; border-radius: 50%; object-fit: cover; border: 2px solid var(--clr-accent, #f59e0b);">' : '<div style="width: 55px; height: 55px; border-radius: 50%; background: rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: center;"><i class="fa-solid fa-user" style="font-size: 1.3rem; color: var(--clr-muted);"></i></div>'}
+            <div>
+              <h4 style="margin: 0; color: var(--clr-accent, #f59e0b); font-size: 1.05rem;">${escapeHtml(s.name)}</h4>
+              <p style="margin: 2px 0; font-size: 0.82rem; color: var(--clr-muted, #94a3b8);">${escapeHtml(s.roll_no)} | ${escapeHtml(s.department || 'N/A')}</p>
+              <p style="margin: 0; font-size: 0.78rem; color: var(--clr-muted, #94a3b8);">${escapeHtml(s.course_year || '')} ${s.section ? 'Sec ' + escapeHtml(s.section) : ''}</p>
+            </div>
+          </div>
+          <div style="font-size: 0.85rem; line-height: 1.8;">
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-phone" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.phone || 'N/A')} ${s.phone ? '<a href="https://wa.me/91' + s.phone.replace(/\D/g, '') + '" target="_blank" style="color:#25d366;margin-left:6px;" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>' : ''}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-envelope" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.email || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-location-dot" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.address || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-bus" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.bus_number || 'Not Assigned')} — ${escapeHtml(s.route || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-calendar" style="width:16px;color:var(--clr-accent);"></i></strong> Joined: ${formatDate(s.joining_date)}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-id-card" style="width:16px;color:var(--clr-accent);"></i></strong> Pass: ${s.pass_valid_from ? formatDate(s.pass_valid_from) + ' → ' + formatDate(s.pass_valid_to) : 'Not Set'}</p>
+          </div>
+        </div>
+
+        <!-- Fee Summary -->
+        <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+          <h4 style="margin: 0 0 14px 0; color: var(--clr-accent, #f59e0b); display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-indian-rupee-sign"></i> Fee Summary</h4>
+          
+          <!-- Progress Bar -->
+          <div style="margin-bottom: 16px;">
+            <div style="display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--clr-muted); margin-bottom: 6px;">
+              <span>Payment Progress</span>
+              <span style="font-weight: 700; color: ${progressColor};">${feeProgress.toFixed(0)}%</span>
+            </div>
+            <div style="height: 10px; background: rgba(255,255,255,0.08); border-radius: 5px; overflow: hidden;">
+              <div style="height: 100%; width: ${feeProgress}%; background: ${progressColor}; border-radius: 5px; transition: width 0.5s ease;"></div>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 16px;">
+            <div style="background: rgba(255,255,255,0.04); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(255,255,255,0.06);">
+              <div style="font-size: 0.7rem; color: var(--clr-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Fees</div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: #f1f5f9; margin-top: 4px;">₹${totalFees.toLocaleString('en-IN')}</div>
+            </div>
+            <div style="background: rgba(16,185,129,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(16,185,129,0.15);">
+              <div style="font-size: 0.7rem; color: #34d399; text-transform: uppercase; letter-spacing: 0.5px;">Paid</div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: #34d399; margin-top: 4px;">₹${feesPaid.toLocaleString('en-IN')}</div>
+            </div>
+            <div style="background: rgba(239,68,68,0.08); padding: 12px; border-radius: 8px; text-align: center; border: 1px solid rgba(239,68,68,0.15);">
+              <div style="font-size: 0.7rem; color: #f87171; text-transform: uppercase; letter-spacing: 0.5px;">Remaining</div>
+              <div style="font-size: 1.15rem; font-weight: 800; color: #f87171; margin-top: 4px;">₹${remainingFees.toLocaleString('en-IN')}</div>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay Fees</button>
+            <button onclick="generateBusPass(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-id-card"></i> Bus Pass</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Payment History -->
+      <div style="background: rgba(255,255,255,0.04); padding: 16px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);">
+        <h4 style="margin: 0 0 12px 0; color: var(--clr-accent, #f59e0b); display: flex; align-items: center; justify-content: space-between;">
+          <span><i class="fa-solid fa-clock-rotate-left"></i> Payment History (${payments.length})</span>
+        </h4>
+        <div style="max-height: 220px; overflow-y: auto;">
+          ${paymentsHtml}
+        </div>
+      </div>
+    `;
+
+    showModal(`Student Details: ${escapeHtml(s.name)}`, content, () => {
+      closeModal();
+      setTimeout(() => editStudent(s.id), 300);
+    });
+
+    // Change Save button text to "Edit Student"
+    document.getElementById('modalSaveBtn').textContent = 'Edit Student';
+
+  } catch (error) {
+    console.error('Error viewing student details:', error);
+    alert('Failed to load student details.');
+  }
+}
+
+// Send receipt via WhatsApp
+function sendReceiptWhatsApp(paymentId) {
+  const s = window.currentStudentData;
+  const p = window.currentPayments ? window.currentPayments.find(pay => pay.id === paymentId) : null;
+  if (!s || !p) { alert('Payment data not found'); return; }
+  if (!s.phone) { alert('Student does not have a phone number'); return; }
+
+  const receiptNo = p.receipt_number || 'REC-' + p.id.toString().padStart(5, '0');
+  const date = new Date(p.payment_date).toLocaleDateString('en-IN');
+  const msg = `*🧾 FEE RECEIPT*\n` +
+    `━━━━━━━━━━━━━━━\n` +
+    `*Receipt No:* ${receiptNo}\n` +
+    `*Date:* ${date}\n\n` +
+    `*Student:* ${s.name}\n` +
+    `*Roll No:* ${s.roll_no}\n` +
+    `*Department:* ${s.department || 'N/A'}\n\n` +
+    `*Amount Paid:* ₹${parseFloat(p.amount).toLocaleString('en-IN')}\n` +
+    `*Payment Mode:* ${p.payment_mode}${p.utr_number ? ' (UTR: ' + p.utr_number + ')' : ''}\n\n` +
+    `*Total Fees:* ₹${parseFloat(s.total_fees || 0).toLocaleString('en-IN')}\n` +
+    `*Total Paid:* ₹${parseFloat(s.fees_paid || 0).toLocaleString('en-IN')}\n` +
+    `*Remaining:* ₹${parseFloat(s.remaining_fees || 0).toLocaleString('en-IN')}\n` +
+    `━━━━━━━━━━━━━━━\n` +
+    `_SGI Bus Transport System_`;
+
+  const phone = '91' + s.phone.replace(/\D/g, '');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// Resend receipt email
+async function resendReceiptEmail(paymentId) {
+  if (!confirm('Send receipt email to the student?')) return;
+  try {
+    const res = await apiFetch(`/api/students/resend-receipt/${paymentId}`, { method: 'POST' });
+    if (res.success) {
+      alert('✅ ' + res.message);
+    } else {
+      alert('❌ ' + (res.message || 'Failed to send email'));
+    }
+  } catch (e) {
+    alert('Error sending receipt email');
   }
 }
 
@@ -2458,6 +2465,174 @@ window.printStudentReceipt = function(paymentId) {
       utr_number: p.utr_number,
       date: p.payment_date
     };
-    generateReceipt(window.currentStudentData, paymentObj, p.id);
+    generateReceipt(window.currentStudentData, paymentObj, p.receipt_number || p.id);
   }
 };
+
+// ===================== ADMIN MANAGEMENT (Super Admin) =====================
+async function loadAdminList() {
+  try {
+    const res = await apiFetch('/api/admin/list');
+    if (!res.success) { alert(res.message || 'Failed to load admins'); return; }
+    
+    const admins = res.admins || [];
+    const rows = admins.map((a, i) => {
+      const isSuperAdmin = a.role === 'super_admin';
+      const roleLabel = isSuperAdmin ? '<span style="color:#f59e0b;font-weight:700;">Super Admin</span>' : '<span style="color:#60a5fa;">Admin</span>';
+      return `
+        <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
+          <td style="padding:10px 8px;">${i+1}</td>
+          <td style="padding:10px 8px;font-weight:600;">${escapeHtml(a.username)}</td>
+          <td style="padding:10px 8px;color:var(--clr-muted);">${escapeHtml(a.email)}</td>
+          <td style="padding:10px 8px;">${roleLabel}</td>
+          <td style="padding:10px 8px;color:var(--clr-muted);font-size:0.82rem;">${new Date(a.created_at).toLocaleDateString('en-IN')}</td>
+          <td style="padding:10px 8px;">
+            ${!isSuperAdmin ? `
+              <button onclick="editAdminUser(${a.id}, '${escapeHtml(a.username)}', '${escapeHtml(a.email)}')" style="padding:5px 10px;background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;margin-right:4px;"><i class="fa-solid fa-pen"></i></button>
+              <button onclick="deleteAdminUser(${a.id}, '${escapeHtml(a.username)}')" style="padding:5px 10px;background:rgba(239,68,68,0.1);color:#f87171;border:1px solid rgba(239,68,68,0.2);border-radius:6px;cursor:pointer;font-size:0.75rem;font-weight:600;"><i class="fa-solid fa-trash"></i></button>
+            ` : '<span style="color:var(--clr-muted);font-size:0.78rem;">Protected</span>'}
+          </td>
+        </tr>`;
+    }).join('');
+
+    const modalHtml = `
+      <div id="adminMgmtModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
+        <div style="background:var(--clr-surface,#111a2e);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;width:100%;max-width:750px;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 40px rgba(0,0,0,0.45);">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+            <h3 style="color:#f59e0b;margin:0;display:flex;align-items:center;gap:10px;"><i class="fa-solid fa-users-gear"></i> Admin Management</h3>
+            <div style="display:flex;gap:8px;">
+              <button onclick="showCreateAdminForm()" style="padding:8px 16px;background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;border-radius:8px;cursor:pointer;font-size:0.82rem;font-weight:600;display:flex;align-items:center;gap:6px;"><i class="fa-solid fa-plus"></i> New Admin</button>
+              <button onclick="document.getElementById('adminMgmtModal').remove()" style="background:transparent;border:none;color:var(--clr-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+            </div>
+          </div>
+          <div style="overflow-y:auto;flex:1;">
+            <table style="width:100%;border-collapse:collapse;color:var(--clr-text,#e2e8f0);font-size:0.85rem;">
+              <thead><tr style="color:var(--clr-muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);">
+                <th style="padding:10px 8px;text-align:left;">#</th>
+                <th style="padding:10px 8px;text-align:left;">Username</th>
+                <th style="padding:10px 8px;text-align:left;">Email</th>
+                <th style="padding:10px 8px;text-align:left;">Role</th>
+                <th style="padding:10px 8px;text-align:left;">Created</th>
+                <th style="padding:10px 8px;text-align:left;">Actions</th>
+              </tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+          <div style="margin-top:12px;text-align:right;">
+            <button onclick="document.getElementById('adminMgmtModal').remove()" style="padding:8px 20px;background:rgba(255,255,255,0.06);color:var(--clr-text);border:1px solid rgba(255,255,255,0.1);border-radius:8px;cursor:pointer;">Close</button>
+          </div>
+        </div>
+      </div>`;
+
+    const existing = document.getElementById('adminMgmtModal');
+    if (existing) existing.remove();
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+  } catch (e) {
+    console.error(e);
+    alert('Error loading admin list');
+  }
+}
+
+function showCreateAdminForm() {
+  const existing = document.getElementById('createAdminModal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'createAdminModal';
+  modal.className = 'modal-backdrop';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:10000;display:flex;align-items:center;justify-content:center;padding:20px;';
+  modal.innerHTML = `
+    <div style="background:var(--clr-surface,#111a2e);border:1px solid rgba(255,255,255,0.1);border-radius:16px;padding:28px;width:100%;max-width:450px;box-shadow:0 8px 40px rgba(0,0,0,0.45);">
+      <h3 style="color:#f59e0b;margin:0 0 20px;display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-user-plus"></i> Create New Admin</h3>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.78rem;color:var(--clr-muted);margin-bottom:4px;font-weight:600;">Username</label>
+        <input type="text" id="newAdminUsername" placeholder="e.g. admin2" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#e2e8f0;font-size:0.88rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="display:block;font-size:0.78rem;color:var(--clr-muted);margin-bottom:4px;font-weight:600;">Email</label>
+        <input type="email" id="newAdminEmail" placeholder="admin@example.com" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#e2e8f0;font-size:0.88rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="display:block;font-size:0.78rem;color:var(--clr-muted);margin-bottom:4px;font-weight:600;">Password</label>
+        <input type="password" id="newAdminPassword" placeholder="Min 6 characters" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#e2e8f0;font-size:0.88rem;outline:none;box-sizing:border-box;">
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="document.getElementById('createAdminModal').remove()" style="padding:10px 20px;border-radius:8px;border:1px solid rgba(255,255,255,0.1);background:rgba(255,255,255,0.04);color:#cbd5e1;cursor:pointer;font-weight:600;">Cancel</button>
+        <button onclick="submitCreateAdmin()" style="padding:10px 20px;border-radius:8px;border:none;background:linear-gradient(135deg,#f59e0b,#f97316);color:#000;cursor:pointer;font-weight:700;">Create Admin</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+}
+
+async function submitCreateAdmin() {
+  const username = document.getElementById('newAdminUsername').value.trim();
+  const email = document.getElementById('newAdminEmail').value.trim();
+  const password = document.getElementById('newAdminPassword').value;
+
+  if (!username || !email || !password) { alert('All fields are required'); return; }
+  if (password.length < 6) { alert('Password must be at least 6 characters'); return; }
+
+  try {
+    const res = await apiFetch('/api/admin/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, email, password })
+    });
+    if (res.success) {
+      alert('✅ Admin created successfully!');
+      document.getElementById('createAdminModal').remove();
+      document.getElementById('adminMgmtModal')?.remove();
+      loadAdminList();
+    } else {
+      alert('❌ ' + (res.message || 'Failed to create admin'));
+    }
+  } catch (e) {
+    alert('Error creating admin');
+  }
+}
+
+async function editAdminUser(id, username, email) {
+  const newUsername = prompt('Username:', username);
+  if (!newUsername) return;
+  const newEmail = prompt('Email:', email);
+  if (!newEmail) return;
+  const newPassword = prompt('New Password (leave blank to keep current):');
+
+  try {
+    const body = { username: newUsername, email: newEmail };
+    if (newPassword && newPassword.length >= 6) body.password = newPassword;
+    
+    const res = await apiFetch(`/api/admin/update/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.success) {
+      alert('✅ Admin updated!');
+      document.getElementById('adminMgmtModal')?.remove();
+      loadAdminList();
+    } else {
+      alert('❌ ' + (res.message || 'Failed'));
+    }
+  } catch (e) { alert('Error updating admin'); }
+}
+
+async function deleteAdminUser(id, username) {
+  if (!confirm(`Delete admin "${username}"? This cannot be undone.`)) return;
+  try {
+    const res = await apiFetch(`/api/admin/delete/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      alert('✅ Admin deleted');
+      document.getElementById('adminMgmtModal')?.remove();
+      loadAdminList();
+    } else {
+      alert('❌ ' + (res.message || 'Failed'));
+    }
+  } catch (e) { alert('Error deleting admin'); }
+}
+
+// Helper: Check if current user is super admin
+function isSuperAdmin() {
+  return localStorage.getItem('adminRole') === 'super_admin';
+}

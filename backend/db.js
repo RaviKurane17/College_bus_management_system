@@ -52,6 +52,7 @@ async function initializeDatabase() {
         username VARCHAR(50) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
         email VARCHAR(100) UNIQUE NOT NULL,
+        role ENUM('super_admin', 'admin') DEFAULT 'admin',
         reset_token VARCHAR(100),
         reset_token_expires DATETIME,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -118,14 +119,45 @@ async function initializeDatabase() {
       ) ENGINE=InnoDB;
     `);
 
+    // Ensure role column exists in admins table (migration)
+    try {
+      await promisePool.query("ALTER TABLE admins ADD COLUMN role ENUM('super_admin', 'admin') DEFAULT 'admin'");
+      console.log('✅ Added role column to admins table');
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.error('Schema migration error (role column):', err.message);
+      }
+    }
+
     // Verify admin table and credentials
     const [admins] = await promisePool.query('SELECT * FROM admins');
+    
+    // Check if super admin exists
+    const superAdminExists = admins.some(a => a.role === 'super_admin');
+    if (!superAdminExists) {
+      console.log('⚠️ No super admin found, creating default super admin...');
+      const hashedPassword = await bcrypt.hash('SuperAdmin@2024', 12);
+      try {
+        await promisePool.query(
+          'INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)',
+          ['superadmin', hashedPassword, process.env.EMAIL_USER || 'ravikurane12@gmail.com', 'super_admin']
+        );
+        console.log('✅ Default super admin created (username: superadmin, password: SuperAdmin@2024)');
+      } catch (dupErr) {
+        // If superadmin username exists but role isn't set, update it
+        if (dupErr.code === 'ER_DUP_ENTRY') {
+          await promisePool.query('UPDATE admins SET role = ? WHERE username = ?', ['super_admin', 'superadmin']);
+          console.log('✅ Updated existing superadmin to super_admin role');
+        }
+      }
+    }
+    
     if (admins.length === 0) {
       console.log('⚠️ No admin users found, creating default admin...');
       const hashedPassword = await bcrypt.hash('admin123', 12);
       await promisePool.query(
-        'INSERT INTO admins (username, password, email) VALUES (?, ?, ?)',
-        ['admin', hashedPassword, process.env.EMAIL_USER || 'ravikurane12@gmail.com']
+        'INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)',
+        ['admin', hashedPassword, process.env.EMAIL_USER || 'ravikurane12@gmail.com', 'admin']
       );
       console.log('✅ Default admin created (username: admin, password: admin123)');
     } else {
@@ -186,10 +218,18 @@ async function initializeDatabase() {
         amount DECIMAL(10,2) NOT NULL,
         payment_mode VARCHAR(50) NOT NULL,
         utr_number VARCHAR(100),
+        receipt_number VARCHAR(50),
         payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
+
+    // Add receipt_number to payments if missing
+    try {
+      await promisePool.query("ALTER TABLE payments ADD COLUMN receipt_number VARCHAR(50)");
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') { /* already exists */ }
+    }
 
     // Create student_queries table
     await promisePool.query(`

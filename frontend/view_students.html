@@ -110,6 +110,7 @@
     <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
     <div class="nav-section">Students</div>
     <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
+    <a href="bulk_upload.html"><i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span></a>
     <a href="view_students.html" class="active"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
   </nav>
   <div class="sidebar-footer">
@@ -127,7 +128,10 @@
   <div class="panel">
     <div class="panel-header">
       <h3><i class="fa-solid fa-user-graduate"></i> Student Directory</h3>
-      <button onclick="downloadStudentPDF()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button onclick="window.location.href='bulk_upload.html'" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-excel"></i> Bulk Upload</button>
+        <button onclick="downloadStudentPDF()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+      </div>
     </div>
     <div class="filter-bar">
       <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchStudent" placeholder="Search name or roll no..." oninput="loadStudents()"></div>

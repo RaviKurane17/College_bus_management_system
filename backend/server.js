@@ -23,6 +23,7 @@ const reminderRoutes = require('./routes/reminders');
 const queriesRoutes = require('./routes/queries');
 const studentResetRoutes = require('./routes/student_reset');
 const backupRoutes = require('./routes/backup');
+const bulkUploadRoutes = require('./routes/bulk_upload');
 
 // Initialize Express app
 const app = express();
@@ -55,8 +56,8 @@ app.use(cors({
 }));
 
 // Body parsers with size limits to prevent DoS
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // =========================
 // 🚦 Rate Limiting
@@ -127,6 +128,7 @@ app.use('/api/upload', apiLimiter, uploadRoutes);
 app.use('/api/reminders', apiLimiter, reminderRoutes);
 app.use('/api/queries', apiLimiter, queriesRoutes);
 app.use('/api/backup', apiLimiter, backupRoutes);
+app.use('/api/students/bulk-upload', apiLimiter, bulkUploadRoutes);
 
 // =========================
 // 🌐 Frontend Serve

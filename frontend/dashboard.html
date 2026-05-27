@@ -1019,6 +1019,9 @@
         <a href="add_student.html">
           <i class="fa-solid fa-user-plus"></i> <span>Add Student</span>
         </a>
+        <a href="bulk_upload.html">
+          <i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span>
+        </a>
         <a href="view_students.html">
           <i class="fa-solid fa-users"></i> <span>View Students</span>
         </a>
@@ -1032,10 +1035,13 @@
         <div class="user-mini">
           <div class="avatar"><i class="fa-solid fa-user-shield"></i></div>
           <div class="user-info">
-            <strong>Admin</strong>
-            <small>Super Admin</small>
+            <strong id="sidebarUserName">Admin</strong>
+            <small id="sidebarUserRole">Super Admin</small>
           </div>
         </div>
+        <button class="btn-logout" onclick="if(isSuperAdmin()) { loadAdminList(); } else { alert('Access Denied'); }" id="btnAdminMgmt" style="display:none; margin-bottom:8px; background:rgba(245,158,11,0.1); color:#f59e0b; border-color:rgba(245,158,11,0.3);">
+          <i class="fa-solid fa-users-gear"></i> <span>Manage Admins</span>
+        </button>
         <button class="btn-logout" id="logoutBtn">
           <i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span>
         </button>
@@ -1438,6 +1444,15 @@
       if (!localStorage.getItem('loggedIn')) {
         window.location.href = '/login.html';
         return;
+      }
+      
+      const adminRole = localStorage.getItem('adminRole');
+      if (adminRole === 'super_admin') {
+        document.getElementById('sidebarUserRole').textContent = 'Super Admin';
+        const mgmtBtn = document.getElementById('btnAdminMgmt');
+        if(mgmtBtn) mgmtBtn.style.display = 'flex';
+      } else {
+        document.getElementById('sidebarUserRole').textContent = 'Admin';
       }
 
       // Load queries

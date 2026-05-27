@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bulk Upload Students — College Bus Management</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    /* Add base styles similar to other pages */
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html{font-size:15px;scroll-behavior:smooth;}
+    body{font-family:'Poppins','Segoe UI',system-ui,sans-serif;background:#0b1120;color:#e2e8f0;min-height:100vh;overflow-x:hidden;}
+    :root{--sidebar-w:260px;--sidebar-collapsed:72px;--header-h:64px;--clr-bg:#0b1120;--clr-surface:#111a2e;--clr-surface-2:#162032;--clr-border:rgba(255,255,255,0.06);--clr-border-strong:rgba(255,255,255,0.10);--clr-text:#e2e8f0;--clr-muted:#94a3b8;--clr-accent:#f59e0b;--clr-accent-2:#3b82f6;--clr-green:#10b981;--clr-red:#ef4444;--clr-orange:#f97316;--clr-purple:#8b5cf6;--radius-sm:8px;--radius-md:12px;--radius-lg:16px;--shadow-card:0 4px 24px rgba(0,0,0,0.30);--transition:0.25s cubic-bezier(0.4,0,0.2,1);}
+    
+    .app-shell{display:flex;min-height:100vh;}
+    .sidebar{width:var(--sidebar-w);min-width:var(--sidebar-w);background:var(--clr-surface);border-right:1px solid var(--clr-border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100;transition:width var(--transition),min-width var(--transition);overflow-x:hidden;}
+    .sidebar.collapsed{width:var(--sidebar-collapsed);min-width:var(--sidebar-collapsed);}
+    .sidebar-brand{display:flex;align-items:center;gap:12px;padding:20px 20px 18px 20px;border-bottom:1px solid var(--clr-border);white-space:nowrap;}
+    .sidebar-brand .brand-icon{width:40px;height:40px;min-width:40px;background:linear-gradient(135deg,var(--clr-accent),#fbbf24);border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;font-size:1.25rem;color:#000;}
+    .sidebar-brand .brand-text h3{font-size:1rem;font-weight:700;color:#f1f5f9;}
+    .sidebar-brand .brand-text span{font-size:0.72rem;color:var(--clr-muted);}
+    .sidebar.collapsed .brand-text{display:none;}
+    .sidebar-nav{flex:1;overflow-y:auto;padding:16px 12px;}
+    .sidebar-nav .nav-section{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--clr-muted);padding:12px 12px 6px 12px;font-weight:600;white-space:nowrap;}
+    .sidebar.collapsed .nav-section{display:none;}
+    .sidebar-nav a{display:flex;align-items:center;gap:12px;padding:11px 12px;margin-bottom:2px;border-radius:var(--radius-sm);color:#cbd5e1;text-decoration:none;font-weight:500;font-size:0.88rem;transition:all var(--transition);white-space:nowrap;position:relative;}
+    .sidebar-nav a i{width:20px;min-width:20px;text-align:center;font-size:1rem;}
+    .sidebar-nav a:hover{background:rgba(255,255,255,0.05);color:#f1f5f9;}
+    .sidebar-nav a.active{background:linear-gradient(135deg,rgba(245,158,11,0.15),rgba(245,158,11,0.05));color:var(--clr-accent);font-weight:600;box-shadow:inset 3px 0 0 var(--clr-accent);}
+    .sidebar.collapsed .sidebar-nav a span:not(.badge){display:none;}
+    .sidebar.collapsed .sidebar-nav a{justify-content:center;padding:12px;}
+    .sidebar-footer{padding:12px;border-top:1px solid var(--clr-border);display:flex;flex-direction:column;gap:8px;}
+    .sidebar-footer .user-mini{display:flex;align-items:center;gap:10px;padding:8px;border-radius:var(--radius-sm);background:var(--clr-surface-2);white-space:nowrap;}
+    .sidebar-footer .user-mini .avatar{width:36px;height:36px;min-width:36px;border-radius:50%;background:linear-gradient(135deg,var(--clr-accent-2),var(--clr-purple));display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:0.85rem;}
+    .sidebar-footer .user-mini .user-info strong{font-size:0.82rem;display:block;color:#f1f5f9;}
+    .sidebar-footer .user-mini .user-info small{font-size:0.7rem;color:var(--clr-muted);}
+    .sidebar.collapsed .user-info,.sidebar.collapsed .sidebar-footer .btn-logout span{display:none;}
+    .sidebar-footer .btn-logout{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;border:1px solid rgba(239,68,68,0.25);background:rgba(239,68,68,0.06);color:#f87171;border-radius:var(--radius-sm);cursor:pointer;font-weight:600;font-size:0.82rem;transition:all var(--transition);font-family:inherit;}
+    .sidebar-footer .btn-logout:hover{background:rgba(239,68,68,0.18);border-color:rgba(239,68,68,0.45);}
+    .main-wrap{flex:1;margin-left:var(--sidebar-w);transition:margin-left var(--transition);min-height:100vh;display:flex;flex-direction:column;}
+    .sidebar.collapsed~.main-wrap{margin-left:var(--sidebar-collapsed);}
+    .topbar{position:sticky;top:0;z-index:50;background:rgba(11,17,32,0.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--clr-border);padding:0 28px;height:var(--header-h);display:flex;align-items:center;justify-content:space-between;gap:16px;}
+    .topbar-left{display:flex;align-items:center;gap:14px;}
+    .btn-sidebar-toggle{width:36px;height:36px;border-radius:var(--radius-sm);background:var(--clr-surface-2);border:1px solid var(--clr-border-strong);color:var(--clr-muted);cursor:pointer;font-size:1.1rem;display:flex;align-items:center;justify-content:center;transition:all var(--transition);}
+    .btn-sidebar-toggle:hover{color:#f1f5f9;border-color:rgba(255,255,255,0.2);}
+    .topbar-left .page-title{font-size:1.15rem;font-weight:700;color:#f1f5f9;}
+    .topbar-right{display:flex;align-items:center;gap:12px;}
+    .btn-icon{width:38px;height:38px;border-radius:50%;background:var(--clr-surface-2);border:1px solid var(--clr-border-strong);color:var(--clr-muted);cursor:pointer;font-size:1rem;display:flex;align-items:center;justify-content:center;transition:all var(--transition);}
+    .btn-icon:hover{color:#f1f5f9;background:rgba(255,255,255,0.06);}
+    .page-content{padding:24px 28px 40px 28px;flex:1;}
+    .panel{background:var(--clr-surface);border:1px solid var(--clr-border);border-radius:var(--radius-lg);padding:24px;margin-bottom:24px;}
+    .panel-header{margin-bottom:20px;border-bottom:1px solid var(--clr-border);padding-bottom:16px;}
+    .panel-header h3{font-size:1.2rem;font-weight:700;color:var(--clr-accent);display:flex;align-items:center;gap:10px;}
+    
+    /* Upload specific styles */
+    .upload-zone {
+      border: 2px dashed var(--clr-border-strong);
+      border-radius: var(--radius-md);
+      padding: 40px 20px;
+      text-align: center;
+      background: var(--clr-surface-2);
+      cursor: pointer;
+      transition: all var(--transition);
+      margin-bottom: 20px;
+    }
+    
+    .upload-zone:hover, .upload-zone.dragover {
+      border-color: var(--clr-accent);
+      background: rgba(245,158,11,0.05);
+    }
+    
+    .upload-zone i {
+      font-size: 3rem;
+      color: var(--clr-muted);
+      margin-bottom: 15px;
+      transition: color var(--transition);
+    }
+    
+    .upload-zone:hover i, .upload-zone.dragover i {
+      color: var(--clr-accent);
+    }
+    
+    .upload-zone p {
+      color: #e2e8f0;
+      font-size: 1.1rem;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    
+    .upload-zone span {
+      color: var(--clr-muted);
+      font-size: 0.85rem;
+    }
+
+    .file-input-hidden {
+      display: none;
+    }
+    
+    .instructions-card {
+      background: rgba(59,130,246,0.08);
+      border: 1px solid rgba(59,130,246,0.2);
+      border-radius: var(--radius-sm);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    
+    .instructions-card h4 {
+      color: #60a5fa;
+      margin-bottom: 10px;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .instructions-card ul {
+      margin-left: 20px;
+      color: #cbd5e1;
+      font-size: 0.85rem;
+      line-height: 1.6;
+    }
+    
+    .instructions-card li { margin-bottom: 4px; }
+    
+    .btn {
+      padding: 10px 20px;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.9rem;
+      font-family: inherit;
+      transition: all var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .btn-download {
+      background: rgba(255,255,255,0.1);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .btn-download:hover { background: rgba(255,255,255,0.15); }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--clr-accent), #f97316);
+      color: #000;
+      font-weight: 700;
+    }
+    .btn-primary:hover { filter: brightness(1.1); }
+    
+    .btn-primary:disabled {
+      background: var(--clr-surface-2);
+      color: var(--clr-muted);
+      cursor: not-allowed;
+      border: 1px solid var(--clr-border);
+    }
+    
+    /* Results Table */
+    .results-container {
+      margin-top: 24px;
+      display: none;
+    }
+    
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+    
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--clr-border);
+      font-size: 0.85rem;
+    }
+    
+    th {
+      background: var(--clr-surface-2);
+      color: var(--clr-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    
+    tr.error-row { background: rgba(239,68,68,0.05); }
+    
+    .status-badge {
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      display: inline-block;
+    }
+    
+    .status-valid { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+    .status-error { background: rgba(239,68,68,0.15); color: #f87171; border: 1px solid rgba(239,68,68,0.3); }
+
+    /* Light Theme Overrides */
+    body.light-theme{--clr-bg:#f1f5f9;--clr-surface:#ffffff;--clr-surface-2:#f8fafc;--clr-border:rgba(0,0,0,0.06);--clr-border-strong:rgba(0,0,0,0.10);--clr-text:#0f172a;--clr-muted:#64748b;}
+    body.light-theme .topbar{background:rgba(255,255,255,0.85);border-bottom:1px solid #e2e8f0;}
+    body.light-theme .sidebar{background:#fff;border-right:1px solid #e2e8f0;}
+    body.light-theme .sidebar-nav a{color:#475569;}
+    body.light-theme .sidebar-nav a:hover{background:#f1f5f9;}
+    body.light-theme .sidebar-nav a.active{color:#b45309;background:#fffbeb;box-shadow:inset 3px 0 0 #f59e0b;}
+    body.light-theme .sidebar-footer .user-mini{background:#f1f5f9;}
+    body.light-theme .panel{background:#fff;border-color:#e2e8f0;}
+    body.light-theme .upload-zone{background:#f8fafc;border-color:#cbd5e1;}
+    body.light-theme .upload-zone p{color:#0f172a;}
+    body.light-theme .instructions-card{background:#eff6ff;border-color:#bfdbfe;}
+    body.light-theme .instructions-card h4{color:#1d4ed8;}
+    body.light-theme .instructions-card ul{color:#334155;}
+    body.light-theme th{background:#f1f5f9;color:#475569;}
+    body.light-theme td{color:#334155;}
+    body.light-theme .btn-download{background:#fff;color:#0f172a;border-color:#cbd5e1;}
+    body.light-theme .btn-download:hover{background:#f1f5f9;}
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
+        <div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div>
+      </div>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main Menu</div>
+        <a href="dashboard.html"><i class="fa-solid fa-grid-2"></i> <span>Dashboard</span></a>
+        
+        <div class="nav-section">Buses & Drivers</div>
+        <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
+        <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
+        <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
+        <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
+        
+        <div class="nav-section">Students</div>
+        <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
+        <a href="bulk_upload.html" class="active"><i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-mini"><div class="avatar"><i class="fa-solid fa-user-shield"></i></div><div class="user-info"><strong id="sidebarUserName">Admin</strong><small id="sidebarUserRole">Super Admin</small></div></div>
+        <button class="btn-logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></button>
+      </div>
+    </aside>
+    
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
+    
+    <div class="main-wrap">
+      <header class="topbar">
+        <div class="topbar-left"><button class="btn-sidebar-toggle" id="btnSidebarToggle"><i class="fa-solid fa-bars"></i></button><span class="page-title">Bulk Upload Students</span></div>
+        <div class="topbar-right"><button class="btn-icon" id="btnThemeToggle"><i class="fa-solid fa-moon"></i></button></div>
+      </header>
+      
+      <div class="page-content">
+        <div class="panel">
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-file-excel"></i> Upload Student Data (Excel)</h3>
+          </div>
+          
+          <div class="instructions-card">
+            <h4><i class="fa-solid fa-circle-info"></i> Instructions</h4>
+            <ul>
+              <li>Download the template file to ensure your data matches the required format.</li>
+              <li>Required columns: <strong>Name, Roll No, Email</strong>.</li>
+              <li>Do not remove or rename the header row in the template.</li>
+              <li>Duplicate roll numbers or emails will be flagged as errors.</li>
+              <li>Upload only <strong>.xlsx</strong> files.</li>
+            </ul>
+            <div style="margin-top:12px;">
+              <button onclick="downloadBulkTemplate()" class="btn btn-download"><i class="fa-solid fa-download"></i> Download Template</button>
+            </div>
+          </div>
+          
+          <div class="upload-zone" id="uploadZone">
+            <i class="fa-solid fa-cloud-arrow-up"></i>
+            <p>Drag and drop your Excel file here</p>
+            <span>OR click to browse files</span>
+            <input type="file" id="fileInput" class="file-input-hidden" accept=".xlsx, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+          </div>
+          
+          <div id="fileInfo" style="display:none; margin-bottom:20px; align-items:center; justify-content:space-between; padding:15px; background:var(--clr-surface-2); border-radius:var(--radius-sm); border:1px solid var(--clr-border);">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <i class="fa-solid fa-file-excel" style="font-size:1.8rem; color:#10b981;"></i>
+              <div>
+                <strong style="display:block; color:#f1f5f9; font-size:0.95rem;" id="fileName">data.xlsx</strong>
+                <span style="color:var(--clr-muted); font-size:0.75rem;" id="fileSize">15 KB</span>
+              </div>
+            </div>
+            <div style="display:flex; gap:10px;">
+              <button onclick="clearFile()" class="btn btn-download" style="padding:6px 12px; font-size:0.8rem;"><i class="fa-solid fa-xmark"></i> Remove</button>
+              <button onclick="previewUpload()" id="btnPreview" class="btn btn-primary" style="padding:6px 16px; font-size:0.8rem;"><i class="fa-solid fa-eye"></i> Preview</button>
+            </div>
+          </div>
+          
+          <!-- Results Section -->
+          <div class="results-container" id="resultsContainer">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; padding-bottom:15px; border-bottom:1px solid var(--clr-border);">
+              <h4 style="color:var(--clr-accent); font-size:1.1rem; display:flex; align-items:center; gap:8px;"><i class="fa-solid fa-list-check"></i> Validation Results</h4>
+              <div style="display:flex; gap:15px; font-size:0.85rem;">
+                <span style="color:#34d399;" id="validCountSpan"><i class="fa-solid fa-check-circle"></i> 0 Valid</span>
+                <span style="color:#f87171;" id="errorCountSpan"><i class="fa-solid fa-circle-exclamation"></i> 0 Errors</span>
+              </div>
+            </div>
+            
+            <div id="uploadAlert" style="display:none; padding:12px 15px; border-radius:var(--radius-sm); margin-bottom:15px; font-size:0.85rem; font-weight:500;"></div>
+            
+            <div style="max-height:400px; overflow-y:auto; margin-bottom:20px; border-radius:var(--radius-sm); border:1px solid var(--clr-border);">
+              <table id="previewTable">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Row</th>
+                    <th>Name</th>
+                    <th>Roll No</th>
+                    <th>Email</th>
+                    <th>Dept/Yr</th>
+                    <th>Details / Errors</th>
+                  </tr>
+                </thead>
+                <tbody id="previewBody">
+                  <!-- JS will populate this -->
+                </tbody>
+              </table>
+            </div>
+            
+            <div style="display:flex; justify-content:flex-end; gap:15px;">
+              <button onclick="clearFile()" class="btn btn-download">Cancel</button>
+              <button onclick="submitUpload()" id="btnSubmitUpload" class="btn btn-primary" disabled><i class="fa-solid fa-upload"></i> Upload Valid Data</button>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/script.js"></script>
+  <script>
+    // Sidebar logic
+    const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
+    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
+    function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
+    document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
+    const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');
+    if(savedTheme==='light'){document.body.classList.add('light-theme');btnTheme.innerHTML='<i class="fa-solid fa-sun"></i>';}
+    btnTheme.addEventListener('click',()=>{document.body.classList.toggle('light-theme');const il=document.body.classList.contains('light-theme');localStorage.setItem('theme',il?'light':'dark');btnTheme.innerHTML=il?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>';});
+    
+    // Auth Check
+    document.addEventListener('DOMContentLoaded', () => {
+      if (!localStorage.getItem('loggedIn')) window.location.href = '/login.html';
+      const role = localStorage.getItem('adminRole');
+      if (role === 'super_admin') document.getElementById('sidebarUserRole').textContent = 'Super Admin';
+    });
+
+    // File Upload Logic
+    const uploadZone = document.getElementById('uploadZone');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const resultsContainer = document.getElementById('resultsContainer');
+    let currentFile = null;
+
+    uploadZone.addEventListener('click', () => fileInput.click());
+    
+    uploadZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadZone.classList.add('dragover');
+    });
+    
+    uploadZone.addEventListener('dragleave', () => {
+      uploadZone.classList.remove('dragover');
+    });
+    
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) {
+        handleFileSelect(e.dataTransfer.files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files.length) {
+        handleFileSelect(e.target.files[0]);
+      }
+    });
+
+    function handleFileSelect(file) {
+      if (!file.name.endsWith('.xlsx')) {
+        alert('Please select an Excel (.xlsx) file.');
+        return;
+      }
+      currentFile = file;
+      fileName.textContent = file.name;
+      fileSize.textContent = (file.size / 1024).toFixed(2) + ' KB';
+      
+      uploadZone.style.display = 'none';
+      fileInfo.style.display = 'flex';
+      resultsContainer.style.display = 'none';
+    }
+
+    function clearFile() {
+      currentFile = null;
+      fileInput.value = '';
+      uploadZone.style.display = 'block';
+      fileInfo.style.display = 'none';
+      resultsContainer.style.display = 'none';
+    }
+
+    function downloadBulkTemplate() {
+      window.location.href = '/api/students/bulk-upload/template';
+    }
+
+    // Call API helper (from script.js) but override for FormData
+    async function uploadFormData(url, formData) {
+      const token = localStorage.getItem('authToken');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: headers,
+        body: formData
+      });
+      if (res.status === 401 || res.status === 403) {
+        localStorage.clear();
+        window.location.href = '/login.html';
+        return;
+      }
+      return res.json();
+    }
+
+    async function previewUpload() {
+      if (!currentFile) return;
+      
+      const btn = document.getElementById('btnPreview');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+      btn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('file', currentFile);
+      
+      try {
+        const res = await uploadFormData('/api/students/bulk-upload/preview', formData);
+        
+        btn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
+        btn.disabled = false;
+        
+        if (res.success) {
+          resultsContainer.style.display = 'block';
+          
+          document.getElementById('validCountSpan').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${res.summary.validRows} Valid`;
+          document.getElementById('errorCountSpan').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${res.summary.errorRows} Errors`;
+          
+          const alertEl = document.getElementById('uploadAlert');
+          alertEl.style.display = 'block';
+          if (res.summary.errorRows === 0) {
+            alertEl.style.backgroundColor = 'rgba(16,185,129,0.15)';
+            alertEl.style.color = '#34d399';
+            alertEl.style.border = '1px solid rgba(16,185,129,0.3)';
+            alertEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> All ${res.summary.totalRows} rows are valid. You can proceed with the upload.`;
+            document.getElementById('btnSubmitUpload').disabled = false;
+          } else if (res.summary.validRows > 0) {
+            alertEl.style.backgroundColor = 'rgba(245,158,11,0.15)';
+            alertEl.style.color = '#fbbf24';
+            alertEl.style.border = '1px solid rgba(245,158,11,0.3)';
+            alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Found ${res.summary.errorRows} errors. You can upload the ${res.summary.validRows} valid rows, but errors will be skipped.`;
+            document.getElementById('btnSubmitUpload').disabled = false;
+          } else {
+            alertEl.style.backgroundColor = 'rgba(239,68,68,0.15)';
+            alertEl.style.color = '#f87171';
+            alertEl.style.border = '1px solid rgba(239,68,68,0.3)';
+            alertEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> No valid rows found. Please fix the errors in your Excel file and try again.`;
+            document.getElementById('btnSubmitUpload').disabled = true;
+          }
+          
+          const tbody = document.getElementById('previewBody');
+          tbody.innerHTML = res.data.map(row => {
+            const isError = !row.isValid;
+            const statusBadge = isError 
+              ? '<span class="status-badge status-error">Error</span>' 
+              : '<span class="status-badge status-valid">Valid</span>';
+              
+            const detailsHtml = isError
+              ? `<span style="color:#f87171; font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${row.errors.join(', ')}</span>`
+              : `<span style="color:var(--clr-muted); font-size:0.75rem;">Ready to upload</span>`;
+              
+            return `
+              <tr class="${isError ? 'error-row' : ''}">
+                <td>${statusBadge}</td>
+                <td>${row.row}</td>
+                <td style="font-weight:600; color:#f1f5f9;">${row.name || '-'}</td>
+                <td>${row.roll_no || '-'}</td>
+                <td>${row.email || '-'}</td>
+                <td>${row.department || '-'} / ${row.course_year || '-'}</td>
+                <td>${detailsHtml}</td>
+              </tr>
+            `;
+          }).join('');
+          
+        } else {
+          alert('Preview failed: ' + (res.message || 'Unknown error'));
+          resultsContainer.style.display = 'none';
+        }
+        
+      } catch (e) {
+        btn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
+        btn.disabled = false;
+        alert('Error parsing Excel file. Ensure it is a valid .xlsx format.');
+      }
+    }
+
+    async function submitUpload() {
+      if (!currentFile) return;
+      
+      const btn = document.getElementById('btnSubmitUpload');
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+      btn.disabled = true;
+      
+      const formData = new FormData();
+      formData.append('file', currentFile);
+      
+      try {
+        const res = await uploadFormData('/api/students/bulk-upload/upload', formData);
+        
+        if (res.success) {
+          alert(`✅ Success!\n${res.summary.inserted} students added successfully.\n${res.summary.skipped} rows skipped due to errors.`);
+          clearFile();
+        } else {
+          btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
+          btn.disabled = false;
+          alert('Upload failed: ' + (res.message || 'Unknown error'));
+        }
+      } catch (e) {
+        btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
+        btn.disabled = false;
+        alert('Upload process failed. Please check server logs.');
+      }
+    }
+  </script>
+</body>
+</html>
