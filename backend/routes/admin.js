@@ -154,12 +154,25 @@ router.get('/setup', async (req, res) => {
     }
     
     const hashedPassword = await bcrypt.hash('SuperAdmin@2024', 12);
-    await db.promise.query(
-      'INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)',
-      ['superadmin', hashedPassword, 'ravikurane12@gmail.com', 'super_admin']
-    );
     
-    res.json({ success: true, message: 'Super admin created successfully! You can now log in.' });
+    // Check if the email is already in use by a regular admin
+    const [existing] = await db.promise.query('SELECT * FROM admins WHERE email = ?', ['ravikurane12@gmail.com']);
+    
+    if (existing.length > 0) {
+      // Upgrade existing admin to super admin
+      await db.promise.query(
+        'UPDATE admins SET username = ?, password = ?, role = ? WHERE email = ?',
+        ['superadmin', hashedPassword, 'super_admin', 'ravikurane12@gmail.com']
+      );
+      return res.json({ success: true, message: 'Existing admin upgraded to Super Admin! You can now log in.' });
+    } else {
+      // Insert new super admin
+      await db.promise.query(
+        'INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)',
+        ['superadmin', hashedPassword, 'ravikurane12@gmail.com', 'super_admin']
+      );
+      return res.json({ success: true, message: 'Super admin created successfully! You can now log in.' });
+    }
   } catch (error) {
     console.error('Setup error:', error);
     res.status(500).json({ success: false, message: 'Failed to create super admin: ' + error.message });
