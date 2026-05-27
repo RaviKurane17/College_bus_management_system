@@ -489,22 +489,22 @@
         if (res.success) {
           resultsContainer.style.display = 'block';
           
-          document.getElementById('validCountSpan').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${res.summary.validRows} Valid`;
-          document.getElementById('errorCountSpan').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${res.summary.errorRows} Errors`;
+          document.getElementById('validCountSpan').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${res.validCount} Valid`;
+          document.getElementById('errorCountSpan').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${res.invalidCount} Errors`;
           
           const alertEl = document.getElementById('uploadAlert');
           alertEl.style.display = 'block';
-          if (res.summary.errorRows === 0) {
+          if (res.invalidCount === 0) {
             alertEl.style.backgroundColor = 'rgba(16,185,129,0.15)';
             alertEl.style.color = '#34d399';
             alertEl.style.border = '1px solid rgba(16,185,129,0.3)';
-            alertEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> All ${res.summary.totalRows} rows are valid. You can proceed with the upload.`;
+            alertEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> All ${res.totalRows} rows are valid. You can proceed with the upload.`;
             document.getElementById('btnSubmitUpload').disabled = false;
-          } else if (res.summary.validRows > 0) {
+          } else if (res.validCount > 0) {
             alertEl.style.backgroundColor = 'rgba(245,158,11,0.15)';
             alertEl.style.color = '#fbbf24';
             alertEl.style.border = '1px solid rgba(245,158,11,0.3)';
-            alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Found ${res.summary.errorRows} errors. You can upload the ${res.summary.validRows} valid rows, but errors will be skipped.`;
+            alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Found ${res.invalidCount} errors. You can upload the ${res.validCount} valid rows, but errors will be skipped.`;
             document.getElementById('btnSubmitUpload').disabled = false;
           } else {
             alertEl.style.backgroundColor = 'rgba(239,68,68,0.15)';
@@ -515,8 +515,8 @@
           }
           
           const tbody = document.getElementById('previewBody');
-          tbody.innerHTML = res.data.map(row => {
-            const isError = !row.isValid;
+          tbody.innerHTML = res.rows.map(row => {
+            const isError = !row.valid;
             const statusBadge = isError 
               ? '<span class="status-badge status-error">Error</span>' 
               : '<span class="status-badge status-valid">Valid</span>';
@@ -562,7 +562,7 @@
         const res = await uploadJsonData('/api/students/bulk-upload/upload', { fileData });
         
         if (res.success) {
-          alert(`✅ Success!\n${res.summary.inserted} students added successfully.\n${res.summary.skipped} rows skipped due to errors.`);
+          alert(`✅ Success!\n${res.successCount} students added successfully.\n${res.failCount} rows skipped due to errors.`);
           clearFile();
         } else {
           btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
