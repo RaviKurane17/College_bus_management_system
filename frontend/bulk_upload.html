@@ -546,7 +546,7 @@
       } catch (e) {
         btn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
         btn.disabled = false;
-        alert('Error parsing Excel file. Ensure it is a valid .xlsx format.');
+        alert('Error details: ' + e.message + '\n' + e.stack);
       }
     }
 
@@ -572,7 +572,7 @@
       } catch (e) {
         btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
         btn.disabled = false;
-        alert('Upload process failed. Please check server logs.');
+        alert('Upload process failed. Details: ' + e.message);
       }
     }
   </script>
