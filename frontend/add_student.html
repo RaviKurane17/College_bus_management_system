@@ -127,46 +127,25 @@
             <label>Student Name *</label>
             <input type="text" id="name" placeholder="Required" required pattern="[A-Za-z\s]+" title="Only letters and spaces">
             <div class="form-row">
-              <div><label>Department</label>
-                <select id="department">
-                  <option value="">-- Select Dept --</option>
-                  <optgroup label="Degree"><option value="Degree - CSE">Computer Science (CSE)</option><option value="Degree - AIML">AI & ML (AIML)</option><option value="Degree - CIVIL">Civil</option><option value="Degree - MECH">Mechanical</option><option value="Degree - ELECTRICAL">Electrical</option><option value="Degree - ECE">Electronics (ECE)</option><option value="Degree - MBA">MBA</option><option value="Degree - BFA">BFA</option></optgroup>
-                  <optgroup label="Polytechnic"><option value="Poly - CSE">Computer Science (CSE)</option><option value="Poly - CIVIL">Civil</option><option value="Poly - MECH">Mechanical</option><option value="Poly - ELECTRICAL">Electrical</option></optgroup>
-                  <optgroup label="Junior College (PUC)">
-                    <option value="PUC - Science">Science</option>
-                    <option value="PUC - Commerce">Commerce</option>
-                    <option value="PUC - Arts">Arts</option>
-                  </optgroup>
-                  <optgroup label="School">
-                    <option value="School - Primary">Primary</option>
-                    <option value="School - Secondary">Secondary</option>
-                    <option value="School - High School">High School</option>
-                  </optgroup>
+              <div><label>Institution Type</label>
+                <select id="institution" onchange="updateDynamicDropdowns()">
+                  <option value="">-- Select Institution --</option>
+                  <option value="Degree">College Degree</option>
+                  <option value="Polytechnic">Polytechnic</option>
+                  <option value="PUC">Junior College (PUC)</option>
+                  <option value="School">School</option>
                 </select>
               </div>
-              <div><label>Course / Year</label>
+              <div><label>Department / Stream</label>
+                <select id="department">
+                  <option value="">-- Select Dept --</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div><label>Course / Year / Standard</label>
                 <select id="course_year">
                   <option value="">-- Select Year --</option>
-                  <optgroup label="College / Degree">
-                    <option value="1st Year">1st Year</option>
-                    <option value="2nd Year">2nd Year</option>
-                    <option value="3rd Year">3rd Year</option>
-                    <option value="4th Year">4th Year</option>
-                  </optgroup>
-                  <optgroup label="School / PUC">
-                    <option value="1st Std">1st Std</option>
-                    <option value="2nd Std">2nd Std</option>
-                    <option value="3rd Std">3rd Std</option>
-                    <option value="4th Std">4th Std</option>
-                    <option value="5th Std">5th Std</option>
-                    <option value="6th Std">6th Std</option>
-                    <option value="7th Std">7th Std</option>
-                    <option value="8th Std">8th Std</option>
-                    <option value="9th Std">9th Std</option>
-                    <option value="10th Std">10th Std</option>
-                    <option value="11th Std">11th Std (PUC 1)</option>
-                    <option value="12th Std">12th Std (PUC 2)</option>
-                  </optgroup>
                 </select>
               </div>
             </div>
@@ -207,6 +186,44 @@
   </div>
   <script src="js/script.js"></script>
   <script>
+    const categoryData = {
+      "Degree": {
+        depts: ["Degree - CSE|Computer Science (CSE)", "Degree - AIML|AI & ML (AIML)", "Degree - CIVIL|Civil", "Degree - MECH|Mechanical", "Degree - ELECTRICAL|Electrical", "Degree - ECE|Electronics (ECE)", "Degree - MBA|MBA", "Degree - BFA|BFA"],
+        years: ["1st Year", "2nd Year", "3rd Year", "4th Year"]
+      },
+      "Polytechnic": {
+        depts: ["Poly - CSE|Computer Science (CSE)", "Poly - CIVIL|Civil", "Poly - MECH|Mechanical", "Poly - ELECTRICAL|Electrical"],
+        years: ["1st Year", "2nd Year", "3rd Year"]
+      },
+      "PUC": {
+        depts: ["PUC - Science|Science", "PUC - Commerce|Commerce", "PUC - Arts|Arts"],
+        years: ["11th Std (PUC 1)", "12th Std (PUC 2)"]
+      },
+      "School": {
+        depts: ["School - Primary|Primary", "School - Secondary|Secondary", "School - High School|High School"],
+        years: ["1st Std", "2nd Std", "3rd Std", "4th Std", "5th Std", "6th Std", "7th Std", "8th Std", "9th Std", "10th Std"]
+      }
+    };
+
+    function updateDynamicDropdowns() {
+      const inst = document.getElementById('institution').value;
+      const deptSelect = document.getElementById('department');
+      const yearSelect = document.getElementById('course_year');
+      
+      deptSelect.innerHTML = '<option value="">-- Select Dept --</option>';
+      yearSelect.innerHTML = '<option value="">-- Select Year --</option>';
+      
+      if (inst && categoryData[inst]) {
+        categoryData[inst].depts.forEach(d => {
+          const parts = d.split('|');
+          deptSelect.innerHTML += `<option value="${parts[0]}">${parts[1]}</option>`;
+        });
+        categoryData[inst].years.forEach(y => {
+          yearSelect.innerHTML += `<option value="${y.split(' (')[0]}">${y}</option>`;
+        });
+      }
+    }
+
     function calcRemaining(){const t=parseFloat(document.getElementById('total_fees').value)||0,p=parseFloat(document.getElementById('fees_paid').value)||0,r=t-p;document.getElementById('remaining_fees').value=r>0?r:0;}
     function previewPhoto(i){if(i.files&&i.files[0]){const r=new FileReader();r.onload=function(e){document.getElementById('photoPreview').innerHTML=`<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;">`};r.readAsDataURL(i.files[0]);}}
     async function uploadPhoto(){const p=document.getElementById('photo');if(!p.files||!p.files[0])return null;const f=new FormData();f.append('photo',p.files[0]);try{const r=await fetch('/api/upload/student-photo',{method:'POST',body:f});const d=await r.json();if(d.success){document.getElementById('photo_url').value=d.photo_url;return d.photo_url;}}catch(e){console.error(e);}return null;}
