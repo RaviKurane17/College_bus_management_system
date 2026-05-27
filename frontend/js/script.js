@@ -351,19 +351,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       try {
         // Basic validation
-        if (!email || !password || !name || !roll_no) {
-          smsg.textContent = '❌ Please fill in all required fields (Email, Password, Name, Roll No)';
+        if (!name) {
+          smsg.textContent = '❌ Please fill in Name';
           return;
         }
 
-        // Email check
-        if (!email.includes('@')) {
+        // Email check (only if provided)
+        if (email && !email.includes('@')) {
           smsg.textContent = '❌ Please enter a valid email address';
           return;
         }
 
-        // Validate password length
-        if (password.length < 6) {
+        // Validate password length (only if provided)
+        if (password && password.length < 6) {
           smsg.textContent = '❌ Password must be at least 6 characters long';
           return;
         }
@@ -374,8 +374,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           return;
         }
 
-        // Validate roll number format
-        if (!/^[A-Za-z0-9-]+$/.test(roll_no)) {
+        // Validate roll number format (only if provided)
+        if (roll_no && !/^[A-Za-z0-9-]+$/.test(roll_no)) {
           smsg.textContent = '❌ Roll number can only contain letters, numbers, and hyphens';
           return;
         }
