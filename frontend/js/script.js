@@ -753,9 +753,10 @@ async function loadStudents() {
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
             ${parseFloat(s.remaining_fees || 0) > 0 ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
           </td>
-          <td>
+          <td style="white-space: nowrap;">
             <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
             <button onclick="sendEmailReminder(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-accent-2, var(--accent)),#2563eb);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-envelope"></i> Email</button>
+            <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-trash"></i> Delete</button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -2326,6 +2327,7 @@ async function viewStudentDetails(id) {
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay Fees</button>
             <button onclick="generateBusPass(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-id-card"></i> Bus Pass</button>
+            <button onclick="closeModal(); setTimeout(()=>deleteStudent(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-trash"></i> Delete</button>
           </div>
         </div>
       </div>
