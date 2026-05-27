@@ -1,232 +1,33 @@
 // =========================
 // 💾 Backup & Recovery Routes (Production-Level)
 // Automated database backup and restore with security
+// Modified for Vercel Serverless Architecture using mysqldump npm package
 // =========================
 const express = require('express');
 const router = express.Router();
-const { exec } = require('child_process');
-const path = require('path');
-const fs = require('fs');
 const db = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
+const mysqldump = require('mysqldump');
+const cloudinary = require('cloudinary').v2;
 
-const BACKUP_DIR = process.env.VERCEL 
-  ? '/tmp/backups' 
-  : path.join(__dirname, '../../backups');
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET
+});
 
-// Helper: Ensure backup directory exists safely before operations
-function ensureBackupDir() {
-  try {
-    if (!fs.existsSync(BACKUP_DIR)) {
-      fs.mkdirSync(BACKUP_DIR, { recursive: true });
-    }
-  } catch (err) {
-    console.warn('⚠️ Warning: Failed to create backup directory:', err.message);
-  }
+function uploadSqlToCloudinary(sqlString, filename) {
+  return new Promise((resolve, reject) => {
+    cloudinary.uploader.upload_stream(
+      { resource_type: "raw", public_id: `backups/${filename}`, format: "sql" },
+      (error, result) => {
+        if (error) reject(error);
+        else resolve(result);
+      }
+    ).end(Buffer.from(sqlString, 'utf-8'));
+  });
 }
 
-// Helper: Sanitize filename to prevent path traversal
-function sanitizeFilename(filename) {
-  return path.basename(filename).replace(/[^a-zA-Z0-9._-]/g, '');
-}
-
-// =============================
-// GET /api/backup/create - Create a new backup (Admin only)
-// =============================
-router.get('/create', authenticateAdmin, (req, res) => {
-  ensureBackupDir();
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const filename = `backup-${timestamp}.sql`;
-  const filepath = path.join(BACKUP_DIR, filename);
-
-  // Use environment variables instead of hardcoded credentials
-  const dbUser = process.env.DB_USER || 'root';
-  const dbPass = process.env.DB_PASSWORD || '';
-  const dbName = process.env.DB_NAME || 'college_bus_db';
-  const dbHost = process.env.DB_HOST || 'localhost';
-
-  // Escape shell arguments to prevent injection
-  const command = `mysqldump --host="${dbHost}" --user="${dbUser}" --password="${dbPass}" --single-transaction --routines --triggers "${dbName}"`;
-
-  exec(command, { maxBuffer: 50 * 1024 * 1024 }, (error, stdout, stderr) => {
-    if (error) {
-      console.error(`Backup error: ${error.message}`);
-      
-      // Log failed backup
-      db.query(
-        'INSERT INTO backup_logs (filename, status, created_by, notes) VALUES (?, ?, ?, ?)',
-        [filename, 'failed', req.user.username, error.message],
-        () => {} // fire and forget
-      );
-      
-      return res.status(500).json({
-        success: false,
-        message: 'Backup failed. Make sure mysqldump is installed and accessible.'
-      });
-    }
-
-    // Write the output to file
-    fs.writeFileSync(filepath, stdout, 'utf8');
-    const fileSize = fs.statSync(filepath).size;
-
-    // Log successful backup
-    db.query(
-      'INSERT INTO backup_logs (filename, file_size, status, created_by) VALUES (?, ?, ?, ?)',
-      [filename, fileSize, 'success', req.user.username],
-      () => {} // fire and forget
-    );
-
-    // Enforce retention policy - keep only last N backups
-    enforceRetention();
-
-    res.json({
-      success: true,
-      message: 'Backup created successfully',
-      backup: {
-        filename: filename,
-        size: formatFileSize(fileSize),
-        timestamp: new Date().toISOString()
-      }
-    });
-  });
-});
-
-// =============================
-// GET /api/backup/download/:filename - Download a backup file (Admin only)
-// =============================
-router.get('/download/:filename', authenticateAdmin, (req, res) => {
-  const filename = sanitizeFilename(req.params.filename);
-  const filepath = path.join(BACKUP_DIR, filename);
-
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ success: false, message: 'Backup file not found' });
-  }
-
-  res.download(filepath, filename, (err) => {
-    if (err) {
-      console.error('Download error:', err.message);
-      res.status(500).json({ success: false, message: 'Error downloading backup' });
-    }
-  });
-});
-
-// =============================
-// GET /api/backup/list - List all backups (Admin only)
-// =============================
-router.get('/list', authenticateAdmin, (req, res) => {
-  try {
-    if (!fs.existsSync(BACKUP_DIR)) {
-      return res.json({ success: true, backups: [] });
-    }
-
-    const files = fs.readdirSync(BACKUP_DIR)
-      .filter(f => f.endsWith('.sql'))
-      .map(f => {
-        const stats = fs.statSync(path.join(BACKUP_DIR, f));
-        return {
-          filename: f,
-          size: formatFileSize(stats.size),
-          sizeBytes: stats.size,
-          created: stats.mtime.toISOString()
-        };
-      })
-      .sort((a, b) => new Date(b.created) - new Date(a.created));
-
-    res.json({ success: true, backups: files });
-  } catch (err) {
-    console.error('Error listing backups:', err.message);
-    res.status(500).json({ success: false, message: 'Error listing backups' });
-  }
-});
-
-// =============================
-// POST /api/backup/restore/:filename - Restore from a backup (Admin only)
-// =============================
-router.post('/restore/:filename', authenticateAdmin, (req, res) => {
-  const filename = sanitizeFilename(req.params.filename);
-  const filepath = path.join(BACKUP_DIR, filename);
-
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ success: false, message: 'Backup file not found' });
-  }
-
-  const dbUser = process.env.DB_USER || 'root';
-  const dbPass = process.env.DB_PASSWORD || '';
-  const dbName = process.env.DB_NAME || 'college_bus_db';
-  const dbHost = process.env.DB_HOST || 'localhost';
-
-  // First create a safety backup before restore
-  const safetyTimestamp = new Date().toISOString().replace(/[:.]/g, '-');
-  const safetyFilename = `pre-restore-safety-${safetyTimestamp}.sql`;
-  const safetyFilepath = path.join(BACKUP_DIR, safetyFilename);
-
-  const dumpCommand = `mysqldump --host="${dbHost}" --user="${dbUser}" --password="${dbPass}" --single-transaction "${dbName}"`;
-
-  exec(dumpCommand, { maxBuffer: 50 * 1024 * 1024 }, (dumpError, dumpStdout) => {
-    if (!dumpError) {
-      fs.writeFileSync(safetyFilepath, dumpStdout, 'utf8');
-      console.log(`✅ Safety backup created: ${safetyFilename}`);
-    }
-
-    // Now restore from the selected backup
-    const restoreCommand = `mysql --host="${dbHost}" --user="${dbUser}" --password="${dbPass}" "${dbName}" < "${filepath}"`;
-
-    exec(restoreCommand, { maxBuffer: 50 * 1024 * 1024 }, (error, stdout, stderr) => {
-      if (error) {
-        console.error(`Restore error: ${error.message}`);
-        return res.status(500).json({
-          success: false,
-          message: 'Database restore failed. Your data is safe - a safety backup was created.',
-          safetyBackup: safetyFilename
-        });
-      }
-
-      console.log(`✅ Database restored from: ${filename}`);
-      res.json({
-        success: true,
-        message: `Database restored successfully from ${filename}`,
-        safetyBackup: safetyFilename
-      });
-    });
-  });
-});
-
-// =============================
-// DELETE /api/backup/delete/:filename - Delete a backup (Admin only)
-// =============================
-router.delete('/delete/:filename', authenticateAdmin, (req, res) => {
-  const filename = sanitizeFilename(req.params.filename);
-  const filepath = path.join(BACKUP_DIR, filename);
-
-  if (!fs.existsSync(filepath)) {
-    return res.status(404).json({ success: false, message: 'Backup file not found' });
-  }
-
-  try {
-    fs.unlinkSync(filepath);
-    res.json({ success: true, message: 'Backup deleted successfully' });
-  } catch (err) {
-    console.error('Error deleting backup:', err.message);
-    res.status(500).json({ success: false, message: 'Error deleting backup' });
-  }
-});
-
-// =============================
-// GET /api/backup/logs - Get backup history (Admin only)
-// =============================
-router.get('/logs', authenticateAdmin, (req, res) => {
-  db.query(
-    'SELECT * FROM backup_logs ORDER BY created_at DESC LIMIT 50',
-    (err, results) => {
-      if (err) return res.status(500).json({ success: false, message: 'DB error' });
-      res.json({ success: true, logs: results });
-    }
-  );
-});
-
-// =============================
-// Helper Functions
-// =============================
 function formatFileSize(bytes) {
   if (bytes === 0) return '0 Bytes';
   const k = 1024;
@@ -235,32 +36,136 @@ function formatFileSize(bytes) {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-function enforceRetention() {
-  try {
-    const retentionCount = parseInt(process.env.BACKUP_RETENTION_COUNT) || 10;
-    const files = fs.readdirSync(BACKUP_DIR)
-      .filter(f => f.startsWith('backup-') && f.endsWith('.sql'))
-      .map(f => ({
-        name: f,
-        time: fs.statSync(path.join(BACKUP_DIR, f)).mtime.getTime()
-      }))
-      .sort((a, b) => b.time - a.time);
+// =============================
+// GET /api/backup/create - Create a new backup (Admin only)
+// =============================
+router.get('/create', authenticateAdmin, async (req, res) => {
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const filename = `backup-${timestamp}.sql`;
 
-    // Delete old backups beyond retention count
-    if (files.length > retentionCount) {
-      const toDelete = files.slice(retentionCount);
-      toDelete.forEach(f => {
-        try {
-          fs.unlinkSync(path.join(BACKUP_DIR, f.name));
-          console.log(`🗑️ Old backup deleted (retention policy): ${f.name}`);
-        } catch (err) {
-          console.error(`Error deleting old backup ${f.name}:`, err.message);
-        }
-      });
-    }
-  } catch (err) {
-    console.error('Error enforcing retention policy:', err.message);
+  try {
+    // Generate dump in memory using pure JS package
+    const result = await mysqldump({
+      connection: {
+        host: process.env.DB_HOST || 'localhost',
+        user: process.env.DB_USER || 'root',
+        password: process.env.DB_PASSWORD || '',
+        database: process.env.DB_NAME || 'college_bus_db',
+        port: process.env.DB_PORT || 3306,
+      },
+      dumpToFile: false // Return as string
+    });
+
+    const sqlString = `${result.dump.schema}\n\n${result.dump.data}`;
+    const fileSize = Buffer.byteLength(sqlString, 'utf8');
+
+    // Upload to Cloudinary to persist beyond Vercel ephemeral /tmp
+    const cloudinaryResult = await uploadSqlToCloudinary(sqlString, filename);
+    const downloadUrl = cloudinaryResult.secure_url;
+
+    // Log to Database to populate the Backup Manager list
+    db.query(
+      'INSERT INTO backup_logs (filename, file_size, status, created_by, notes) VALUES (?, ?, ?, ?, ?)',
+      [filename, fileSize, 'success', req.user.username, downloadUrl],
+      () => {} // fire and forget
+    );
+
+    res.json({
+      success: true,
+      message: 'Backup created successfully',
+      backup: {
+        filename: filename,
+        size: formatFileSize(fileSize),
+        url: downloadUrl,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('Backup generation error:', error);
+    db.query(
+      'INSERT INTO backup_logs (filename, status, created_by, notes) VALUES (?, ?, ?, ?)',
+      [filename, 'failed', req.user.username, error.message],
+      () => {}
+    );
+    res.status(500).json({ success: false, message: 'Backup failed: ' + error.message });
   }
-}
+});
+
+// =============================
+// GET /api/backup/list - List all backups (Admin only)
+// =============================
+router.get('/list', authenticateAdmin, (req, res) => {
+  // Read from database instead of local disk for Vercel compatibility
+  db.query('SELECT * FROM backup_logs WHERE status="success" ORDER BY created_at DESC LIMIT 20', (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Failed to fetch backups' });
+    
+    const files = results.map(row => ({
+      filename: row.filename,
+      size: formatFileSize(row.file_size),
+      sizeBytes: row.file_size,
+      created: row.created_at,
+      url: row.notes // Cloudinary URL is stored here
+    }));
+    
+    res.json({ success: true, backups: files });
+  });
+});
+
+// =============================
+// GET /api/backup/download/:filename - Get Backup URL
+// =============================
+router.get('/download/:filename', authenticateAdmin, (req, res) => {
+  const filename = req.params.filename;
+  db.query('SELECT notes FROM backup_logs WHERE filename = ? AND status="success"', [filename], (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Backup not found' });
+    
+    const url = results[0].notes;
+    res.json({ success: true, url: url });
+  });
+});
+
+// =============================
+// POST /api/backup/restore/:filename
+// =============================
+router.post('/restore/:filename', authenticateAdmin, (req, res) => {
+  res.status(400).json({ 
+    success: false, 
+    message: 'Automated restore is disabled on Vercel due to execution time limits. Please download the backup and import it manually via phpMyAdmin or your database host provider.' 
+  });
+});
+
+// =============================
+// DELETE /api/backup/delete/:filename
+// =============================
+router.delete('/delete/:filename', authenticateAdmin, async (req, res) => {
+  const filename = req.params.filename;
+  
+  db.query('SELECT notes FROM backup_logs WHERE filename = ?', [filename], async (err, results) => {
+    if (err || results.length === 0) return res.status(404).json({ success: false, message: 'Backup not found' });
+    
+    // Cloudinary raw resources are deleted using the public_id
+    try {
+      const publicId = `backups/${filename}`;
+      await cloudinary.uploader.destroy(publicId, { resource_type: "raw" });
+      
+      db.query('DELETE FROM backup_logs WHERE filename = ?', [filename]);
+      res.json({ success: true, message: 'Backup deleted successfully' });
+    } catch (error) {
+      console.error('Error deleting from Cloudinary:', error);
+      res.status(500).json({ success: false, message: 'Failed to delete backup from cloud storage' });
+    }
+  });
+});
+
+// =============================
+// GET /api/backup/logs
+// =============================
+router.get('/logs', authenticateAdmin, (req, res) => {
+  db.query('SELECT * FROM backup_logs ORDER BY created_at DESC LIMIT 50', (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'DB error' });
+    res.json({ success: true, logs: results });
+  });
+});
 
 module.exports = router;

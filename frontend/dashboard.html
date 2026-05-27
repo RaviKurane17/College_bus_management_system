@@ -1658,18 +1658,15 @@
 
     function downloadBackup(filename) {
       const token = localStorage.getItem('authToken');
-      const a = document.createElement('a');
-      a.href = `/api/backup/download/${filename}`;
-      // For download with auth, we need to use fetch
       fetch(`/api/backup/download/${filename}`, {
         headers: { 'Authorization': `Bearer ${token}` }
-      }).then(res => res.blob()).then(blob => {
-        const url = URL.createObjectURL(blob);
-        a.href = url;
-        a.download = filename;
-        a.click();
-        URL.revokeObjectURL(url);
-      }).catch(() => alert('Download failed'));
+      }).then(res => res.json()).then(data => {
+        if (data.success && data.url) {
+           window.open(data.url, '_blank');
+        } else {
+           alert(data.message || 'Download failed');
+        }
+      }).catch(() => alert('Download request failed'));
     }
 
     async function restoreBackup(filename) {
