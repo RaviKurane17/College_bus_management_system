@@ -145,14 +145,20 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
     const rows = data.map((row, index) => {
       const errors = [];
       const name = (row['Name'] || '').toString().trim();
-      const roll_no = (row['Roll No'] || '').toString().trim();
-      const email = (row['Email'] || '').toString().trim();
-      const password = (row['Password'] || '').toString().trim();
+      let roll_no = (row['Roll No'] || '').toString().trim();
+      let email = (row['Email'] || '').toString().trim();
+      let password = (row['Password'] || '').toString().trim();
       const department = (row['Department'] || '').toString().trim();
       const course_year = (row['Course Year'] || '').toString().trim();
       const section = (row['Section'] || '').toString().trim();
       const phone = (row['Phone'] || '').toString().trim();
       const address = (row['Address'] || '').toString().trim();
+
+      // Apply defaults for optional fields
+      if (!roll_no) roll_no = 'TEMP-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000) + index;
+      if (!password) password = '123456';
+      if (!email && phone) email = phone;
+      if (!email) email = roll_no;
       const bus_number = (row['Bus Number'] || '').toString().trim();
       const total_fees = parseFloat(row['Total Fees']) || 0;
       const fees_paid = parseFloat(row['Fees Paid']) || 0;
@@ -162,15 +168,6 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       // Required field checks
       if (!name) errors.push('Name is required');
       else if (!/^[A-Za-z\s]+$/.test(name)) errors.push('Name: letters and spaces only');
-      
-      if (!roll_no) errors.push('Roll No is required');
-      else if (!/^[A-Za-z0-9\-]+$/.test(roll_no)) errors.push('Roll No: letters, numbers, hyphens only');
-      
-      if (!email) errors.push('Email is required');
-      else if (!email.includes('@')) errors.push('Invalid email format');
-      
-      if (!password) errors.push('Password is required');
-      else if (password.length < 6) errors.push('Password: minimum 6 characters');
       
       if (!phone) errors.push('Phone is required');
       if (!department) errors.push('Department is required');
@@ -263,14 +260,21 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       const row = data[i];
       const rowNum = i + 2;
       const name = (row['Name'] || '').toString().trim();
-      const roll_no = (row['Roll No'] || '').toString().trim();
-      const email = (row['Email'] || '').toString().trim();
-      const password = (row['Password'] || '').toString().trim();
+      let roll_no = (row['Roll No'] || '').toString().trim();
+      let email = (row['Email'] || '').toString().trim();
+      let password = (row['Password'] || '').toString().trim();
       const department = (row['Department'] || '').toString().trim();
       const course_year = (row['Course Year'] || '').toString().trim();
       const section = (row['Section'] || '').toString().trim();
       const phone = (row['Phone'] || '').toString().trim();
       const address = (row['Address'] || '').toString().trim();
+
+      // Apply defaults for optional fields
+      if (!roll_no) roll_no = 'TEMP-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000) + rowNum;
+      if (!password) password = '123456';
+      if (!email && phone) email = phone;
+      if (!email) email = roll_no;
+
       const bus_number = (row['Bus Number'] || '').toString().trim();
       const total_fees = parseFloat(row['Total Fees']) || 0;
       const fees_paid = parseFloat(row['Fees Paid']) || 0;
@@ -281,9 +285,7 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       // Validation
       const errors = [];
       if (!name || !/^[A-Za-z\s]+$/.test(name)) errors.push('Invalid name');
-      if (!roll_no || !/^[A-Za-z0-9\-]+$/.test(roll_no)) errors.push('Invalid roll no');
-      if (!email || !email.includes('@')) errors.push('Invalid email');
-      if (!password || password.length < 6) errors.push('Password too short');
+      
       if (!phone) errors.push('Phone is required');
       if (!department) errors.push('Department is required');
       if (!address) errors.push('Address is required');

@@ -138,15 +138,15 @@
             </div>
             <div class="form-row">
               <div><label>Section</label><select id="section"><option value="">-- Select --</option><option value="A">Section A</option><option value="B">Section B</option><option value="C">Section C</option></select></div>
-              <div><label>Roll No *</label><input type="text" id="roll_no" placeholder="Required" required pattern="[A-Za-z0-9-]+" title="Letters, numbers, and hyphens"></div>
+              <div><label>Roll No</label><input type="text" id="roll_no" placeholder="Auto-generated if empty" pattern="[A-Za-z0-9-]+" title="Letters, numbers, and hyphens"></div>
             </div>
-            <label>Password *</label>
-            <input type="password" id="password" placeholder="Min 6 characters" required minlength="6">
+            <label>Password</label>
+            <input type="password" id="password" placeholder="Min 6 characters (Defaults to 123456)">
             <label>Address</label>
             <textarea id="address" placeholder="Student address"></textarea>
             <div class="form-row">
-              <div><label>Mobile / WhatsApp</label><input type="tel" id="phone" placeholder="e.g. 9876543210" pattern="[0-9]{10}" title="10 digit number"></div>
-              <div><label>Email *</label><input type="email" id="email" placeholder="student@email.com" required></div>
+              <div><label>Mobile / WhatsApp *</label><input type="tel" id="phone" placeholder="e.g. 9876543210" required pattern="[0-9]{10}" title="10 digit number"></div>
+              <div><label>Email</label><input type="email" id="email" placeholder="Optional"></div>
             </div>
             <label>Student Photo (for Bus Pass)</label>
             <div class="photo-upload">

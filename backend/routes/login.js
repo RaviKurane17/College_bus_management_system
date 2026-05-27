@@ -68,10 +68,10 @@ router.post('/', async (req, res) => {
         }
       );
     } else if (role === 'student') {
-      // Students login with email
+      // Students login with email, phone, or username
       db.query(
-        'SELECT * FROM students WHERE email = ?',
-        [username],
+        'SELECT * FROM students WHERE email = ? OR phone = ? OR username = ?',
+        [username, username, username],
         async (err, results) => {
           if (err) {
             console.error('❌ DB Error (student login):', err.message);

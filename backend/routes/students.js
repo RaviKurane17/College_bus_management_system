@@ -491,21 +491,23 @@ router.get('/profile/:identifier', authenticateAny, (req, res) => {
 // ============================
 router.post('/add-student', authenticateAdmin, async (req, res) => {
   try {
-    const { username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body || {};
+    let { username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body || {};
+
+    // Map email to username if frontend passes email instead of username
+    if (!username && email) username = email;
+
+    // Apply defaults for optional fields
+    if (!roll_no) roll_no = 'TEMP-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000);
+    if (!password) password = '123456';
+    if (!username && phone) username = phone;
+    if (!username) username = roll_no; // Fallback to roll no as username
+    if (!email) email = username + '@noemail.com'; // Fallback to satisfy DB unique email constraint
 
     // Validate required fields
-    if (!username || !password || !name || !roll_no) {
+    if (!name || !phone || !department || !address) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Username, password, name and roll number are required' 
-      });
-    }
-
-    // Validate email format
-    if (!username.includes('@')) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Valid email is required' 
+        message: 'Name, phone, department, and address are required' 
       });
     }
 
@@ -674,6 +676,43 @@ router.post('/login', async (req, res) => {
     const { password: _, reset_token, reset_token_expires, ...studentData } = student;
     res.json({ success: true, student: studentData });
   });
+});
+
+// ============================
+// Change password (protected for students)
+// ============================
+router.post('/change-password', authenticateAny, async (req, res) => {
+  try {
+    const { oldPassword, newPassword } = req.body;
+    const studentId = req.user.id; // from authenticateAny middleware
+
+    if (!oldPassword || !newPassword) {
+      return res.status(400).json({ success: false, message: 'Old and new password required' });
+    }
+
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+    }
+
+    db.query('SELECT password FROM students WHERE id = ?', [studentId], async (err, results) => {
+      if (err) return res.status(500).json({ success: false, message: 'Database error' });
+      if (results.length === 0) return res.status(404).json({ success: false, message: 'Student not found' });
+
+      const isMatch = await bcrypt.compare(oldPassword, results[0].password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Incorrect old password' });
+      }
+
+      const hashedNew = await bcrypt.hash(newPassword, 12);
+      db.query('UPDATE students SET password = ? WHERE id = ?', [hashedNew, studentId], (updateErr) => {
+        if (updateErr) return res.status(500).json({ success: false, message: 'Failed to update password' });
+        res.json({ success: true, message: 'Password updated successfully' });
+      });
+    });
+  } catch (error) {
+    console.error('Password change error:', error.message);
+    res.status(500).json({ success: false, message: 'Server error changing password' });
+  }
 });
 
 module.exports = router;
