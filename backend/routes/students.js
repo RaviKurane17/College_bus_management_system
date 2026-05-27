@@ -6,16 +6,8 @@ const express = require('express');
 const router = express.Router();
 const db = require('../db');
 const bcrypt = require('bcryptjs');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/mailer');
 const { authenticateAdmin, authenticateAny } = require('../middleware/auth');
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 // ============================
 // Reset password (public - rate limited at server level)
@@ -72,11 +64,8 @@ router.post('/reset-password', (req, res) => {
 
         // Send password via email if available (don't return in response for security)
         if (student.email) {
-          const mailOptions = {
-            from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
-            to: student.email,
-            subject: '🔐 Password Reset - SGI Bus Transport',
-            html: `
+          const subject = '🔐 Password Reset - SGI Bus Transport';
+          const htmlContent = `
               <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px;">
                 <h2>Password Reset Successful</h2>
                 <p>Dear ${student.username},</p>
@@ -88,9 +77,8 @@ router.post('/reset-password', (req, res) => {
                 <p>Please login and change your password immediately.</p>
                 <p style="color: #999; font-size: 12px;">- SGI Bus Management System</p>
               </div>
-            `
-          };
-          transporter.sendMail(mailOptions).catch(err =>
+            `;
+          sendEmail(student.email, subject, htmlContent, student.username).catch(err =>
             console.error('Failed to send password reset email:', err.message)
           );
         }
@@ -280,11 +268,8 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
 
         // Async Email Sending
         if (studentObj.email) {
-          const mailOptions = {
-            from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
-            to: studentObj.email,
-            subject: '🧾 Payment Receipt - SGI Bus Transport',
-            html: `
+          const subject = '🧾 Payment Receipt - SGI Bus Transport';
+          const htmlContent = `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #7d3c43; border-radius: 12px; padding: 20px;">
                 <div style="text-align: center; color: #7d3c43; border-bottom: 2px solid #7d3c43; padding-bottom: 10px; margin-bottom: 20px;">
                   <h2 style="margin: 0; font-size: 24px;">SANJEEVAN PUBLIC SCHOOL</h2>
@@ -303,9 +288,8 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
                   This is an auto-generated receipt. Please log in to your dashboard to view or print the detailed version.
                 </div>
               </div>
-            `
-          };
-          transporter.sendMail(mailOptions).catch(err => console.error('Failed to send receipt email:', err.message));
+            `;
+          sendEmail(studentObj.email, subject, htmlContent, studentObj.name).catch(err => console.error('Failed to send receipt email:', err.message));
         }
       });
     });
@@ -356,39 +340,39 @@ router.post('/resend-receipt/:paymentId', authenticateAdmin, (req, res) => {
     const paymentDate = new Date(p.payment_date);
     const receiptNo = p.receipt_number || `REC-${paymentId.toString().padStart(5, '0')}`;
 
-    const mailOptions = {
-      from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
-      to: p.email,
-      subject: `🧾 Payment Receipt ${receiptNo} - SGI Bus Transport`,
-      html: `
+    const subject = \`🧾 Payment Receipt \${receiptNo} - SGI Bus Transport\`;
+    const htmlContent = \`
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 2px solid #7d3c43; border-radius: 12px; padding: 20px;">
           <div style="text-align: center; color: #7d3c43; border-bottom: 2px solid #7d3c43; padding-bottom: 10px; margin-bottom: 20px;">
             <h2 style="margin: 0; font-size: 24px;">SANJEEVANI PUBLIC SCHOOL</h2>
             <h3 style="margin: 5px 0 0;">FEE RECEIPT</h3>
           </div>
           <div style="margin-bottom: 20px; color: #444; line-height: 1.8;">
-            <p><strong>Receipt No:</strong> ${receiptNo}</p>
-            <p><strong>Date:</strong> ${paymentDate.toLocaleDateString('en-GB')}</p>
-            <p><strong>Student Name:</strong> ${p.name}</p>
-            <p><strong>Roll No:</strong> ${p.roll_no}</p>
-            <p><strong>Department:</strong> ${p.department || 'N/A'} | ${p.course_year || ''} ${p.section ? 'Sec ' + p.section : ''}</p>
+            <p><strong>Receipt No:</strong> \${receiptNo}</p>
+            <p><strong>Date:</strong> \${paymentDate.toLocaleDateString('en-GB')}</p>
+            <p><strong>Student Name:</strong> \${p.name}</p>
+            <p><strong>Roll No:</strong> \${p.roll_no}</p>
+            <p><strong>Department:</strong> \${p.department || 'N/A'} | \${p.course_year || ''} \${p.section ? 'Sec ' + p.section : ''}</p>
             <hr style="border-color: #eee;">
-            <p><strong>Amount Paid:</strong> ₹${parseFloat(p.amount).toLocaleString('en-IN')}</p>
-            <p><strong>Payment Mode:</strong> ${p.payment_mode} ${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
-            <p><strong>Total Fees:</strong> ₹${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
-            <p><strong>Total Paid:</strong> ₹${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
-            <p><strong>Remaining Balance:</strong> ₹${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Amount Paid:</strong> ₹\${parseFloat(p.amount).toLocaleString('en-IN')}</p>
+            <p><strong>Payment Mode:</strong> \${p.payment_mode} \${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
+            <p><strong>Total Fees:</strong> ₹\${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Total Paid:</strong> ₹\${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Remaining Balance:</strong> ₹\${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
           </div>
           <div style="font-size: 12px; color: #777; text-align: center; border-top: 1px solid #ccc; padding-top: 10px;">
             This is an auto-generated receipt from SGI Bus Management System.
           </div>
         </div>
-      `
-    };
+      \`;
 
-    transporter.sendMail(mailOptions)
-      .then(() => {
-        res.json({ success: true, message: `Receipt email sent to ${p.email}` });
+    sendEmail(p.email, subject, htmlContent, p.name)
+      .then((success) => {
+        if (success) {
+          res.json({ success: true, message: \`Receipt email sent to \${p.email}\` });
+        } else {
+          res.status(500).json({ success: false, message: 'Failed to send email via Brevo API.' });
+        }
       })
       .catch(err => {
         console.error('Failed to send receipt email:', err.message);

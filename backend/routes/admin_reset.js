@@ -5,17 +5,9 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../db');
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/mailer');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
-
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 // Request password reset (public - rate limited at server level)
 router.post('/request-reset', async (req, res) => {
@@ -53,17 +45,15 @@ router.post('/request-reset', async (req, res) => {
           }
 
           try {
-            await transporter.sendMail({
-              from: `"College Bus System" <${process.env.EMAIL_USER}>`,
-              to: cleanEmail,
-              subject: 'Password Reset Code',
-              html: `
+            const subject = 'Password Reset Code';
+            const htmlContent = `
                 <h1>Password Reset Request</h1>
                 <p>Your password reset code is: <strong>${resetToken}</strong></p>
                 <p>This code will expire in 30 minutes.</p>
                 <p>If you didn't request this reset, please ignore this email.</p>
-              `
-            });
+              `;
+            const success = await sendEmail(cleanEmail, subject, htmlContent);
+            if (!success) throw new Error('Brevo API failed to send email');
             res.json({ success: true, message: 'Reset code sent to your email' });
           } catch (error) {
             console.error('❌ Error sending email:', error.message);

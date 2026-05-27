@@ -4,18 +4,9 @@
 // =========================
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
+const { sendEmail } = require('../utils/mailer');
 const db = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
-
-// Configure email transporter using env variables
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  }
-});
 
 // Get all overdue students (protected)
 router.get('/overdue-students', authenticateAdmin, (req, res) => {
@@ -55,11 +46,8 @@ router.post('/send-email-reminder/:id', authenticateAdmin, (req, res) => {
       return res.status(400).json({ success: false, message: 'Student has no email address registered' });
     }
 
-    const mailOptions = {
-      from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
-      to: student.email,
-      subject: '⚠️ Bus Fee Payment Reminder - SGI Bus Transport',
-      html: `
+    const subject = '⚠️ Bus Fee Payment Reminder - SGI Bus Transport';
+    const htmlContent = `
         <div style="font-family: 'Segoe UI', Tahoma; max-width: 600px; margin: 0 auto; background: #f8fafc; border-radius: 12px; overflow: hidden;">
           <div style="background: linear-gradient(135deg, #0f172a, #1e293b); padding: 30px; text-align: center;">
             <span style="background: #ffb703; color: white; padding: 5px 15px; border-radius: 8px; font-weight: 800; font-size: 20px;">SGI</span>
@@ -82,12 +70,15 @@ router.post('/send-email-reminder/:id', authenticateAdmin, (req, res) => {
             <p style="color: #94a3b8; font-size: 12px; margin-top: 30px;">This is an auto-generated email from SGI Bus Management System. Please do not reply.</p>
           </div>
         </div>
-      `
-    };
+      `;
 
     try {
-      await transporter.sendMail(mailOptions);
-      res.json({ success: true, message: `Reminder email sent to ${student.email}` });
+      const success = await sendEmail(student.email, subject, htmlContent, student.name);
+      if (success) {
+        res.json({ success: true, message: `Reminder email sent to ${student.email}` });
+      } else {
+        throw new Error('Brevo API failed to send email');
+      }
     } catch (error) {
       console.error('Email send error:', error.message);
       res.json({ success: false, message: 'Failed to send email. Check email config.' });
@@ -103,14 +94,11 @@ router.post('/send-bulk-reminders', authenticateAdmin, (req, res) => {
     let sent = 0, failed = 0;
     for (const student of results) {
       try {
-        const mailOptions = {
-          from: `"SGI Bus Transport" <${process.env.EMAIL_USER}>`,
-          to: student.email,
-          subject: '⚠️ Bus Fee Payment Reminder - SGI Bus Transport',
-          html: `<p>Dear ${student.name}, your pending bus fee is ₹${parseFloat(student.remaining_fees || 0).toLocaleString('en-IN')}. Please pay at the earliest.</p><p>- SGI Bus Transport</p>`
-        };
-        await transporter.sendMail(mailOptions);
-        sent++;
+        const subject = '⚠️ Bus Fee Payment Reminder - SGI Bus Transport';
+        const htmlContent = `<p>Dear ${student.name}, your pending bus fee is ₹${parseFloat(student.remaining_fees || 0).toLocaleString('en-IN')}. Please pay at the earliest.</p><p>- SGI Bus Transport</p>`;
+        const success = await sendEmail(student.email, subject, htmlContent, student.name);
+        if (success) sent++;
+        else failed++;
       } catch (e) {
         failed++;
       }
