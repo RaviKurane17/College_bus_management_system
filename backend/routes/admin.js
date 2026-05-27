@@ -143,6 +143,32 @@ router.post('/create', authenticateSuperAdmin, async (req, res) => {
   }
 });
 
+// =========================
+// 🚀 EMERGENCY SETUP ROUTE (For Vercel/Serverless)
+// =========================
+router.get('/setup', async (req, res) => {
+  try {
+    const [admins] = await db.promise.query('SELECT * FROM admins WHERE role = ?', ['super_admin']);
+    if (admins.length > 0) {
+      return res.json({ success: true, message: 'Super admin already exists.' });
+    }
+    
+    const hashedPassword = await bcrypt.hash('SuperAdmin@2024', 12);
+    await db.promise.query(
+      'INSERT INTO admins (username, password, email, role) VALUES (?, ?, ?, ?)',
+      ['superadmin', hashedPassword, 'ravikurane12@gmail.com', 'super_admin']
+    );
+    
+    res.json({ success: true, message: 'Super admin created successfully! You can now log in.' });
+  } catch (error) {
+    console.error('Setup error:', error);
+    res.status(500).json({ success: false, message: 'Failed to create super admin: ' + error.message });
+  }
+});
+
+// =========================
+// 🔐 Auth Middleware
+// ============================
 // ============================
 // SUPER ADMIN: Update admin
 // ============================
