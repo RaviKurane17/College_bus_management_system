@@ -439,7 +439,6 @@
       }
     }
 
-    // Call API helper (from script.js) but override for JSON
     async function uploadJsonData(url, bodyObj) {
       const token = localStorage.getItem('authToken');
       const headers = { 'Content-Type': 'application/json' };
@@ -457,8 +456,7 @@
       }
       return res.json();
     }
-
-    // Helper to read file as base64
+    
     function readFileAsBase64(file) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();

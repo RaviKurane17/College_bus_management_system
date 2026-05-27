@@ -50,9 +50,13 @@ router.post('/student-photo', authenticateAdmin, upload.single('photo'), (req, r
       message: 'Photo uploaded successfully',
       photo_url: req.file.path
     });
-  } catch (error) {
-    console.error('Upload error:', error.message);
-    res.status(500).json({ success: false, message: 'Upload failed' });
+  } catch (err) {
+    console.error('Upload Error:', err);
+    let errorMessage = err.message || 'Unknown error';
+    if (errorMessage.toLowerCase().includes('limit')) {
+      errorMessage = 'Cloud Storage Limit Exceeded on Cloudinary.';
+    }
+    return res.status(500).json({ success: false, message: errorMessage });
   }
 });
 

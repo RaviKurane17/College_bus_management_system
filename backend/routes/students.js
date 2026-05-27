@@ -560,8 +560,13 @@ router.post('/add-student', authenticateAdmin, async (req, res) => {
       });
 
     async function insertStudent() {
-      // Hash password before storing
-      const hashedPassword = await bcrypt.hash(password, 12);
+      if (password && password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
+      }
+
+      // Hash password (use default '123456' if not provided)
+      const plainPassword = password || '123456';
+      const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
       const sql = `INSERT INTO students 
         (username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees, joining_date) 

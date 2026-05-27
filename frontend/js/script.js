@@ -1359,6 +1359,11 @@ async function payFees(id) {
         return;
       }
 
+      const saveBtn = document.getElementById('modalSaveBtn');
+      const originalText = saveBtn.innerHTML;
+      saveBtn.disabled = true;
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+
       try {
         const payRes = await apiFetch(`/api/students/pay/${id}`, {
           method: 'POST',
@@ -1373,9 +1378,13 @@ async function payFees(id) {
           generateReceipt(payRes.student, payRes.payment, payRes.payment_id);
         } else {
           alert(payRes.message || 'Payment failed');
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalText;
         }
       } catch (e) {
         alert('Error processing payment.');
+        saveBtn.disabled = false;
+        saveBtn.innerHTML = originalText;
       }
     });
 
@@ -1908,9 +1917,20 @@ async function generateBusPass(id) {
   }
 }
 
+let isSendingEmail = false;
 // Send email fee reminder
 async function sendEmailReminder(studentId) {
+  if (isSendingEmail) return;
   if (!confirm('Send fee reminder email to this student?')) return;
+  
+  const originalBtn = event && event.target && event.target.closest ? event.target.closest('button') : null;
+  const originalHtml = originalBtn ? originalBtn.innerHTML : '';
+  if (originalBtn) {
+    originalBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+    originalBtn.style.opacity = '0.7';
+  }
+  
+  isSendingEmail = true;
   try {
     const res = await apiFetch(`/api/reminders/send-email-reminder/${studentId}`, { method: 'POST' });
     if (res.success) {
@@ -1921,6 +1941,12 @@ async function sendEmailReminder(studentId) {
   } catch (error) {
     console.error('Error sending reminder:', error);
     alert('Failed to send email reminder. Check email configuration.');
+  } finally {
+    isSendingEmail = false;
+    if (originalBtn) {
+      originalBtn.innerHTML = originalHtml;
+      originalBtn.style.opacity = '1';
+    }
   }
 }
 

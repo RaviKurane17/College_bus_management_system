@@ -124,8 +124,8 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Excel file is empty' });
     }
 
-    if (data.length > 500) {
-      return res.status(400).json({ success: false, message: 'Maximum 500 students per upload' });
+    if (data.length > 2000) {
+      return res.status(400).json({ success: false, message: 'Maximum 2000 students per upload' });
     }
 
     // Fetch existing data for validation
@@ -237,8 +237,8 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Excel file is empty' });
     }
 
-    if (data.length > 500) {
-      return res.status(400).json({ success: false, message: 'Maximum 500 students per upload' });
+    if (data.length > 2000) {
+      return res.status(400).json({ success: false, message: 'Maximum 2000 students per upload' });
     }
 
     const promisePool = db.promise ? db.promise : require('../db').promise;

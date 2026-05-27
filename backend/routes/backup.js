@@ -9,6 +9,7 @@ const db = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
 const mysqldump = require('mysqldump');
 const cloudinary = require('cloudinary').v2;
+const { sendEmail } = require('../utils/mailer');
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -67,7 +68,21 @@ router.get('/create', authenticateAdmin, async (req, res) => {
     db.query(
       'INSERT INTO backup_logs (filename, file_size, status, created_by, notes) VALUES (?, ?, ?, ?, ?)',
       [filename, fileSize, 'success', req.user.username, downloadUrl],
-      () => {} // fire and forget
+      () => {
+        // Send email to admin
+        db.query('SELECT email FROM admins WHERE id = ?', [req.user.id], (err, rows) => {
+          if (!err && rows.length > 0 && rows[0].email) {
+            sendEmail(
+              rows[0].email,
+              `Database Backup Successful - ${filename}`,
+              `<p>A new database backup has been successfully generated.</p>
+               <p><strong>File:</strong> ${filename}</p>
+               <p><strong>Size:</strong> ${formatFileSize(fileSize)}</p>
+               <p><a href="${downloadUrl}" style="padding:10px 15px; background:#10b981; color:white; text-decoration:none; border-radius:5px; display:inline-block; margin-top:10px;">Download Backup</a></p>`
+            ).catch(e => console.error('Failed to send backup email:', e));
+          }
+        });
+      }
     );
 
     res.json({
@@ -83,12 +98,16 @@ router.get('/create', authenticateAdmin, async (req, res) => {
 
   } catch (error) {
     console.error('Backup generation error:', error);
+    let errorMessage = error.message;
+    if (errorMessage && errorMessage.toLowerCase().includes('limit')) {
+      errorMessage = 'Cloud Storage Limit Exceeded on Cloudinary.';
+    }
     db.query(
       'INSERT INTO backup_logs (filename, status, created_by, notes) VALUES (?, ?, ?, ?)',
-      [filename, 'failed', req.user.username, error.message],
+      [filename, 'failed', req.user.username, errorMessage],
       () => {}
     );
-    res.status(500).json({ success: false, message: 'Backup failed: ' + error.message });
+    res.status(500).json({ success: false, message: 'Backup failed: ' + errorMessage });
   }
 });
 
