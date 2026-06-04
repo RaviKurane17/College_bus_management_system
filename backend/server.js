@@ -137,7 +137,7 @@ const frontendPath = path.join(__dirname, '..', 'frontend');
 app.use(express.static(frontendPath));
 
 // Default route (for all non-API routes)
-app.get('*', (req, res) => {
+app.get(/^(.*)$/, (req, res) => {
   res.sendFile(path.join(frontendPath, 'index.html'));
 });
 
