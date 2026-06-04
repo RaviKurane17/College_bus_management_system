@@ -63,10 +63,10 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // 🚦 Rate Limiting
 // =========================
 
-// Global rate limiter: 100 requests per 15 minutes per IP
+// Global rate limiter: 5000 requests per 15 minutes per IP
 const globalLimiter = rateLimit({
   windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000,
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 5000,
   message: {
     success: false,
     message: 'Too many requests from this IP. Please try again after 15 minutes.'
@@ -75,10 +75,10 @@ const globalLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Strict rate limiter for login/auth routes: 5 attempts per 15 minutes
+// Strict rate limiter for login/auth routes: 250 attempts per 15 minutes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX) || 5,
+  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX) || 250,
   message: {
     success: false,
     message: 'Too many login attempts. Account temporarily locked. Try again after 15 minutes.'
@@ -87,10 +87,10 @@ const authLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Moderate rate limiter for API endpoints: 30 requests per minute
+// Moderate rate limiter for API endpoints: 1500 requests per minute
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
-  max: 30,
+  max: 1500,
   message: {
     success: false,
     message: 'API rate limit exceeded. Please slow down.'
