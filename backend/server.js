@@ -75,10 +75,10 @@ const globalLimiter = rateLimit({
   legacyHeaders: false
 });
 
-// Strict rate limiter for login/auth routes: 250 attempts per 15 minutes
+// Strict rate limiter for login/auth routes: 50 attempts per 15 minutes
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: parseInt(process.env.LOGIN_RATE_LIMIT_MAX) || 250,
+  max: 50,
   message: {
     success: false,
     message: 'Too many login attempts. Account temporarily locked. Try again after 15 minutes.'
