@@ -765,6 +765,7 @@ async function loadStudents() {
           <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.route || 'N/A')}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
+          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.concession || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
           <td style="color: ${isOverdue ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${isOverdue ? '700' : '600'};">
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
@@ -805,6 +806,10 @@ async function loadStudents() {
                 <div class="sc-fee-val" style="color:#cbd5e1;">₹${parseFloat(s.total_fees || 0).toLocaleString()}</div>
               </div>
               <div class="sc-fee-box">
+                <div class="sc-fee-label">Conces.</div>
+                <div class="sc-fee-val" style="color:var(--clr-muted);">₹${parseFloat(s.concession || 0).toLocaleString()}</div>
+              </div>
+              <div class="sc-fee-box">
                 <div class="sc-fee-label">Paid</div>
                 <div class="sc-fee-val" style="color:#34d399;">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</div>
               </div>
@@ -827,7 +832,7 @@ async function loadStudents() {
       });
 
       if (filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="no-data">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" class="no-data">No students found</td></tr>';
         if (cardsContainer) cardsContainer.innerHTML = '<p style="text-align:center;padding:20px;color:var(--clr-muted);">No students found</p>';
       }
     } else {
@@ -1669,7 +1674,7 @@ function generateReceipt(student, payment, receiptNo) {
               </div>
               
               <div class="field-row multi">
-                <div>Academic Year: <span class="underline receipt-value">2024-25</span></div>
+                <div>Payment Cycle: <span class="underline receipt-value">${student.payment_cycle || ''}</span></div>
                 <div>Bus No.: <span class="underline receipt-value">${student.bus_number || ''}</span></div>
               </div>
               
@@ -1699,8 +1704,8 @@ function generateReceipt(student, payment, receiptNo) {
                     <td class="receipt-value">${payment.amount} /-</td>
                   </tr>
                   <tr>
-                    <td>Miscellaneous Fee</td>
-                    <td class="receipt-value">-</td>
+                    <td>Concession / Discount</td>
+                    <td class="receipt-value">${parseFloat(student.concession || 0) > 0 ? parseFloat(student.concession).toLocaleString() + ' /-' : '-'}</td>
                   </tr>
                 </tbody>
                 <tfoot>
@@ -1745,7 +1750,7 @@ function generateReceipt(student, payment, receiptNo) {
               <div class="footer-sigs">
                 <div class="note">Note:- Fees Once Paid Will Not Be Refunded.</div>
                 <div class="sig-box">
-                  <span class="receipt-value sig-fake">SGI</span>
+                  <span class="receipt-value sig-fake" style="visibility:hidden;">SGI</span>
                   <div class="sig-line">Signature of the Accountant</div>
                 </div>
               </div>
@@ -1796,7 +1801,7 @@ function generateReceipt(student, payment, receiptNo) {
               </div>
               
               <div class="field-row multi">
-                <div>Academic Year: <span class="underline receipt-value">2024-25</span></div>
+                <div>Payment Cycle: <span class="underline receipt-value">${student.payment_cycle || ''}</span></div>
                 <div>Bus No.: <span class="underline receipt-value">${student.bus_number || ''}</span></div>
               </div>
               
@@ -1826,8 +1831,8 @@ function generateReceipt(student, payment, receiptNo) {
                     <td class="receipt-value">${payment.amount > 0 ? payment.amount + ' /-' : '-'}</td>
                   </tr>
                   <tr>
-                    <td>Miscellaneous Fee</td>
-                    <td class="receipt-value">-</td>
+                    <td>Concession / Discount</td>
+                    <td class="receipt-value">${parseFloat(student.concession || 0) > 0 ? parseFloat(student.concession).toLocaleString() + ' /-' : '-'}</td>
                   </tr>
                 </tbody>
                 <tfoot>
@@ -1872,7 +1877,7 @@ function generateReceipt(student, payment, receiptNo) {
               <div class="footer-sigs">
                 <div class="note">Note:- Fees Once Paid Will Not Be Refunded.</div>
                 <div class="sig-box">
-                  <span class="receipt-value sig-fake">SGI</span>
+                  <span class="receipt-value sig-fake" style="visibility:hidden;">SGI</span>
                   <div class="sig-line">Signature of the Accountant</div>
                 </div>
               </div>

@@ -283,6 +283,8 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
                   <p><strong>Date:</strong> ${paymentDate.toLocaleDateString('en-GB')}</p>
                   <p><strong>Student Name:</strong> ${studentObj.name}</p>
                   <p><strong>Roll No:</strong> ${studentObj.roll_no}</p>
+                  <p><strong>Payment Cycle:</strong> ${studentObj.payment_cycle || ''}</p>
+                  <p><strong>Concession:</strong> ₹${parseFloat(studentObj.concession || 0).toLocaleString('en-IN')}</p>
                   <p><strong>Amount Paid:</strong> ₹${parseFloat(amount).toLocaleString('en-IN')}</p>
                   <p><strong>Payment Mode:</strong> ${payment_mode} ${utr_number ? '(UTR: ' + utr_number + ')' : ''}</p>
                   <p><strong>Remaining Balance:</strong> ₹${parseFloat(studentObj.remaining_fees || 0).toLocaleString('en-IN')}</p>
@@ -323,7 +325,7 @@ router.post('/resend-receipt/:paymentId', authenticateAdmin, (req, res) => {
   }
 
   const sql = `
-    SELECT p.*, s.name, s.roll_no, s.email, s.remaining_fees, s.total_fees, s.fees_paid,
+    SELECT p.*, s.name, s.roll_no, s.email, s.remaining_fees, s.total_fees, s.fees_paid, s.concession, s.payment_cycle,
            s.department, s.course_year, s.section, s.bus_id,
            b.bus_number, b.route
     FROM payments p
@@ -360,6 +362,8 @@ router.post('/resend-receipt/:paymentId', authenticateAdmin, (req, res) => {
             <p><strong>Amount Paid:</strong> ₹${parseFloat(p.amount).toLocaleString('en-IN')}</p>
             <p><strong>Payment Mode:</strong> ${p.payment_mode} ${p.utr_number ? '(UTR: ' + p.utr_number + ')' : ''}</p>
             <p><strong>Total Fees:</strong> ₹${parseFloat(p.total_fees || 0).toLocaleString('en-IN')}</p>
+            <p><strong>Payment Cycle:</strong> ${p.payment_cycle || ''}</p>
+            <p><strong>Concession:</strong> ₹${parseFloat(p.concession || 0).toLocaleString('en-IN')}</p>
             <p><strong>Total Paid:</strong> ₹${parseFloat(p.fees_paid || 0).toLocaleString('en-IN')}</p>
             <p><strong>Remaining Balance:</strong> ₹${parseFloat(p.remaining_fees || 0).toLocaleString('en-IN')}</p>
           </div>

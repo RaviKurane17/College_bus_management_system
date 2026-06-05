@@ -1739,11 +1739,19 @@
     // ===================== SETTINGS MODAL =====================
     async function showSettingsModal() {
       // Fetch current settings
-      let cycle = '';
+      let cycleStart = '';
+      let cycleEnd = '';
       try {
         const res = await apiFetch('/api/settings');
         if (res.success && res.settings && res.settings.payment_cycle) {
           cycle = res.settings.payment_cycle;
+          if (cycle.includes(' to ')) {
+            const parts = cycle.split(' to ');
+            cycleStart = parts[0];
+            cycleEnd = parts[1];
+          } else {
+            cycleStart = cycle;
+          }
         }
       } catch (e) { console.error('Error fetching settings:', e); }
 
@@ -1758,8 +1766,11 @@
             </h3>
             
             <div style="margin-bottom: 20px;">
-              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--clr-muted);">Payment Cycle (e.g., 2024-2025)</label>
-              <input type="text" id="settingPaymentCycle" value="${cycle}" style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#e2e8f0;outline:none;" />
+              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--clr-muted);">Cycle Start Date</label>
+              <input type="date" id="settingPaymentCycleStart" value="${cycleStart}" style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#e2e8f0;outline:none;" />
+              
+              <label style="display:block;margin-top:12px;margin-bottom:8px;font-size:0.85rem;color:var(--clr-muted);">Cycle End Date</label>
+              <input type="date" id="settingPaymentCycleEnd" value="${cycleEnd}" style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#e2e8f0;outline:none;" />
             </div>
 
             <div style="display:flex;justify-content:flex-end;gap:10px;">
@@ -1773,8 +1784,11 @@
     }
 
     async function saveSettings() {
-      const cycle = document.getElementById('settingPaymentCycle').value.trim();
-      if (!cycle) return alert('Payment Cycle is required');
+      const start = document.getElementById('settingPaymentCycleStart').value.trim();
+      const end = document.getElementById('settingPaymentCycleEnd').value.trim();
+      if (!start || !end) return alert('Start and End dates are required');
+      
+      const cycle = `${start} to ${end}`;
       
       try {
         const res = await apiFetch('/api/settings/payment_cycle', {
