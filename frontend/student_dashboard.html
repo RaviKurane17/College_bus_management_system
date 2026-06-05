@@ -1058,7 +1058,8 @@
           const remaining = parseFloat(s.remaining_fees || 0);
           const statusBadge = remaining > 0
             ? '<span class="badge badge-red"><i class="fa-solid fa-clock"></i> Fees Pending</span>'
-            : '<span class="badge badge-green"><i class="fa-solid fa-check"></i> Fees Cleared</span>';
+            : '<span class="badge badge-green"><i class="fa-solid fa-check"></i> Fees Cleared</span>' +
+              ` <button onclick="printNoDuesReceipt(${s.id})" style="padding: 4px 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem; margin-left: 8px;"><i class="fa-solid fa-print"></i> No Dues Certificate</button>`;
 
           studentInfo.innerHTML = `
             <div class="profile-hero">
