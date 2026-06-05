@@ -84,16 +84,59 @@
     body.light-theme table td{color:#334155;border-bottom-color:#e2e8f0;}
     body.light-theme .search-box input,.filter-select{background:#f8fafc;border-color:#cbd5e1;color:#0f172a;}
     body.light-theme .panel-header h3{color:#0f172a;}
+    /* ── Mobile Responsive ── */
     @media(max-width:768px){
       .sidebar{position:fixed;left:-280px;z-index:200;transition:left var(--transition);width:260px;min-width:260px;}
       .sidebar.mobile-open{left:0;}.sidebar.collapsed{left:-280px;}
       .main-wrap{margin-left:0!important;}
-      .page-content{padding:16px;}.topbar{padding:0 16px;}
+      .page-content{padding:12px;}.topbar{padding:0 12px;}
       .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;}
       .sidebar-overlay.show{display:block;}
-      .filter-bar{flex-direction:column;align-items:stretch;}
-      .filter-select{min-width:auto;}
+      .filter-bar{flex-direction:column;align-items:stretch;padding:12px;}
+      .filter-select{min-width:auto;width:100%;}
+      .search-box{min-width:unset;}
+      /* Hide desktop table, show cards */
+      .desktop-table{display:none;}
+      .student-cards{display:flex;flex-direction:column;gap:12px;padding:12px;}
+      /* Panel header buttons stack on small screens */
+      .panel-header{flex-direction:column;align-items:flex-start;gap:10px;}
+      .panel-header>div{flex-wrap:wrap;}
+      .topbar-left .page-title{font-size:1rem;}
     }
+    @media(min-width:769px){
+      /* On desktop, cards are hidden */
+      .student-cards{display:none;}
+      .desktop-table{display:block;}
+    }
+
+    /* ── Student Card (mobile) ── */
+    .student-card{
+      background:var(--clr-surface-2);
+      border:1px solid var(--clr-border-strong);
+      border-radius:var(--radius-md);
+      padding:14px;
+      font-size:0.84rem;
+      position:relative;
+    }
+    .student-card.overdue{border-left:4px solid var(--clr-red);}
+    .student-card .sc-name{font-weight:700;font-size:0.95rem;color:#f1f5f9;margin-bottom:2px;}
+    .student-card .sc-roll{font-size:0.75rem;color:var(--clr-muted);font-family:monospace;margin-bottom:10px;}
+    .student-card .sc-row{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:6px;flex-wrap:wrap;}
+    .student-card .sc-label{color:var(--clr-muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:0.04em;margin-bottom:2px;}
+    .student-card .sc-val{color:#cbd5e1;font-size:0.82rem;}
+    .student-card .sc-dept{display:inline-block;padding:3px 8px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.08);border-radius:5px;font-size:0.74rem;color:#cbd5e1;margin-bottom:8px;}
+    .student-card .sc-fees-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin:10px 0;}
+    .student-card .sc-fee-box{background:rgba(255,255,255,0.04);border-radius:8px;padding:8px 10px;text-align:center;border:1px solid rgba(255,255,255,0.06);}
+    .student-card .sc-fee-box .sc-fee-label{font-size:0.66rem;color:var(--clr-muted);text-transform:uppercase;letter-spacing:0.03em;margin-bottom:3px;}
+    .student-card .sc-fee-box .sc-fee-val{font-weight:700;font-size:0.82rem;}
+    .student-card .sc-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+    .student-card .sc-actions button{flex:1;min-width:80px;padding:8px 10px;border-radius:6px;border:none;font-weight:700;font-size:0.76rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:5px;}
+    body.light-theme .student-card{background:#f8fafc;border-color:#e2e8f0;}
+    body.light-theme .student-card .sc-name{color:#0f172a;}
+    body.light-theme .student-card .sc-val{color:#334155;}
+    body.light-theme .student-card .sc-dept{background:#f1f5f9;border-color:#e2e8f0;color:#334155;}
+    body.light-theme .student-card .sc-fee-box{background:#f1f5f9;border-color:#e2e8f0;}
+    
   </style>
 </head>
 <body>
@@ -192,10 +235,15 @@
       </select>
     </div>
     <div class="panel-body">
-      <table id="studentsTable">
-        <thead><tr><th>Name</th><th>Department</th><th>Bus No</th><th>Route</th><th>Total Fees</th><th>Paid Fees</th><th>Remaining Fees</th><th>Action</th></tr></thead>
-        <tbody></tbody>
-      </table>
+      <!-- Desktop: scrollable table -->
+      <div class="desktop-table" style="overflow-x:auto;">
+        <table id="studentsTable">
+          <thead><tr><th>Name</th><th>Department</th><th>Bus No</th><th>Route</th><th>Total Fees</th><th>Paid Fees</th><th>Remaining Fees</th><th>Action</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <!-- Mobile: card layout -->
+      <div class="student-cards" id="studentCards"></div>
     </div>
   </div>
 </div>

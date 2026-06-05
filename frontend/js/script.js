@@ -710,6 +710,9 @@ async function loadStudents() {
     const tbody = document.querySelector('#studentsTable tbody');
     if (!tbody) return;
     tbody.innerHTML = '';
+    // Also clear mobile cards
+    const cardsContainer = document.getElementById('studentCards');
+    if (cardsContainer) cardsContainer.innerHTML = '';
 
     if (Array.isArray(res)) {
       const searchInput = document.getElementById('searchStudent');
@@ -729,15 +732,15 @@ async function loadStudents() {
       window.currentFilteredStudents = filteredStudents;
 
       filteredStudents.forEach(s => {
+        const isOverdue = parseFloat(s.remaining_fees || 0) > 0;
+
+        // ── Desktop table row ──
         const tr = document.createElement('tr');
-        // Highlight overdue students
-        if (parseFloat(s.remaining_fees || 0) > 0) {
-          tr.style.borderLeft = '3px solid var(--error)';
-        }
+        if (isOverdue) tr.style.borderLeft = '3px solid var(--error)';
         tr.innerHTML = `
           <td>
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-              <i class="fa-solid fa-circle-user" style="color: var(--primary, var(--clr-accent)); font-size: 1.1rem; opacity: 0.8;"></i> 
+              <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.9rem;"></i>
               <div>
                 ${escapeHtml(s.name)}
                 <div style="font-family: monospace; font-size: 0.8rem; color: var(--clr-muted, var(--gray)); margin-top: 2px;">${escapeHtml(s.roll_no)}</div>
@@ -749,9 +752,9 @@ async function loadStudents() {
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.route || 'N/A')}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
-          <td style="color: ${parseFloat(s.remaining_fees || 0) > 0 ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${parseFloat(s.remaining_fees || 0) > 0 ? '700' : '600'};">
+          <td style="color: ${isOverdue ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${isOverdue ? '700' : '600'};">
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
-            ${parseFloat(s.remaining_fees || 0) > 0 ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
+            ${isOverdue ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
           </td>
           <td style="white-space: nowrap;">
             <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
@@ -760,10 +763,58 @@ async function loadStudents() {
           </td>
         `;
         tbody.appendChild(tr);
+
+        // ── Mobile card ──
+        const cardsContainer = document.getElementById('studentCards');
+        if (cardsContainer) {
+          const card = document.createElement('div');
+          card.className = 'student-card' + (isOverdue ? ' overdue' : '');
+          card.innerHTML = `
+            <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="text-decoration:none;">
+              <div class="sc-name">${escapeHtml(s.name)}</div>
+              <div class="sc-roll">${escapeHtml(s.roll_no) || 'No Roll No'}</div>
+            </a>
+            <div class="sc-dept">${escapeHtml(s.department || 'N/A')}</div>
+            <div class="sc-row">
+              <div>
+                <div class="sc-label">Bus No</div>
+                <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.bus_number || 'None')}</div>
+              </div>
+              <div>
+                <div class="sc-label">Route</div>
+                <div class="sc-val" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.route || 'N/A')}</div>
+              </div>
+            </div>
+            <div class="sc-fees-row">
+              <div class="sc-fee-box">
+                <div class="sc-fee-label">Total</div>
+                <div class="sc-fee-val" style="color:#cbd5e1;">₹${parseFloat(s.total_fees || 0).toLocaleString()}</div>
+              </div>
+              <div class="sc-fee-box">
+                <div class="sc-fee-label">Paid</div>
+                <div class="sc-fee-val" style="color:#34d399;">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</div>
+              </div>
+              <div class="sc-fee-box">
+                <div class="sc-fee-label">Due</div>
+                <div class="sc-fee-val" style="color:${isOverdue ? '#f87171' : '#34d399'};">
+                  ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
+                  ${isOverdue ? '<i class="fa-solid fa-triangle-exclamation" style="font-size:0.7rem;margin-left:3px;"></i>' : ''}
+                </div>
+              </div>
+            </div>
+            <div class="sc-actions">
+              <button onclick="payFees(${s.id})" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
+              <button onclick="sendEmailReminder(${s.id})" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;"><i class="fa-solid fa-envelope"></i> Email</button>
+              <button onclick="deleteStudent(${s.id})" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;"><i class="fa-solid fa-trash"></i></button>
+            </div>
+          `;
+          cardsContainer.appendChild(card);
+        }
       });
 
       if (filteredStudents.length === 0) {
         tbody.innerHTML = '<tr><td colspan="8" class="no-data">No students found</td></tr>';
+        if (cardsContainer) cardsContainer.innerHTML = '<p style="text-align:center;padding:20px;color:var(--clr-muted);">No students found</p>';
       }
     } else {
       tbody.innerHTML = '<tr><td colspan="8" class="error">Error loading students</td></tr>';
