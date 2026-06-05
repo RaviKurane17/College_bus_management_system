@@ -1025,6 +1025,15 @@ async function editBus(id) {
   }
 }
 
+// Helper function for edit student modal
+window.calcEditRemaining = function() {
+  const t = parseFloat(document.getElementById('edit_total_fees').value) || 0;
+  const c = parseFloat(document.getElementById('edit_concession').value) || 0;
+  const p = parseFloat(document.getElementById('edit_fees_paid').value) || 0;
+  const r = t - c - p;
+  document.getElementById('edit_remaining_fees').value = r > 0 ? r : 0;
+};
+
 // Edit student function
 async function editStudent(id) {
   try {
@@ -1148,15 +1157,6 @@ async function editStudent(id) {
           <input type="number" id="edit_remaining_fees" value="${s.remaining_fees || 0}" readonly class="modal-input">
         </div>
       </div>
-      <script>
-        window.calcEditRemaining = function() {
-          const t = parseFloat(document.getElementById('edit_total_fees').value) || 0;
-          const c = parseFloat(document.getElementById('edit_concession').value) || 0;
-          const p = parseFloat(document.getElementById('edit_fees_paid').value) || 0;
-          const r = t - c - p;
-          document.getElementById('edit_remaining_fees').value = r > 0 ? r : 0;
-        }
-      </script>
     `;
 
     showModal('Edit Student Data', content, async () => {

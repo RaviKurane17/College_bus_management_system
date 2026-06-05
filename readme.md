@@ -23,5 +23,5 @@ This project helps manage bus routes, student details, driver info, and fees eff
 | **Frontend** | HTML, CSS, JavaScript |
 | **Backend** | Node.js, Express.js |
 | **Database** | MySQL |
-| **Server** | Localhost (XAMPP / MySQL Server) |
+| **Server** | Localhost (XAMPP/MySQL Server) |
 ---
