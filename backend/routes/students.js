@@ -139,7 +139,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid student ID' });
   }
 
-  const { name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body;
+  const { name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, concession, concession_reason, payment_cycle, fees_paid, remaining_fees } = req.body;
 
   if (!name || !roll_no) {
     return res.status(400).json({ success: false, message: 'Name and Roll No are required' });
@@ -159,7 +159,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
     const sql = `UPDATE students SET name = ?, roll_no = ?, department = ?, 
                  course_year = ?, section = ?, address = ?, phone = ?, email = ?, photo_url = ?,
                  pass_valid_from = ?, pass_valid_to = ?,
-                 bus_id = ?, total_fees = ?, fees_paid = ?, remaining_fees = ? WHERE id = ?`;
+                 bus_id = ?, total_fees = ?, concession = ?, concession_reason = ?, payment_cycle = ?, fees_paid = ?, remaining_fees = ? WHERE id = ?`;
     const values = [
       name.toString().trim().substring(0, 150),
       roll_no.toString().trim().substring(0, 50),
@@ -174,6 +174,9 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
       pass_valid_to || null,
       bus_id || null,
       parseFloat(total_fees || 0).toFixed(2),
+      parseFloat(concession || 0).toFixed(2),
+      (concession_reason || '').toString().trim().substring(0, 255),
+      (payment_cycle || '').toString().trim().substring(0, 100),
       parseFloat(fees_paid || 0).toFixed(2),
       parseFloat(remaining_fees || 0).toFixed(2),
       id
@@ -201,7 +204,7 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid student ID' });
   }
 
-  const { amount, payment_mode, utr_number } = req.body;
+  const { amount, payment_mode, utr_number, receipt_url } = req.body;
 
   if (!amount || isNaN(amount) || amount <= 0) {
     return res.status(400).json({ success: false, message: 'Valid amount is required' });
@@ -216,10 +219,10 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
   const dateStr = now.getFullYear().toString() + (now.getMonth()+1).toString().padStart(2,'0') + now.getDate().toString().padStart(2,'0');
   
   // 1b. Insert into payments table with receipt number
-  const insertPaymentSql = `INSERT INTO payments (student_id, amount, payment_mode, utr_number, receipt_number) VALUES (?, ?, ?, ?, ?)`;
+  const insertPaymentSql = `INSERT INTO payments (student_id, amount, payment_mode, utr_number, receipt_number, receipt_url) VALUES (?, ?, ?, ?, ?, ?)`;
   const receiptPrefix = `REC-${dateStr}-`;
   
-  db.query(insertPaymentSql, [student_id, parseFloat(amount).toFixed(2), payment_mode.substring(0, 50), (utr_number || '').substring(0, 100), ''], (err, result) => {
+  db.query(insertPaymentSql, [student_id, parseFloat(amount).toFixed(2), payment_mode.substring(0, 50), (utr_number || '').substring(0, 100), '', receipt_url || null], (err, result) => {
     if (err) {
       console.error('❌ Database error inserting payment:', err.message);
       return res.status(500).json({ success: false, message: 'Error recording payment' });
@@ -234,7 +237,7 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
     // 2. Update student's fees (FIXED: Use single atomic update to avoid race condition)
     const updateFeesSql = `UPDATE students SET 
       fees_paid = fees_paid + ?, 
-      remaining_fees = GREATEST(0, total_fees - (fees_paid + ?)) 
+      remaining_fees = GREATEST(0, total_fees - concession - (fees_paid + ?)) 
       WHERE id = ?`;
     db.query(updateFeesSql, [parseFloat(amount), parseFloat(amount), student_id], (err) => {
       if (err) {
@@ -263,7 +266,7 @@ router.post('/pay/:id', authenticateAdmin, (req, res) => {
           payment_id: payment_id,
           receipt_number: receipt_number,
           student: studentObj,
-          payment: { amount, payment_mode, utr_number, date: paymentDate, receipt_number }
+          payment: { amount, payment_mode, utr_number, receipt_url, date: paymentDate, receipt_number }
         });
 
         // Async Email Sending
@@ -475,7 +478,7 @@ router.get('/profile/:identifier', authenticateAny, (req, res) => {
 // ============================
 router.post('/add-student', authenticateAdmin, async (req, res) => {
   try {
-    let { username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees } = req.body || {};
+    let { username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, concession, concession_reason, payment_cycle, fees_paid, remaining_fees } = req.body || {};
 
     // Map email to username if frontend passes email instead of username
     if (!username && email) username = email;
@@ -569,8 +572,8 @@ router.post('/add-student', authenticateAdmin, async (req, res) => {
       const hashedPassword = await bcrypt.hash(plainPassword, 12);
 
       const sql = `INSERT INTO students 
-        (username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees, joining_date) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())`;
+        (username, password, name, roll_no, department, course_year, section, address, phone, email, photo_url, pass_valid_from, pass_valid_to, bus_id, total_fees, concession, concession_reason, payment_cycle, fees_paid, remaining_fees, joining_date) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())`;
       
       db.query(sql, [
         username.toString().trim().substring(0, 50), 
@@ -588,6 +591,9 @@ router.post('/add-student', authenticateAdmin, async (req, res) => {
         pass_valid_to || null,
         bus_id || null, 
         parseFloat(total_fees || 0).toFixed(2),
+        parseFloat(concession || 0).toFixed(2),
+        (concession_reason || '').toString().trim().substring(0, 255),
+        (payment_cycle || '').toString().trim().substring(0, 100),
         parseFloat(fees_paid || 0).toFixed(2),
         parseFloat(remaining_fees || 0).toFixed(2)
       ], (err, result) => {

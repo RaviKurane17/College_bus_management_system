@@ -571,10 +571,10 @@
     .ac-report .ac-icon { background: rgba(139,92,246,0.15); color: #a78bfa; }
     .ac-report:hover { border-color: rgba(139,92,246,0.35); background: rgba(139,92,246,0.04); }
 
-    /* ---------- PANELS (two-column) ---------- */
+    /* ---------- PANELS ---------- */
     .panels-row {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 20px;
       margin-bottom: 24px;
     }
@@ -1151,6 +1151,13 @@
               <span>View, download & restore</span>
             </div>
           </div>
+          <div class="action-card" onclick="showSettingsModal()" style="cursor:pointer;">
+            <div class="ac-icon" style="background: rgba(16, 185, 129, 0.15); color: #10b981;"><i class="fa-solid fa-gear"></i></div>
+            <div class="ac-info">
+              <strong>Settings</strong>
+              <span>Edit Payment Cycle</span>
+            </div>
+          </div>
         </div>
 
         <!-- Two-column panels: Queries + Recent Activity -->
@@ -1177,6 +1184,16 @@
               <h4><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity</h4>
             </div>
             <div class="panel-body" id="recentActivity">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          
+          <!-- Year-wise Distribution Panel -->
+          <div class="panel">
+            <div class="panel-header">
+              <h4><i class="fa-solid fa-chart-pie"></i> Year-wise Students</h4>
+            </div>
+            <div class="panel-body" id="yearWiseAnalytics">
               <!-- Dynamically populated -->
             </div>
           </div>
@@ -1312,6 +1329,7 @@
                 </div>
               </div>
               <div class="qi-message">${escapeHtml(q.message || '')}</div>
+              ${q.attachment_url ? `<div style="margin-top:8px;"><a href="${q.attachment_url}" target="_blank" style="color:#60a5fa; font-size:0.85rem; text-decoration:none;"><i class="fa-solid fa-paperclip"></i> View Attachment</a></div>` : ''}
               ${replyHtml}
               <div style="margin-top:10px;display:flex;gap:6px;justify-content:flex-end;">
                 <button class="btn-xs btn-xs-reply" onclick="replyToQuery(${q.id})"><i class="fa-solid fa-reply"></i> Reply</button>
@@ -1523,6 +1541,24 @@
             </div>
           `;
 
+          // Populate Year-wise analytics
+          const yearWiseContainer = document.getElementById('yearWiseAnalytics');
+          if (s.yearWiseStudents && s.yearWiseStudents.length > 0) {
+            yearWiseContainer.innerHTML = s.yearWiseStudents.map(y => {
+              const year = y.course_year || 'Unspecified';
+              return `
+                <div class="activity-item" style="justify-content: space-between; align-items: center;">
+                  <div class="activity-info">
+                    <strong>${year}</strong>
+                  </div>
+                  <div style="font-weight: 700; color: var(--clr-accent);">${y.count}</div>
+                </div>
+              `;
+            }).join('');
+          } else {
+            yearWiseContainer.innerHTML = '<div class="empty-state"><p>No data available</p></div>';
+          }
+
           // Load recent activity
           loadRecentActivity();
         }
@@ -1609,18 +1645,20 @@
               <div style="overflow-y:auto;flex:1;">
                 ${emptyState}
                 ${backups.length > 0 ? `
-                  <table style="width:100%;border-collapse:collapse;color:var(--clr-text);font-size:0.85rem;">
-                    <thead>
-                      <tr style="color:var(--clr-muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--clr-border-strong);">
-                        <th style="padding:10px 8px;text-align:left;">#</th>
-                        <th style="padding:10px 8px;text-align:left;">Filename</th>
-                        <th style="padding:10px 8px;text-align:left;">Size</th>
-                        <th style="padding:10px 8px;text-align:left;">Created</th>
-                        <th style="padding:10px 8px;text-align:left;">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>${rows}</tbody>
-                  </table>
+                  <div class="table-responsive">
+                    <table style="width:100%;border-collapse:collapse;color:var(--clr-text);font-size:0.85rem;">
+                      <thead>
+                        <tr style="color:var(--clr-muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid var(--clr-border-strong);">
+                          <th style="padding:10px 8px;text-align:left;">#</th>
+                          <th style="padding:10px 8px;text-align:left;">Filename</th>
+                          <th style="padding:10px 8px;text-align:left;">Size</th>
+                          <th style="padding:10px 8px;text-align:left;">Created</th>
+                          <th style="padding:10px 8px;text-align:left;">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>${rows}</tbody>
+                    </table>
+                  </div>
                 ` : ''}
               </div>
               <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--clr-border);display:flex;justify-content:space-between;align-items:center;">
@@ -1696,6 +1734,63 @@
           alert(`❌ ${res.message}`);
         }
       } catch (e) { alert('Delete failed.'); }
+    }
+
+    // ===================== SETTINGS MODAL =====================
+    async function showSettingsModal() {
+      // Fetch current settings
+      let cycle = '';
+      try {
+        const res = await apiFetch('/api/settings');
+        if (res.success && res.settings && res.settings.payment_cycle) {
+          cycle = res.settings.payment_cycle;
+        }
+      } catch (e) { console.error('Error fetching settings:', e); }
+
+      const existing = document.getElementById('settingsModal');
+      if (existing) existing.remove();
+
+      const modalHtml = `
+        <div id="settingsModal" style="position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;">
+          <div style="background:var(--clr-surface);border:1px solid var(--clr-border-strong);border-radius:var(--radius-lg);padding:28px;width:100%;max-width:400px;box-shadow:var(--shadow-elevated);">
+            <h3 style="color:var(--clr-accent);margin-bottom:20px;display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-gear"></i> System Settings
+            </h3>
+            
+            <div style="margin-bottom: 20px;">
+              <label style="display:block;margin-bottom:8px;font-size:0.85rem;color:var(--clr-muted);">Payment Cycle (e.g., 2024-2025)</label>
+              <input type="text" id="settingPaymentCycle" value="${cycle}" style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#e2e8f0;outline:none;" />
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;gap:10px;">
+              <button onclick="document.getElementById('settingsModal').remove()" style="padding:10px 20px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#cbd5e1;cursor:pointer;">Cancel</button>
+              <button onclick="saveSettings()" style="padding:10px 20px;border-radius:var(--radius-sm);border:none;background:var(--clr-accent);color:#000;font-weight:700;cursor:pointer;">Save Settings</button>
+            </div>
+          </div>
+        </div>
+      `;
+      document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async function saveSettings() {
+      const cycle = document.getElementById('settingPaymentCycle').value.trim();
+      if (!cycle) return alert('Payment Cycle is required');
+      
+      try {
+        const res = await apiFetch('/api/settings/payment_cycle', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ value: cycle })
+        });
+        if (res.success) {
+          alert('Settings saved successfully!');
+          document.getElementById('settingsModal').remove();
+        } else {
+          alert(res.message || 'Failed to save settings');
+        }
+      } catch (e) {
+        alert('Error saving settings.');
+      }
     }
   </script>
 </body>

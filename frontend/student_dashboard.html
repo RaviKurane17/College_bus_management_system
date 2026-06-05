@@ -878,7 +878,11 @@
         <h3><i class="fa-solid fa-paper-plane"></i> Send Query to Admin</h3>
         <input type="text" id="querySubject" class="query-input" placeholder="Subject (e.g. Bus delay, Fee issue, Route change)" maxlength="200">
         <textarea id="queryMessage" class="query-input" rows="4" placeholder="Describe your query or concern in detail..."></textarea>
-        <button class="submit-query-btn" onclick="submitQuery()">
+        <div style="margin-bottom: 15px;">
+          <label class="q-reply-label" style="display:block; margin-bottom: 5px;">Attachment (Optional, max 5MB)</label>
+          <input type="file" id="queryAttachment" class="query-input" accept=".jpg,.jpeg,.png,.pdf" style="padding: 8px;">
+        </div>
+        <button class="submit-query-btn" onclick="submitQuery()" id="submitQueryBtn">
           <i class="fa-solid fa-paper-plane"></i> Submit Query
         </button>
         <div id="queryMsg" style="margin-top:10px;font-size:0.85rem;"></div>
@@ -1162,7 +1166,10 @@
     async function submitQuery() {
       const subject = document.getElementById('querySubject').value.trim();
       const message = document.getElementById('queryMessage').value.trim();
+      const attachmentInput = document.getElementById('queryAttachment');
       const msgEl = document.getElementById('queryMsg');
+      const btn = document.getElementById('submitQueryBtn');
+
       if (!subject || !message) {
         msgEl.innerHTML = '<span style="color:#f87171;">⚠️ Please fill in both subject and message.</span>';
         return;
@@ -1171,16 +1178,45 @@
         msgEl.innerHTML = '<span style="color:#f87171;">⚠️ Student data not loaded. Refresh and try again.</span>';
         return;
       }
+
+      msgEl.innerHTML = '<span style="color:#f8fafc;"><i class="fa-solid fa-spinner fa-spin"></i> Submitting...</span>';
+      btn.disabled = true;
+
+      let attachment_url = null;
+      if (attachmentInput.files && attachmentInput.files[0]) {
+        const formData = new FormData();
+        formData.append('receipt', attachmentInput.files[0]);
+        try {
+          const uploadRes = await apiFetch('/api/upload/receipt', {
+            method: 'POST',
+            body: formData,
+            // don't set Content-Type header, let browser set boundary
+          }, false); // don't stringify body
+          if (uploadRes.success) {
+            attachment_url = uploadRes.receipt_url;
+          } else {
+            msgEl.innerHTML = `<span style="color:#f87171;">❌ Upload failed: ${uploadRes.message}</span>`;
+            btn.disabled = false;
+            return;
+          }
+        } catch (e) {
+          msgEl.innerHTML = '<span style="color:#f87171;">❌ Upload error. Try again.</span>';
+          btn.disabled = false;
+          return;
+        }
+      }
+
       try {
         const res = await apiFetch('/api/queries/submit', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ student_id: currentStudentId, subject, message })
+          body: JSON.stringify({ student_id: currentStudentId, subject, message, attachment_url })
         });
         if (res.success) {
           msgEl.innerHTML = '<span style="color:#4ade80;">✅ Query submitted! Admin will respond soon.</span>';
           document.getElementById('querySubject').value = '';
           document.getElementById('queryMessage').value = '';
+          document.getElementById('queryAttachment').value = '';
           loadMyQueries(currentStudentId);
         } else {
           msgEl.innerHTML = `<span style="color:#f87171;">❌ ${res.message}</span>`;
@@ -1188,6 +1224,7 @@
       } catch (e) {
         msgEl.innerHTML = '<span style="color:#f87171;">❌ Error submitting query. Try again.</span>';
       }
+      btn.disabled = false;
     }
 
     async function loadMyQueries(studentId) {
@@ -1199,6 +1236,7 @@
             <div class="query-item">
               <div class="q-subject">${escapeHtml(q.subject)}</div>
               <div class="q-message">${escapeHtml(q.message)}</div>
+              ${q.attachment_url ? `<div style="margin-bottom:8px;"><a href="${q.attachment_url}" target="_blank" style="color:#60a5fa; font-size:0.85rem; text-decoration:none;"><i class="fa-solid fa-paperclip"></i> View Attachment</a></div>` : ''}
               <div class="q-meta">
                 <span class="q-status ${q.status}">${q.status === 'in_progress' ? '🔄 In Progress' : q.status === 'resolved' ? '✅ Resolved' : '🔴 Open'}</span>
                 <span class="q-date">${new Date(q.created_at).toLocaleDateString('en-IN', { day:'2-digit', month:'short', year:'numeric' })}</span>

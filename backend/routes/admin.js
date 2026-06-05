@@ -44,7 +44,8 @@ router.get('/stats', authenticateAdmin, (req, res) => {
     totalDrivers: 0,
     totalFeesCollected: 0,
     totalRemainingFees: 0,
-    overdueStudents: 0
+    overdueStudents: 0,
+    yearWiseStudents: []
   };
 
   db.query('SELECT COUNT(*) as count FROM buses', (err, busResults) => {
@@ -62,7 +63,11 @@ router.get('/stats', authenticateAdmin, (req, res) => {
         
         db.query('SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0', (err, overdueResults) => {
           if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
-          res.json({ success: true, stats });
+          
+          db.query('SELECT course_year, COUNT(*) as count FROM students GROUP BY course_year ORDER BY course_year', (err, yearResults) => {
+            if (!err) stats.yearWiseStudents = yearResults;
+            res.json({ success: true, stats });
+          });
         });
       });
     });

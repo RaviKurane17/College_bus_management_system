@@ -7,7 +7,7 @@ const router = express.Router();
 const multer = require('multer');
 const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const { authenticateAdmin } = require('../middleware/auth');
+const { authenticateAdmin, authenticateAny } = require('../middleware/auth');
 
 // Configure Cloudinary using environment variables
 cloudinary.config({
@@ -25,16 +25,37 @@ const storage = new CloudinaryStorage({
   }
 });
 
+const receiptStorage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'sgi_bus_system/receipts',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp', 'pdf']
+  }
+});
+
 const upload = multer({
   storage: storage,
   limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
   fileFilter: (req, file, cb) => {
-    // Only allow image files
-    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg'];
+    // Only allow image files and pdfs
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
     if (allowedMimes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files (JPG, PNG, WEBP) are allowed'), false);
+      cb(new Error('Only image files (JPG, PNG, WEBP) and PDF are allowed'), false);
+    }
+  }
+});
+
+const uploadReceipt = multer({
+  storage: receiptStorage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
+  fileFilter: (req, file, cb) => {
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp', 'image/jpg', 'application/pdf'];
+    if (allowedMimes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Only images and PDFs are allowed'), false);
     }
   }
 });
@@ -49,6 +70,27 @@ router.post('/student-photo', authenticateAdmin, upload.single('photo'), (req, r
       success: true,
       message: 'Photo uploaded successfully',
       photo_url: req.file.path
+    });
+  } catch (err) {
+    console.error('Upload Error:', err);
+    let errorMessage = err.message || 'Unknown error';
+    if (errorMessage.toLowerCase().includes('limit')) {
+      errorMessage = 'Cloud Storage Limit Exceeded on Cloudinary.';
+    }
+    return res.status(500).json({ success: false, message: errorMessage });
+  }
+});
+
+// Upload payment receipt (protected)
+router.post('/receipt', authenticateAny, uploadReceipt.single('receipt'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+    res.json({
+      success: true,
+      message: 'Receipt uploaded successfully',
+      receipt_url: req.file.path
     });
   } catch (err) {
     console.error('Upload Error:', err);

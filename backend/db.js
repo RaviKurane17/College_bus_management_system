@@ -105,6 +105,9 @@ async function initializeDatabase() {
         pass_valid_to DATE,
         bus_id INT,
         total_fees DECIMAL(10,2) DEFAULT 0,
+        concession DECIMAL(10,2) DEFAULT 0,
+        concession_reason VARCHAR(255),
+        payment_cycle VARCHAR(100),
         fees_paid DECIMAL(10,2) DEFAULT 0,
         remaining_fees DECIMAL(10,2) DEFAULT 0,
         joining_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -197,7 +200,10 @@ async function initializeDatabase() {
       "ALTER TABLE students ADD COLUMN pass_valid_from DATE",
       "ALTER TABLE students ADD COLUMN pass_valid_to DATE",
       "ALTER TABLE students ADD COLUMN reset_token VARCHAR(100)",
-      "ALTER TABLE students ADD COLUMN reset_token_expires DATETIME"
+      "ALTER TABLE students ADD COLUMN reset_token_expires DATETIME",
+      "ALTER TABLE students ADD COLUMN concession DECIMAL(10,2) DEFAULT 0",
+      "ALTER TABLE students ADD COLUMN concession_reason VARCHAR(255)",
+      "ALTER TABLE students ADD COLUMN payment_cycle VARCHAR(100)"
     ];
 
     for (const query of alterQueries) {
@@ -219,17 +225,36 @@ async function initializeDatabase() {
         payment_mode VARCHAR(50) NOT NULL,
         utr_number VARCHAR(100),
         receipt_number VARCHAR(50),
+        receipt_url VARCHAR(500),
         payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE
       ) ENGINE=InnoDB;
     `);
 
-    // Add receipt_number to payments if missing
+    // Add receipt_number and receipt_url to payments if missing
     try {
       await promisePool.query("ALTER TABLE payments ADD COLUMN receipt_number VARCHAR(50)");
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') { /* already exists */ }
     }
+    try {
+      await promisePool.query("ALTER TABLE payments ADD COLUMN receipt_url VARCHAR(500)");
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') { /* already exists */ }
+    }
+
+    // Create settings table
+    await promisePool.query(`
+      CREATE TABLE IF NOT EXISTS settings (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        setting_key VARCHAR(50) UNIQUE NOT NULL,
+        setting_value VARCHAR(255),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
+    // Insert default payment cycle if not exists
+    await promisePool.query("INSERT IGNORE INTO settings (setting_key, setting_value) VALUES ('payment_cycle', '2024-2025')");
 
     // Create student_queries table
     await promisePool.query(`

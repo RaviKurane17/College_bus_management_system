@@ -24,6 +24,7 @@ const queriesRoutes = require('./routes/queries');
 const studentResetRoutes = require('./routes/student_reset');
 const backupRoutes = require('./routes/backup');
 const bulkUploadRoutes = require('./routes/bulk_upload');
+const settingsRoutes = require('./routes/settings');
 
 // Initialize Express app
 const app = express();
@@ -129,6 +130,7 @@ app.use('/api/reminders', apiLimiter, reminderRoutes);
 app.use('/api/queries', apiLimiter, queriesRoutes);
 app.use('/api/backup', apiLimiter, backupRoutes);
 app.use('/api/students/bulk-upload', apiLimiter, bulkUploadRoutes);
+app.use('/api/settings', apiLimiter, settingsRoutes);
 
 // =========================
 // 🌐 Frontend Serve

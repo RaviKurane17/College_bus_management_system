@@ -346,6 +346,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       const course_year = document.getElementById('course_year')?.value.trim();
       const section = document.getElementById('section')?.value.trim();
       const bus_id = document.getElementById('bus_select').value || null;
+      const concession = parseFloat(document.getElementById('concession')?.value) || 0;
+      const concession_reason = document.getElementById('concession_reason')?.value.trim() || '';
       const fees_paid = parseFloat(document.getElementById('fees_paid').value) || 0;
       const remaining_fees = parseFloat(document.getElementById('remaining_fees').value) || 0;
 
@@ -387,6 +389,15 @@ document.addEventListener('DOMContentLoaded', async () => {
           photo_url = await uploadPhoto() || '';
         }
 
+        // Fetch active payment cycle
+        let payment_cycle = '';
+        try {
+          const sRes = await apiFetch('/api/settings');
+          if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
+            payment_cycle = sRes.settings.payment_cycle;
+          }
+        } catch (e) { console.warn('Could not fetch payment cycle', e); }
+
         const res = await apiFetch('/api/students/add-student', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -406,6 +417,9 @@ document.addEventListener('DOMContentLoaded', async () => {
             pass_valid_to: document.getElementById('pass_valid_to')?.value || null,
             bus_id: bus_id === '' ? null : parseInt(bus_id),
             total_fees: parseFloat(document.getElementById('total_fees')?.value) || 0,
+            concession,
+            concession_reason,
+            payment_cycle,
             fees_paid: fees_paid || 0,
             remaining_fees: parseFloat(document.getElementById('remaining_fees')?.value) || 0
           })
@@ -1101,10 +1115,24 @@ async function editStudent(id) {
       </div>
       <input type="hidden" id="edit_photo_url" value="${s.photo_url || ''}">
       <div style="margin-top: 15px;">
+        <label class="modal-label">Payment Cycle</label>
+        <input type="text" id="edit_payment_cycle" value="${escapeHtml(s.payment_cycle || '')}" class="modal-input">
+      </div>
+      <div style="margin-top: 15px;">
         <label class="modal-label">Assign Bus</label>
         <select id="edit_bus_id" class="modal-input">
           ${busOptions}
         </select>
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
+        <div>
+          <label class="modal-label">Concession (₹)</label>
+          <input type="number" id="edit_concession" value="${s.concession || 0}" class="modal-input" oninput="calcEditRemaining()">
+        </div>
+        <div>
+          <label class="modal-label">Concession Reason</label>
+          <input type="text" id="edit_concession_reason" value="${escapeHtml(s.concession_reason || '')}" class="modal-input">
+        </div>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-top: 15px;">
         <div>
@@ -1123,8 +1151,9 @@ async function editStudent(id) {
       <script>
         window.calcEditRemaining = function() {
           const t = parseFloat(document.getElementById('edit_total_fees').value) || 0;
+          const c = parseFloat(document.getElementById('edit_concession').value) || 0;
           const p = parseFloat(document.getElementById('edit_fees_paid').value) || 0;
-          const r = t - p;
+          const r = t - c - p;
           document.getElementById('edit_remaining_fees').value = r > 0 ? r : 0;
         }
       </script>
@@ -1145,6 +1174,9 @@ async function editStudent(id) {
         pass_valid_to: document.getElementById('edit_pass_valid_to').value || null,
         bus_id: document.getElementById('edit_bus_id').value || null,
         total_fees: parseFloat(document.getElementById('edit_total_fees').value) || 0,
+        concession: parseFloat(document.getElementById('edit_concession').value) || 0,
+        concession_reason: document.getElementById('edit_concession_reason').value.trim(),
+        payment_cycle: document.getElementById('edit_payment_cycle').value.trim(),
         fees_paid: parseFloat(document.getElementById('edit_fees_paid').value) || 0,
         remaining_fees: parseFloat(document.getElementById('edit_remaining_fees').value) || 0
       };
@@ -1254,7 +1286,10 @@ async function viewStudentDetails(id) {
       <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 8px;">
         <h4 style="margin: 0 0 10px 0; color: var(--primary); display: flex; justify-content: space-between;">
           Payment History
-          <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" class="edit-btn" style="background: var(--success); color: white; padding: 2px 10px; font-size: 0.8rem;">Pay Fees</button>
+          <div>
+            ${parseFloat(s.remaining_fees || 0) <= 0 ? `<button onclick="printNoDuesReceipt(${s.id})" class="edit-btn" style="background: #3b82f6; color: white; padding: 2px 10px; font-size: 0.8rem; margin-right: 5px;"><i class="fa-solid fa-print"></i> No Dues</button>` : ''}
+            <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" class="edit-btn" style="background: var(--success); color: white; padding: 2px 10px; font-size: 0.8rem;">Pay Fees</button>
+          </div>
         </h4>
         <div style="max-height: 200px; overflow-y: auto;">
           ${paymentsHtml}
@@ -1293,6 +1328,7 @@ async function viewBusDetails(id) {
     let studentsHtml = '';
     if (students.length > 0) {
       studentsHtml = `
+      <div class="table-responsive">
         <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem;">
           <thead>
             <tr style="border-bottom: 1px solid rgba(255,255,255,0.2); text-align: left;">
@@ -1393,6 +1429,10 @@ async function payFees(id) {
         <label class="modal-label"><i class="fa-solid fa-barcode" style="margin-right: 5px; color: var(--primary);"></i> UTR / Transaction Number *</label>
         <input type="text" id="pay_utr" placeholder="Enter Transaction ID" class="modal-input">
       </div>
+      <div style="margin-bottom: 15px;">
+        <label class="modal-label"><i class="fa-solid fa-file-invoice" style="margin-right: 5px; color: var(--primary);"></i> Receipt/Screenshot (Optional)</label>
+        <input type="file" id="pay_receipt" class="modal-input" accept=".jpg,.jpeg,.png,.pdf" style="padding: 8px;">
+      </div>
     `;
 
     showModal('Pay Fees & Generate Receipt', content, async () => {
@@ -1415,11 +1455,39 @@ async function payFees(id) {
       saveBtn.disabled = true;
       saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
 
+      let receipt_url = null;
+      const receiptInput = document.getElementById('pay_receipt');
+      if (receiptInput.files && receiptInput.files[0]) {
+        const formData = new FormData();
+        formData.append('receipt', receiptInput.files[0]);
+        try {
+          saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Uploading...';
+          const uploadRes = await apiFetch('/api/upload/receipt', {
+            method: 'POST',
+            body: formData,
+          }, false);
+          if (uploadRes.success) {
+            receipt_url = uploadRes.receipt_url;
+          } else {
+            alert('Failed to upload receipt: ' + uploadRes.message);
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalText;
+            return;
+          }
+        } catch (e) {
+          alert('Error uploading receipt.');
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = originalText;
+          return;
+        }
+      }
+
+      saveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing Payment...';
       try {
         const payRes = await apiFetch(`/api/students/pay/${id}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ amount, payment_mode, utr_number })
+          body: JSON.stringify({ amount, payment_mode, utr_number, receipt_url })
         });
 
         if (payRes.success) {
@@ -1478,6 +1546,7 @@ function generateReceipt(student, payment, receiptNo) {
             display: flex;
             justify-content: center;
             align-items: center;
+            gap: 20px;
             min-height: 100vh;
             -webkit-print-color-adjust: exact !important; 
             print-color-adjust: exact !important; 
@@ -1551,16 +1620,18 @@ function generateReceipt(student, payment, receiptNo) {
           .sig-fake { display: block; font-size: 16px; color: #000; font-style: italic; margin-bottom: -3px; font-family: 'Georgia', serif; }
           
           @media print {
-            body { padding: 0; background: white; min-height: auto; display: block; }
+            body { padding: 0; background: white; min-height: auto; display: flex; flex-direction: row; gap: 10px; align-items: flex-start; justify-content: center; }
             .print-area { box-shadow: none; padding: 0; width: 148mm; height: 210mm; margin: 0; page-break-inside: avoid; }
-            @page { size: A5 portrait; margin: 0; }
+            @page { size: A4 landscape; margin: 10mm; }
           }
         </style>
       </head>
       <body>
+        <!-- First Copy -->
         <div class="print-area">
           <div class="receipt-wrapper">
             <div class="inner-border">
+              ${student.remaining_fees <= 0 ? '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:60px;color:rgba(34,197,94,0.15);font-weight:900;border:5px solid rgba(34,197,94,0.15);padding:10px 20px;border-radius:10px;pointer-events:none;z-index:10;">NO DUES</div>' : ''}
               <div class="header-section">
                 <div class="logo-area" style="display: flex; align-items: center; justify-content: center;">
                   <img src="/images/sgilogo.png" alt="SGI Logo">
@@ -1636,6 +1707,133 @@ function generateReceipt(student, payment, receiptNo) {
                   <tr>
                     <td style="text-align: right; padding-right: 15px;">Total Amount ₹</td>
                     <td class="receipt-value">${payment.amount} /-</td>
+                  </tr>
+                </tfoot>
+              </table>
+
+              <div class="field-row" style="margin-top: 10px;">
+                In Words: <span class="underline flex-1 receipt-value">${numberToWords(payment.amount)}</span>
+              </div>
+              
+              <div class="field-row">
+                Payment Mode: 
+                <span style="font-family: Arial; font-weight: normal; margin-left: 10px; color: #444; font-size: 12px;">
+                  Cash ${payment.payment_mode === 'Cash' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''} / 
+                  D.D. / Cheque ${payment.payment_mode === 'Cheque' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''} / 
+                  NEFT / UTR ${payment.payment_mode === 'Online' ? '<span style="color:#000;font-weight:bold;">✓</span>' : ''}
+                </span>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Bank Name : <span class="underline receipt-value"></span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Branch Name : <span class="underline receipt-value"></span></div>
+                <div>D.D./Cheque No.: <span class="underline receipt-value"></span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Date of DD or Cheque: <span class="underline receipt-value"></span></div>
+                <div>Dues Fees ₹: <span class="underline receipt-value">${student.remaining_fees > 0 ? student.remaining_fees + ' /-' : 'Nil'}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div style="max-width: 60%;">UTR No. : <span class="underline receipt-value">${payment.utr_number || ''}</span></div>
+              </div>
+              
+              <div class="footer-sigs">
+                <div class="note">Note:- Fees Once Paid Will Not Be Refunded.</div>
+                <div class="sig-box">
+                  <span class="receipt-value sig-fake">SGI</span>
+                  <div class="sig-line">Signature of the Accountant</div>
+                </div>
+              </div>
+              
+            </div>
+          </div>
+        </div>
+
+        <!-- Second Copy (Office Copy) -->
+        <div class="print-area">
+          <div class="receipt-wrapper">
+            <div class="inner-border">
+              ${student.remaining_fees <= 0 ? '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-size:60px;color:rgba(34,197,94,0.15);font-weight:900;border:5px solid rgba(34,197,94,0.15);padding:10px 20px;border-radius:10px;pointer-events:none;z-index:10;">NO DUES</div>' : ''}
+              <div class="header-section">
+                <div class="logo-area" style="display: flex; align-items: center; justify-content: center;">
+                  <img src="/images/sgilogo.png" alt="SGI Logo">
+                </div>
+                <div class="titles">
+                  <div class="small-text">Holy-Wood Academy's</div>
+                  <div class="main-title">SANJEEVAN</div>
+                  <div class="sub-title">PUBLIC SCHOOL, PANHALA.</div>
+                </div>
+                <div class="right-info">
+                  <div>Affiliation No. : 1130172</div>
+                  <div>UDISE No. : 27340202704</div>
+                  <div>School Code : 30128</div>
+                  <div class="red-text">DAY SECTION - CBSE CURRICULUM</div>
+                </div>
+              </div>
+              
+              <div class="address-bar">
+                At. Sanjeevan Group of Schools, Somwar Peth-Injole, Post. & Tal. Panhala, Dist. Kolhapur - 416201.
+              </div>
+
+              <div class="receipt-info">
+                <div style="color: #7d3c43;">Rec. No. <span class="receipt-value" style="margin-left: 10px;">${receiptNo}</span></div>
+                <div class="fee-receipt-badge">OFFICE COPY</div>
+                <div style="color: #7d3c43;">Date: <span class="receipt-value" style="margin-left: 10px;">${dateStr}</span></div>
+              </div>
+              
+              <div class="field-row">
+                Name: <span class="underline flex-1 receipt-value" style="text-align: center;">${student.name}</span>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Branch/Standard: <span class="underline receipt-value">${student.course_year || student.department || ''}</span></div>
+                <div>Class: <span class="underline receipt-value">${student.section || ''}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div>Academic Year: <span class="underline receipt-value">2024-25</span></div>
+                <div>Bus No.: <span class="underline receipt-value">${student.bus_number || ''}</span></div>
+              </div>
+              
+              <div class="field-row multi">
+                <div style="flex: 1.5;">Bus Route: <span class="underline receipt-value">${student.route || ''}</span></div>
+                <div style="flex: 1;">Pickup Point: <span class="underline receipt-value"></span></div>
+              </div>
+
+              <table class="particulars-table">
+                <thead>
+                  <tr>
+                    <th>Particulars</th>
+                    <th>Amount Rs. (₹)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Registration Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                  <tr>
+                    <td>Tuition Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                  <tr>
+                    <td>Bus Fee</td>
+                    <td class="receipt-value">${payment.amount > 0 ? payment.amount + ' /-' : '-'}</td>
+                  </tr>
+                  <tr>
+                    <td>Miscellaneous Fee</td>
+                    <td class="receipt-value">-</td>
+                  </tr>
+                </tbody>
+                <tfoot>
+                  <tr>
+                    <td style="text-align: right; padding-right: 15px;">Total Amount ₹</td>
+                    <td class="receipt-value">${payment.amount > 0 ? payment.amount + ' /-' : '0 /-'}</td>
                   </tr>
                 </tfoot>
               </table>
@@ -2561,6 +2759,31 @@ window.printStudentReceipt = function(paymentId) {
   }
 };
 
+window.printNoDuesReceipt = async function(id) {
+  try {
+    const res = await apiFetch(`/api/students/get/${id}`);
+    if (!res || !res.success) {
+      alert('Failed to load student data');
+      return;
+    }
+    const student = res.student;
+    if (parseFloat(student.remaining_fees || 0) > 0) {
+      alert('Student still has dues pending!');
+      return;
+    }
+    const paymentObj = {
+      amount: 0,
+      payment_mode: 'N/A',
+      utr_number: '',
+      date: new Date()
+    };
+    generateReceipt(student, paymentObj, 'NO-DUES');
+  } catch (error) {
+    console.error('Error generating NO DUES receipt:', error);
+    alert('Failed to generate NO DUES receipt.');
+  }
+};
+
 // ===================== ADMIN MANAGEMENT (Super Admin) =====================
 async function loadAdminList() {
   try {
@@ -2597,7 +2820,7 @@ async function loadAdminList() {
               <button onclick="document.getElementById('adminMgmtModal').remove()" style="background:transparent;border:none;color:var(--clr-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
             </div>
           </div>
-          <div style="overflow-y:auto;flex:1;">
+          <div class="table-responsive" style="overflow-y:auto;flex:1;">
             <table style="width:100%;border-collapse:collapse;color:var(--clr-text,#e2e8f0);font-size:0.85rem;">
               <thead><tr style="color:var(--clr-muted);font-size:0.72rem;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.15);">
                 <th style="padding:10px 8px;text-align:left;">#</th>

@@ -147,6 +147,13 @@ table tr:hover {
   transition: 0.3s;
 }
 
+/* Responsive Table Wrapper */
+.table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Links & Nav */
 nav a {
   color: var(--primary);

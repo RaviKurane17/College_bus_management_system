@@ -61,6 +61,9 @@ CREATE TABLE IF NOT EXISTS students (
   pass_valid_to DATE,
   bus_id INT,
   total_fees DECIMAL(10,2) DEFAULT 0,
+  concession DECIMAL(10,2) DEFAULT 0,
+  concession_reason VARCHAR(255),
+  payment_cycle VARCHAR(100),
   fees_paid DECIMAL(10,2) DEFAULT 0,
   remaining_fees DECIMAL(10,2) DEFAULT 0,
   joining_date DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -81,6 +84,7 @@ CREATE TABLE IF NOT EXISTS payments (
   amount DECIMAL(10,2) NOT NULL,
   payment_mode VARCHAR(50) NOT NULL,
   utr_number VARCHAR(100),
+  receipt_url VARCHAR(500),
   payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
   INDEX idx_student_id (student_id),
@@ -93,6 +97,7 @@ CREATE TABLE IF NOT EXISTS student_queries (
   student_id INT NOT NULL,
   subject VARCHAR(200) NOT NULL,
   message TEXT NOT NULL,
+  attachment_url VARCHAR(500),
   status ENUM('open','resolved','in_progress') DEFAULT 'open',
   admin_reply TEXT,
   replied_at DATETIME,
@@ -111,6 +116,14 @@ CREATE TABLE IF NOT EXISTS backup_logs (
   created_by VARCHAR(100),
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   notes TEXT
+) ENGINE=InnoDB;
+
+-- Settings
+CREATE TABLE IF NOT EXISTS settings (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  setting_key VARCHAR(50) UNIQUE NOT NULL,
+  setting_value VARCHAR(255),
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 -- Insert default admin (password will be hashed on first server start)

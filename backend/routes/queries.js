@@ -9,7 +9,7 @@ const { authenticateAdmin, authenticateAny } = require('../middleware/auth');
 
 // Submit a query (student - protected)
 router.post('/submit', authenticateAny, (req, res) => {
-  const { student_id, subject, message } = req.body;
+  const { student_id, subject, message, attachment_url } = req.body;
   if (!student_id || !subject || !message) {
     return res.status(400).json({ success: false, message: 'All fields are required.' });
   }
@@ -22,9 +22,11 @@ router.post('/submit', authenticateAny, (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid student ID.' });
   }
 
+  const cleanAttachment = attachment_url ? attachment_url.toString().substring(0, 500) : null;
+
   db.query(
-    'INSERT INTO student_queries (student_id, subject, message) VALUES (?, ?, ?)',
-    [cleanId, cleanSubject, cleanMessage],
+    'INSERT INTO student_queries (student_id, subject, message, attachment_url) VALUES (?, ?, ?, ?)',
+    [cleanId, cleanSubject, cleanMessage, cleanAttachment],
     (err, result) => {
       if (err) return res.status(500).json({ success: false, message: 'Failed to submit query.' });
       res.json({ success: true, message: 'Query submitted successfully!' });
