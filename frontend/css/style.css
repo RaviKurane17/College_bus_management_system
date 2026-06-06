@@ -469,81 +469,167 @@ body.dashboard-body {
   background: transparent;
 }
 
-/* Light Theme Overrides */
+/* ========================================= */
+/* ✨ Premium SaaS Light Theme Overrides    */
+/* ========================================= */
 body.light-theme {
-  --dark: #f8fafc;
-  --light: #0f172a;
-  --gray: #475569;
-  background: linear-gradient(135deg, #f1f5f9, #e2e8f0);
+  --clr-bg: #f8fafc;
+  --clr-surface: #ffffff;
+  --clr-surface-2: #f1f5f9;
+  --clr-border: #e2e8f0;
+  --clr-border-strong: #cbd5e1;
+  --clr-text: #0f172a;
+  --clr-muted: #64748b;
+  background: var(--clr-bg);
+  color: var(--clr-text);
 }
 
 body.light-theme .container,
 body.light-theme .content-card,
 body.light-theme .dashboard-grid > div,
-body.light-theme .stat-card {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+body.light-theme .stat-card,
+body.light-theme .panel,
+body.light-theme .modal-content,
+body.light-theme .login-box,
+body.light-theme .student-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,.08), 0 8px 24px rgba(0,0,0,.06);
   color: #0f172a;
 }
 
+body.light-theme .stat-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e2e8f0;
+}
+
+body.light-theme .stat-card:hover,
+body.light-theme .content-card:hover,
+body.light-theme .student-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border-color: #cbd5e1;
+}
+
 body.light-theme .sidebar {
-  background: rgba(255, 255, 255, 0.9);
-  border-right: 1px solid rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  border-right: 1px solid #e2e8f0;
+  box-shadow: 1px 0 3px rgba(0,0,0,0.02);
 }
 
 body.light-theme .sidebar-menu a {
-  color: #475569;
+  color: #334155;
+  font-weight: 500;
 }
 
-body.light-theme .sidebar-menu a:hover,
+body.light-theme .sidebar-menu a:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
 body.light-theme .sidebar-menu a.active {
-  background: var(--primary);
-  color: #fff;
+  background: #f8fafc;
+  color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+  border-right: 1px solid #e2e8f0;
+}
+
+body.light-theme .sidebar-footer .user-mini {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+body.light-theme .topbar,
+body.light-theme .top-header {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+body.light-theme .topbar-left .page-title,
+body.light-theme .panel-header h3,
+body.light-theme .sidebar-brand .brand-text h3 {
+  color: #0f172a;
 }
 
 body.light-theme input,
 body.light-theme select,
-body.light-theme textarea {
+body.light-theme textarea,
+body.light-theme .search-box input,
+body.light-theme .filter-select {
   background: #ffffff;
   color: #0f172a;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 body.light-theme input:focus,
 body.light-theme select:focus,
-body.light-theme textarea:focus {
+body.light-theme textarea:focus,
+body.light-theme .search-box input:focus {
   border-color: var(--primary);
-  background: #fff;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(255, 183, 3, 0.15);
+  outline: none;
 }
 
 body.light-theme table th {
-  background: #cbd5e1;
-  color: #0f172a;
+  background: #f8fafc;
+  color: #334155;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 600;
 }
 
 body.light-theme table td {
-  color: #1e293b;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
 }
 
-body.light-theme table tr {
+body.light-theme table tr:hover td {
+  background: #f8fafc;
+}
+
+body.light-theme .filter-bar {
+  background: #ffffff;
   border-bottom: 1px solid #e2e8f0;
 }
 
-body.light-theme table tr:hover {
-  background: #f1f5f9;
+body.light-theme .info-item,
+body.light-theme .info-item.fees,
+body.light-theme .student-card .sc-fee-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
 }
 
-body.light-theme .modal-content {
-  background: #f8fafc;
-  border: 1px solid #cbd5e1;
+body.light-theme .student-card .sc-dept,
+body.light-theme .tag {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+body.light-theme .student-card .sc-name,
+body.light-theme .student-card .sc-val {
   color: #0f172a;
 }
 
-body.light-theme .info-item,
-body.light-theme .info-item.fees {
-  background: rgba(0,0,0,0.03);
-  border: 1px solid rgba(0,0,0,0.05);
+body.light-theme .student-card .sc-label,
+body.light-theme .student-card .sc-fee-box .sc-fee-label,
+body.light-theme .modal-label,
+body.light-theme table th {
+  color: #64748b;
+}
+
+body.light-theme .theme-toggle {
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+}
+
+body.light-theme .theme-toggle:hover {
+  background: #e2e8f0;
+  color: #0f172a;
 }
 
 .theme-toggle {
@@ -742,29 +828,17 @@ body.light-theme .modal-input option {
   color: #0f172a !important;
 }
 
-.modal-input[readonly] {
-  background: rgba(0,0,0,0.2);
-  cursor: not-allowed;
-}
-
-body.light-theme .modal-label {
-  color: #475569;
-}
-
 body.light-theme .modal-input,
 body.light-theme .modal-select {
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   color: #0f172a;
   color-scheme: light;
-}
-
-body.light-theme .modal-select option {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
 }
 
 body.light-theme .modal-input[readonly] {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #64748b;
+  border-color: #e2e8f0;
 }
