@@ -1581,6 +1581,15 @@ async function payFees(id) {
           alert('Payment successful!');
           closeModal();
           loadStudents();
+          // Fetch global payment cycle if needed
+          if (!payRes.student.payment_cycle) {
+            try {
+              const sRes = await apiFetch('/api/settings');
+              if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
+                payRes.student.payment_cycle = sRes.settings.payment_cycle;
+              }
+            } catch (e) { console.warn(e); }
+          }
           generateReceipt(payRes.student, payRes.payment, payRes.payment_id);
         } else {
           alert(payRes.message || 'Payment failed');
@@ -2833,7 +2842,7 @@ window.downloadStudentPDF = function() {
   doc.save('student_list.pdf');
 }
 
-window.printStudentReceipt = function(paymentId) {
+window.printStudentReceipt = async function(paymentId) {
   if (!window.currentStudentData || !window.currentPayments) return;
   const p = window.currentPayments.find(pay => pay.id === paymentId);
   if (p) {
@@ -2843,7 +2852,20 @@ window.printStudentReceipt = function(paymentId) {
       utr_number: p.utr_number,
       date: p.payment_date
     };
-    generateReceipt(window.currentStudentData, paymentObj, p.receipt_number || p.id);
+    
+    // Fetch global payment cycle
+    let activeCycle = window.currentStudentData.payment_cycle || '';
+    if (!activeCycle) {
+      try {
+        const sRes = await apiFetch('/api/settings');
+        if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
+          activeCycle = sRes.settings.payment_cycle;
+        }
+      } catch (e) { console.warn(e); }
+    }
+    
+    const studentWithCycle = { ...window.currentStudentData, payment_cycle: activeCycle };
+    generateReceipt(studentWithCycle, paymentObj, p.receipt_number || p.id);
   }
 };
 
@@ -2853,6 +2875,17 @@ window.printNoDuesReceipt = async function(id) {
     if (!res || !res.success) { alert('Failed to load student data'); return; }
     const student = res.student;
     if (parseFloat(student.remaining_fees || 0) > 0) { alert('Student still has dues pending!'); return; }
+    
+    // Fetch global payment cycle
+    if (!student.payment_cycle) {
+      try {
+        const sRes = await apiFetch('/api/settings');
+        if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
+          student.payment_cycle = sRes.settings.payment_cycle;
+        }
+      } catch (e) { console.warn(e); }
+    }
+    
     generateNoDuesCertificate(student);
   } catch (error) {
     console.error('Error generating NO DUES certificate:', error);
