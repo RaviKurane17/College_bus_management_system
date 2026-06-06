@@ -842,3 +842,89 @@ body.light-theme .modal-input[readonly] {
   color: #64748b;
   border-color: #e2e8f0;
 }
+
+/* ========================================= */
+/* SaaS App Shell Specific Light Overrides  */
+/* ========================================= */
+
+body.light-theme .sidebar-brand .brand-text h3,
+body.light-theme .sidebar-footer .user-mini .user-info strong,
+body.light-theme .welcome-banner .welcome-text h2,
+body.light-theme .welcome-stat-item .val,
+body.light-theme .stat-card .stat-info p,
+body.light-theme .section-header h2,
+body.light-theme .quick-action-card .qa-content h4,
+body.light-theme .topbar-left .page-title,
+body.light-theme .topbar-right .header-date strong {
+  color: #0f172a;
+}
+
+body.light-theme .sidebar-nav a {
+  color: #334155;
+  font-weight: 500;
+}
+
+body.light-theme .sidebar-nav a:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.light-theme .sidebar-nav a.active {
+  background: #f8fafc;
+  color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+  border-right: 1px solid #e2e8f0;
+}
+
+body.light-theme .sidebar-brand .brand-text span,
+body.light-theme .sidebar-footer .user-mini .user-info small,
+body.light-theme .welcome-banner .welcome-text p,
+body.light-theme .welcome-stat-item .lbl,
+body.light-theme .stat-card .stat-info h3,
+body.light-theme .stat-card .stat-info small,
+body.light-theme .quick-action-card .qa-content p,
+body.light-theme .topbar-right .header-date {
+  color: #64748b;
+}
+
+body.light-theme .btn-icon,
+body.light-theme .btn-sidebar-toggle {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #334155;
+}
+
+body.light-theme .btn-icon:hover,
+body.light-theme .btn-sidebar-toggle:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+body.light-theme .welcome-banner {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+body.light-theme .quick-action-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+body.light-theme .quick-action-card:hover {
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  border-color: #cbd5e1;
+}
+
+body.light-theme .sidebar-footer .btn-logout {
+  background: #fff1f2;
+  border-color: #fecdd3;
+  color: #e11d48;
+}
+
+body.light-theme .sidebar-footer .btn-logout:hover {
+  background: #ffe4e6;
+  border-color: #fda4af;
+}
+
