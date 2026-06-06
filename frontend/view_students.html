@@ -163,65 +163,12 @@
     </div>
     <div class="filter-bar">
       <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchStudent" placeholder="Search name or roll no..." oninput="loadStudents()"></div>
-      <select class="filter-select" id="filterInst" onchange="updateDynamicFilters()">
-        <option value="">All Institutions</option>
-        <option value="Degree">College Degree</option>
-        <option value="Polytechnic">Polytechnic</option>
-        <option value="PUC">Junior College (PUC)</option>
-        <option value="School">School</option>
-      </select>
-      <select class="filter-select" id="filterDept" onchange="loadStudents()">
-        <option value="">All Departments</option>
-        <option value="Degree - CSE">Degree - CSE</option>
-        <option value="Degree - AIML">Degree - AIML</option>
-        <option value="Degree - CIVIL">Degree - CIVIL</option>
-        <option value="Degree - MECH">Degree - MECH</option>
-        <option value="Degree - ELECTRICAL">Degree - ELECTRICAL</option>
-        <option value="Degree - ECE">Degree - ECE</option>
-        <option value="Degree - MBA">Degree - MBA</option>
-        <option value="Degree - BFA">Degree - BFA</option>
-        <option value="Poly - CSE">Poly - CSE</option>
-        <option value="Poly - CIVIL">Poly - CIVIL</option>
-        <option value="Poly - MECH">Poly - MECH</option>
-        <option value="Poly - ELECTRICAL">Poly - ELECTRICAL</option>
-        <option value="PUC - Science">PUC - Science</option>
-        <option value="PUC - Commerce">PUC - Commerce</option>
-        <option value="PUC - Arts">PUC - Arts</option>
-        <option value="School - Primary">School - Primary</option>
-        <option value="School - Secondary">School - Secondary</option>
-        <option value="School - High School">School - High School</option>
-      </select>
-      <select class="filter-select" id="filterYear" onchange="loadStudents()">
-        <option value="">All Years / Stds</option>
-        <option value="1st Year">1st Year</option>
-        <option value="2nd Year">2nd Year</option>
-        <option value="3rd Year">3rd Year</option>
-        <option value="4th Year">4th Year</option>
-        <option value="1st Std">1st Std</option>
-        <option value="2nd Std">2nd Std</option>
-        <option value="3rd Std">3rd Std</option>
-        <option value="4th Std">4th Std</option>
-        <option value="5th Std">5th Std</option>
-        <option value="6th Std">6th Std</option>
-        <option value="7th Std">7th Std</option>
-        <option value="8th Std">8th Std</option>
-        <option value="9th Std">9th Std</option>
-        <option value="10th Std">10th Std</option>
-        <option value="11th Std">11th Std</option>
-        <option value="12th Std">12th Std</option>
-      </select>
-      <select class="filter-select" id="filterSec" onchange="loadStudents()">
-        <option value="">All Sections</option>
-        <option value="A">Sec A</option>
-        <option value="B">Sec B</option>
-        <option value="C">Sec C</option>
-      </select>
     </div>
     <div class="panel-body">
       <!-- Desktop: scrollable table -->
       <div class="desktop-table" style="overflow-x:auto;">
         <table id="studentsTable">
-          <thead><tr><th>Name</th><th>Department</th><th>Bus No</th><th>Route</th><th>Total Fees</th><th>Concession</th><th>Paid Fees</th><th>Remaining Fees</th><th>Action</th></tr></thead>
+          <thead><tr><th>ID</th><th>Name</th><th>Class</th><th>Bus No</th><th>Pick-up</th><th>Total Fees</th><th>Concession</th><th>Paid Fees</th><th>Remaining Fees</th><th>Action</th></tr></thead>
           <tbody></tbody>
         </table>
       </div>
@@ -235,61 +182,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <script src="js/script.js?v=6"></script>
-<script>
-    const categoryData = {
-      "Degree": {
-        depts: ["Degree - CSE|Degree - CSE", "Degree - AIML|Degree - AIML", "Degree - CIVIL|Degree - CIVIL", "Degree - MECH|Degree - MECH", "Degree - ELECTRICAL|Degree - ELECTRICAL", "Degree - ECE|Degree - ECE", "Degree - MBA|Degree - MBA", "Degree - BFA|Degree - BFA"],
-        years: ["1st Year", "2nd Year", "3rd Year", "4th Year"]
-      },
-      "Polytechnic": {
-        depts: ["Poly - CSE|Poly - CSE", "Poly - CIVIL|Poly - CIVIL", "Poly - MECH|Poly - MECH", "Poly - ELECTRICAL|Poly - ELECTRICAL"],
-        years: ["1st Year", "2nd Year", "3rd Year"]
-      },
-      "PUC": {
-        depts: ["PUC - Science|PUC - Science", "PUC - Commerce|PUC - Commerce", "PUC - Arts|PUC - Arts"],
-        years: ["11th Std", "12th Std"]
-      },
-      "School": {
-        depts: ["School - Primary|School - Primary", "School - Secondary|School - Secondary", "School - High School|School - High School"],
-        years: ["1st Std", "2nd Std", "3rd Std", "4th Std", "5th Std", "6th Std", "7th Std", "8th Std", "9th Std", "10th Std"]
-      }
-    };
-
-    function updateDynamicFilters() {
-      const inst = document.getElementById('filterInst').value;
-      const deptSelect = document.getElementById('filterDept');
-      const yearSelect = document.getElementById('filterYear');
-      
-      let allDepts = [];
-      let allYears = [];
-      
-      if (inst && categoryData[inst]) {
-        allDepts = categoryData[inst].depts;
-        allYears = categoryData[inst].years;
-      } else {
-        Object.values(categoryData).forEach(cat => {
-          allDepts = allDepts.concat(cat.depts);
-          allYears = allYears.concat(cat.years);
-        });
-      }
-      
-      deptSelect.innerHTML = '<option value="">All Departments</option>';
-      yearSelect.innerHTML = '<option value="">All Years / Stds</option>';
-      
-      allDepts.forEach(d => {
-        const parts = d.split('|');
-        deptSelect.innerHTML += `<option value="${parts[0]}">${parts[1]}</option>`;
-      });
-      allYears.forEach(y => {
-        yearSelect.innerHTML += `<option value="${y.split(' (')[0]}">${y}</option>`;
-      });
-      
-      loadStudents();
-    }
-    
-    document.addEventListener('DOMContentLoaded', () => {
-      updateDynamicFilters();
-    });
 </script>
 <script>
   const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');

@@ -36,36 +36,68 @@ router.post('/login', async (req, res) => {
   });
 });
 
-// Get dashboard statistics (protected)
+// Get dashboard statistics (protected) — Client-Wise Structure
 router.get('/stats', authenticateAdmin, (req, res) => {
   const stats = {
     totalBuses: 0,
     totalStudents: 0,
-    totalDrivers: 0,
     totalFeesCollected: 0,
     totalRemainingFees: 0,
+    totalOldFees: 0,
+    totalCurrentFees: 0,
+    totalGrandFees: 0,
     overdueStudents: 0,
-    yearWiseStudents: []
+    activeStudents: 0,
+    passoutStudents: 0,
+    schoolLeftStudents: 0,
+    busWiseStats: [],
+    classWiseStats: []
   };
 
   db.query('SELECT COUNT(*) as count FROM buses', (err, busResults) => {
     if (!err && busResults.length > 0) stats.totalBuses = busResults[0].count;
 
-    db.query('SELECT COUNT(*) as count FROM drivers', (err, driverResults) => {
-      if (!err && driverResults.length > 0) stats.totalDrivers = driverResults[0].count;
+    db.query(`SELECT
+        COUNT(*) as total,
+        SUM(fees_paid) as paid,
+        SUM(remaining_fees) as remaining,
+        SUM(old_bus_fees) as old_fees,
+        SUM(current_fees) as curr_fees,
+        SUM(total_fees) as grand_total,
+        SUM(CASE WHEN student_status='active'      THEN 1 ELSE 0 END) as active_count,
+        SUM(CASE WHEN student_status='passout'     THEN 1 ELSE 0 END) as passout_count,
+        SUM(CASE WHEN student_status='school_left' THEN 1 ELSE 0 END) as left_count
+      FROM students`, (err, sr) => {
+      if (!err && sr.length > 0) {
+        stats.totalStudents       = sr[0].total || 0;
+        stats.totalFeesCollected  = sr[0].paid || 0;
+        stats.totalRemainingFees  = sr[0].remaining || 0;
+        stats.totalOldFees        = sr[0].old_fees || 0;
+        stats.totalCurrentFees    = sr[0].curr_fees || 0;
+        stats.totalGrandFees      = sr[0].grand_total || 0;
+        stats.activeStudents      = sr[0].active_count || 0;
+        stats.passoutStudents     = sr[0].passout_count || 0;
+        stats.schoolLeftStudents  = sr[0].left_count || 0;
+      }
 
-      db.query('SELECT COUNT(*) as count, SUM(fees_paid) as paid, SUM(remaining_fees) as remaining FROM students', (err, studentResults) => {
-        if (!err && studentResults.length > 0) {
-          stats.totalStudents = studentResults[0].count;
-          stats.totalFeesCollected = studentResults[0].paid || 0;
-          stats.totalRemainingFees = studentResults[0].remaining || 0;
-        }
-        
-        db.query('SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0', (err, overdueResults) => {
-          if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
-          
-          db.query('SELECT course_year, COUNT(*) as count FROM students GROUP BY course_year ORDER BY course_year', (err, yearResults) => {
-            if (!err) stats.yearWiseStudents = yearResults;
+      db.query('SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0', (err, overdueResults) => {
+        if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
+
+        db.query(`SELECT
+            b.bus_number, b.route,
+            COUNT(s.id) as student_count,
+            SUM(s.fees_paid) as collected,
+            SUM(s.remaining_fees) as remaining,
+            SUM(s.old_bus_fees) as old_fees,
+            SUM(s.current_fees) as current_fees
+          FROM buses b
+          LEFT JOIN students s ON s.bus_id = b.id
+          GROUP BY b.id, b.bus_number, b.route
+          ORDER BY b.bus_number`, (err, busStats) => {
+          if (!err) stats.busWiseStats = busStats;
+
+          db.query('SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students GROUP BY class_name ORDER BY class_name', (err, classResults) => {
+            if (!err) stats.classWiseStats = classResults;
             res.json({ success: true, stats });
           });
         });

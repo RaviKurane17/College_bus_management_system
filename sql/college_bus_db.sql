@@ -1,132 +1,159 @@
--- =================================
--- 🗄️ College Bus Management System
--- Complete Database Schema (Production-Level)
--- =================================
+-- =====================================================
+-- 🗄️  College Bus Management System
+-- FRESH DATABASE — Matches Client Excel Exactly
+-- HOLY-WOOD ACADEMY (TRANSPORTS 26-27)
+--
+-- Student table columns match Excel:
+--   Name | Class | Old Bus Fees | Current Fees | Discount |
+--   Total | Paid | Unpaid | Bus No | Pick-Up Point
+--
+-- HOW TO USE ON TiDB:
+--   1. Login → TiDB Cloud → SQL Editor
+--   2. Paste this entire file → Run
+-- =====================================================
 
-CREATE DATABASE IF NOT EXISTS college_bus_db;
+DROP DATABASE IF EXISTS college_bus_db;
+CREATE DATABASE college_bus_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE college_bus_db;
 
--- Admins
-CREATE TABLE IF NOT EXISTS admins (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,  -- bcrypt hashed
-  email VARCHAR(100) UNIQUE NOT NULL,
+-- ─────────────────────────────────────────────────────
+-- TABLE: admins
+-- ─────────────────────────────────────────────────────
+CREATE TABLE admins (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+  username    VARCHAR(50)  UNIQUE NOT NULL,
+  password    VARCHAR(255) NOT NULL,
+  email       VARCHAR(100) UNIQUE NOT NULL,
+  role        ENUM('super_admin','admin') DEFAULT 'admin',
   reset_token VARCHAR(100),
   reset_token_expires DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_email (email),
+  created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_email    (email),
   INDEX idx_username (username)
 ) ENGINE=InnoDB;
 
--- Drivers
-CREATE TABLE IF NOT EXISTS drivers (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  phone VARCHAR(20) NOT NULL,
-  license_number VARCHAR(50),
-  address TEXT,
-  joined_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  INDEX idx_phone (phone)
-) ENGINE=InnoDB;
-
--- Buses
-CREATE TABLE IF NOT EXISTS buses (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  bus_number VARCHAR(20) NOT NULL UNIQUE,
-  driver_name VARCHAR(100),  -- Legacy column
-  driver_phone VARCHAR(20),  -- Legacy column
-  driver_id INT,
-  capacity INT NOT NULL DEFAULT 0,
-  route VARCHAR(255),
-  FOREIGN KEY (driver_id) REFERENCES drivers(id) ON DELETE SET NULL,
+-- ─────────────────────────────────────────────────────
+-- TABLE: buses
+-- ─────────────────────────────────────────────────────
+CREATE TABLE buses (
+  id           INT AUTO_INCREMENT PRIMARY KEY,
+  bus_number   VARCHAR(20)  NOT NULL UNIQUE,
+  driver_name  VARCHAR(100),
+  driver_phone VARCHAR(20),
+  route        VARCHAR(255),
+  capacity     INT DEFAULT 50,
   INDEX idx_bus_number (bus_number)
 ) ENGINE=InnoDB;
 
--- Students
-CREATE TABLE IF NOT EXISTS students (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  password VARCHAR(255) NOT NULL,  -- bcrypt hashed
-  name VARCHAR(150) NOT NULL,
-  roll_no VARCHAR(50) UNIQUE NOT NULL,
-  department VARCHAR(150),
-  course_year VARCHAR(50),
-  section VARCHAR(50),
-  address TEXT,
-  phone VARCHAR(20),
-  email VARCHAR(100),
-  photo_url VARCHAR(500),
-  pass_valid_from DATE,
-  pass_valid_to DATE,
-  bus_id INT,
-  total_fees DECIMAL(10,2) DEFAULT 0,
-  concession DECIMAL(10,2) DEFAULT 0,
-  concession_reason VARCHAR(255),
-  payment_cycle VARCHAR(100),
-  fees_paid DECIMAL(10,2) DEFAULT 0,
+-- ─────────────────────────────────────────────────────
+-- TABLE: students
+-- Columns match client Excel sheet exactly
+-- ─────────────────────────────────────────────────────
+CREATE TABLE students (
+  id          INT AUTO_INCREMENT PRIMARY KEY,
+
+  -- ── Login (system) ──────────────────────────────────
+  username    VARCHAR(100) UNIQUE NOT NULL,   -- auto-generated or phone
+  password    VARCHAR(255) NOT NULL,           -- bcrypt hashed
+
+  -- ── Excel: "Name of Students" ───────────────────────
+  name        VARCHAR(150) NOT NULL,
+
+  -- ── Excel: "Class" ──────────────────────────────────
+  class_name  VARCHAR(100),                    -- e.g. "Class - 3rd", "Class - 10th (Passout)"
+
+  -- ── Contact ─────────────────────────────────────────
+  phone       VARCHAR(20),
+
+  -- ── Excel: "Bus No." ────────────────────────────────
+  bus_id      INT,                             -- FK → buses.id
+
+  -- ── Excel: "Pick-Up Point" ──────────────────────────
+  pick_up_point VARCHAR(150),                  -- e.g. "NIKAMWADI", "SARUD"
+
+  -- ── Excel: "Old Bus Fees" ───────────────────────────
+  old_bus_fees  DECIMAL(10,2) DEFAULT 0,       -- carry-forward dues from previous years
+
+  -- ── Excel: "Currents Bus Fees" (2026-27) ────────────
+  current_fees  DECIMAL(10,2) DEFAULT 0,       -- current academic year fees
+
+  -- ── Excel: "Discount Amount" ────────────────────────
+  discount_amount DECIMAL(10,2) DEFAULT 0,
+
+  -- ── Excel: "Total Amount" (computed) ────────────────
+  -- total_fees = old_bus_fees + current_fees - discount_amount
+  total_fees    DECIMAL(10,2) DEFAULT 0,
+
+  -- ── Excel: "Paid" ───────────────────────────────────
+  fees_paid     DECIMAL(10,2) DEFAULT 0,
+
+  -- ── Excel: "Unpaid Fees" (computed) ─────────────────
+  -- remaining_fees = total_fees - fees_paid
   remaining_fees DECIMAL(10,2) DEFAULT 0,
-  joining_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-  last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  reset_token VARCHAR(100),
+
+  -- ── Status (from last section in Excel) ─────────────
+  -- active       = currently enrolled
+  -- passout      = completed 10th/12th, old dues pending
+  -- school_left  = left school, old dues pending
+  student_status ENUM('active','passout','school_left') DEFAULT 'active',
+
+  -- ── System ──────────────────────────────────────────
+  joining_date   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  last_updated   TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  reset_token    VARCHAR(100),
   reset_token_expires DATETIME,
+
   FOREIGN KEY (bus_id) REFERENCES buses(id) ON DELETE SET NULL,
-  INDEX idx_roll_no (roll_no),
-  INDEX idx_email (email),
-  INDEX idx_department (department),
-  INDEX idx_remaining_fees (remaining_fees)
+  INDEX idx_name          (name),
+  INDEX idx_bus_id        (bus_id),
+  INDEX idx_pick_up_point (pick_up_point),
+  INDEX idx_remaining     (remaining_fees),
+  INDEX idx_status        (student_status)
 ) ENGINE=InnoDB;
 
--- Payments
-CREATE TABLE IF NOT EXISTS payments (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  student_id INT NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  payment_mode VARCHAR(50) NOT NULL,
-  utr_number VARCHAR(100),
-  receipt_url VARCHAR(500),
-  payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+-- ─────────────────────────────────────────────────────
+-- TABLE: payments  (one row per transaction)
+-- ─────────────────────────────────────────────────────
+CREATE TABLE payments (
+  id             INT AUTO_INCREMENT PRIMARY KEY,
+  student_id     INT NOT NULL,
+  amount         DECIMAL(10,2) NOT NULL,
+  payment_mode   VARCHAR(50) NOT NULL,    -- Cash / Online / Cheque
+  utr_number     VARCHAR(100),
+  receipt_number VARCHAR(50),
+  payment_date   DATETIME DEFAULT CURRENT_TIMESTAMP,
+  notes          TEXT,
   FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  INDEX idx_student_id (student_id),
-  INDEX idx_payment_date (payment_date)
+  INDEX idx_student_id  (student_id),
+  INDEX idx_payment_date(payment_date)
 ) ENGINE=InnoDB;
 
--- Student Queries
-CREATE TABLE IF NOT EXISTS student_queries (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  student_id INT NOT NULL,
-  subject VARCHAR(200) NOT NULL,
-  message TEXT NOT NULL,
-  attachment_url VARCHAR(500),
-  status ENUM('open','resolved','in_progress') DEFAULT 'open',
-  admin_reply TEXT,
-  replied_at DATETIME,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (student_id) REFERENCES students(id) ON DELETE CASCADE,
-  INDEX idx_student_id (student_id),
-  INDEX idx_status (status)
-) ENGINE=InnoDB;
-
--- Backup Logs
-CREATE TABLE IF NOT EXISTS backup_logs (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  filename VARCHAR(255) NOT NULL,
-  file_size BIGINT DEFAULT 0,
-  status ENUM('success', 'failed') DEFAULT 'success',
-  created_by VARCHAR(100),
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  notes TEXT
-) ENGINE=InnoDB;
-
--- Settings
-CREATE TABLE IF NOT EXISTS settings (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  setting_key VARCHAR(50) UNIQUE NOT NULL,
+-- ─────────────────────────────────────────────────────
+-- TABLE: settings
+-- ─────────────────────────────────────────────────────
+CREATE TABLE settings (
+  id            INT AUTO_INCREMENT PRIMARY KEY,
+  setting_key   VARCHAR(50) UNIQUE NOT NULL,
   setting_value VARCHAR(255),
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
--- Insert default admin (password will be hashed on first server start)
--- Default credentials: admin / admin123
-INSERT IGNORE INTO admins (username, password, email)
-VALUES ('admin', 'admin123', 'ravikurane12@gmail.com');
+INSERT INTO settings (setting_key, setting_value) VALUES
+  ('school_name',   'HOLY-WOOD ACADEMY'),
+  ('academic_year', '2026-27'),
+  ('fee_year',      '2026-27');
+
+-- ─────────────────────────────────────────────────────
+-- Default super admin
+-- Login: superadmin / SuperAdmin@2024
+-- (password gets re-hashed on first server start)
+-- ─────────────────────────────────────────────────────
+INSERT INTO admins (username, password, email, role)
+VALUES ('superadmin', 'REHASH_ON_START', 'ravikurane12@gmail.com', 'super_admin');
+
+-- ─────────────────────────────────────────────────────
+-- VERIFY
+-- ─────────────────────────────────────────────────────
+SELECT 'Database created successfully!' AS status;
+SHOW TABLES;
+DESCRIBE students;

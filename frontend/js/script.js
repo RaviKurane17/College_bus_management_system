@@ -815,14 +815,9 @@ async function loadStudents() {
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
       const filteredStudents = res.filter(s => {
-        const fDept = document.getElementById('filterDept')?.value || '';
-        const fYear = document.getElementById('filterYear')?.value || '';
-        const fSec = document.getElementById('filterSec')?.value || '';
-        const matchesSearch = (s.name.toLowerCase().includes(searchTerm) || s.roll_no.toLowerCase().includes(searchTerm));
-        const matchesDept = fDept === '' || s.department === fDept || (fDept.includes(' - ') && s.department === fDept.split(' - ')[1]);
-        const matchesYear = fYear === '' || s.course_year === fYear;
-        const matchesSec = fSec === '' || s.section === fSec;
-        return matchesSearch && matchesDept && matchesYear && matchesSec;
+        const name = s.name || '';
+        const cls = s.class_name || '';
+        return name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
       });
 
       window.currentFilteredStudents = filteredStudents;
@@ -834,20 +829,20 @@ async function loadStudents() {
         const tr = document.createElement('tr');
         if (isOverdue) tr.style.borderLeft = '3px solid var(--error)';
         tr.innerHTML = `
+          <td>${s.id}</td>
           <td>
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
               <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.9rem;"></i>
               <div>
                 ${escapeHtml(s.name)}
-                <div style="font-family: monospace; font-size: 0.8rem; color: var(--clr-muted, var(--gray)); margin-top: 2px;">${escapeHtml(s.roll_no)}</div>
               </div>
             </a>
           </td>
-          <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.department || 'N/A')}</span></td>
+          <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
           <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
-          <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.route || 'N/A')}</td>
+          <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
-          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.concession || 0).toLocaleString()}</td>
+          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
           <td style="color: ${isOverdue ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${isOverdue ? '700' : '600'};">
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
@@ -869,17 +864,17 @@ async function loadStudents() {
           card.innerHTML = `
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="text-decoration:none;">
               <div class="sc-name">${escapeHtml(s.name)}</div>
-              <div class="sc-roll">${escapeHtml(s.roll_no) || 'No Roll No'}</div>
+              <div class="sc-roll">ID: ${s.id}</div>
             </a>
-            <div class="sc-dept">${escapeHtml(s.department || 'N/A')}</div>
+            <div class="sc-dept">${escapeHtml(s.class_name || 'N/A')}</div>
             <div class="sc-row">
               <div>
                 <div class="sc-label">Bus No</div>
                 <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.bus_number || 'None')}</div>
               </div>
               <div>
-                <div class="sc-label">Route</div>
-                <div class="sc-val" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.route || 'N/A')}</div>
+                <div class="sc-label">Pick-up</div>
+                <div class="sc-val" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.pick_up_point || 'N/A')}</div>
               </div>
             </div>
             <div class="sc-fees-row">
@@ -888,8 +883,8 @@ async function loadStudents() {
                 <div class="sc-fee-val" style="color:#cbd5e1;">₹${parseFloat(s.total_fees || 0).toLocaleString()}</div>
               </div>
               <div class="sc-fee-box">
-                <div class="sc-fee-label">Conces.</div>
-                <div class="sc-fee-val" style="color:var(--clr-muted);">₹${parseFloat(s.concession || 0).toLocaleString()}</div>
+                <div class="sc-fee-label">Discount</div>
+                <div class="sc-fee-val" style="color:var(--clr-muted);">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</div>
               </div>
               <div class="sc-fee-box">
                 <div class="sc-fee-label">Paid</div>
@@ -914,7 +909,7 @@ async function loadStudents() {
       });
 
       if (filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" class="no-data">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="10" class="no-data">No students found</td></tr>';
         if (cardsContainer) cardsContainer.innerHTML = '<p style="text-align:center;padding:20px;color:var(--clr-muted);">No students found</p>';
       }
     } else {

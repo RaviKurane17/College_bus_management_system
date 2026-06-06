@@ -1,364 +1,229 @@
 // =========================
-// 📤 Bulk Student Upload Routes
-// Parse Excel files and batch-insert students
+// 📤 Bulk Student Upload (Standard Template)
+// Columns matching client Excel:
+//   Name | Class | Phone | Bus Number | Pick-Up Point
+//   Old Bus Fees | Current Fees (2026-27) | Discount Amount | Fees Paid
 // =========================
 const express = require('express');
-const router = express.Router();
-const multer = require('multer');
-const XLSX = require('xlsx');
-const bcrypt = require('bcryptjs');
-const db = require('../db');
+const router  = express.Router();
+const XLSX    = require('xlsx');
+const bcrypt  = require('bcryptjs');
+const db      = require('../db');
 const { authenticateAdmin } = require('../middleware/auth');
 
-// (Multer removed - using base64 JSON for Vercel Serverless compatibility)
+function computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid) {
+  const total = Math.max(0, parseFloat(old_bus_fees||0) + parseFloat(current_fees||0) - parseFloat(discount_amount||0));
+  return { total_fees: total.toFixed(2), remaining_fees: Math.max(0, total - parseFloat(fees_paid||0)).toFixed(2) };
+}
 
 // ============================
-// Download Excel template
+// GET template
 // ============================
 router.get('/template', authenticateAdmin, (req, res) => {
   try {
     const wb = XLSX.utils.book_new();
-    
-    // Create template data with sample row
-    const templateData = [
-      {
-        'Name': 'John Doe',
-        'Roll No': 'CSE-2024-001',
-        'Email': 'john@example.com',
-        'Password': 'Pass@123',
-        'Department': 'Degree - CSE',
-        'Course Year': '1st Year',
-        'Section': 'A',
-        'Phone': '9876543210',
-        'Address': '123 Main Street',
-        'Bus Number': 'KA-01-1234',
-        'Total Fees': 15000,
-        'Fees Paid': 5000,
-        'Pass Valid From': '2024-06-01',
-        'Pass Valid To': '2025-05-31'
-      }
-    ];
-
-    const ws = XLSX.utils.json_to_sheet(templateData);
-
-    // Set column widths
+    const ws = XLSX.utils.json_to_sheet([{
+      'Name':             'AARUSH ATUL KHOT',
+      'Class':            'Class - 3rd',
+      'Phone':            '9860127879',
+      'Bus Number':       '82',
+      'Pick-Up Point':    'NIKAMWADI',
+      'Old Bus Fees':     0,
+      'Current Fees':     9500,
+      'Discount Amount':  0,
+      'Fees Paid':        0,
+      'Password':         '123456'
+    }]);
     ws['!cols'] = [
-      { wch: 20 }, // Name
-      { wch: 18 }, // Roll No
-      { wch: 25 }, // Email
-      { wch: 15 }, // Password
-      { wch: 18 }, // Department
-      { wch: 12 }, // Course Year
-      { wch: 10 }, // Section
-      { wch: 15 }, // Phone
-      { wch: 30 }, // Address
-      { wch: 15 }, // Bus Number
-      { wch: 12 }, // Total Fees
-      { wch: 12 }, // Fees Paid
-      { wch: 15 }, // Pass Valid From
-      { wch: 15 }, // Pass Valid To
+      {wch:28},{wch:15},{wch:15},{wch:12},{wch:20},
+      {wch:14},{wch:14},{wch:16},{wch:12},{wch:15}
     ];
-
     XLSX.utils.book_append_sheet(wb, ws, 'Students');
 
-    // Add instructions sheet
-    const instructions = [
-      { 'Instructions': 'BULK STUDENT UPLOAD TEMPLATE' },
-      { 'Instructions': '' },
-      { 'Instructions': 'Required Fields (marked with *):' },
-      { 'Instructions': '  * Name - Student full name (letters and spaces only)' },
-      { 'Instructions': '  * Roll No - Unique roll number (letters, numbers, hyphens)' },
-      { 'Instructions': '  * Email - Valid email address (used as login username)' },
-      { 'Instructions': '  * Password - Minimum 6 characters' },
-      { 'Instructions': '  * Phone - Contact number' },
-      { 'Instructions': '  * Department - e.g., Degree - CSE, Poly - MECH' },
-      { 'Instructions': '  * Address - Home/Hostel address' },
-      { 'Instructions': '' },
-      { 'Instructions': 'Optional Fields:' },
-      { 'Instructions': '  - Course Year (1st Year, 2nd Year, 3rd Year, 4th Year)' },
-      { 'Instructions': '  - Section (A, B, C)' },
-      { 'Instructions': '  - Bus Number (must match existing bus in the system)' },
-      { 'Instructions': '  - Total Fees (numeric)' },
-      { 'Instructions': '  - Fees Paid (numeric)' },
-      { 'Instructions': '  - Pass Valid From (YYYY-MM-DD format)' },
-      { 'Instructions': '  - Pass Valid To (YYYY-MM-DD format)' },
-      { 'Instructions': '' },
-      { 'Instructions': 'NOTES:' },
-      { 'Instructions': '  1. Delete the sample row before uploading' },
-      { 'Instructions': '  2. Do not change column headers' },
-      { 'Instructions': '  3. Duplicate roll numbers or emails will be skipped' },
-    ];
+    const instr = XLSX.utils.json_to_sheet([
+      { Instructions: 'BULK UPLOAD TEMPLATE — HOLY-WOOD ACADEMY' },
+      { Instructions: '' },
+      { Instructions: 'Required: Name, Phone, Bus Number' },
+      { Instructions: 'Optional: Class, Pick-Up Point, Old Bus Fees, Current Fees, Discount Amount, Fees Paid, Password' },
+      { Instructions: '' },
+      { Instructions: 'total_fees = Old Bus Fees + Current Fees - Discount (auto-computed)' },
+      { Instructions: 'remaining_fees = total_fees - Fees Paid (auto-computed)' },
+      { Instructions: '' },
+      { Instructions: 'Password defaults to "123456" if left empty' },
+      { Instructions: 'Bus Number must already exist in system' },
+    ]);
+    instr['!cols'] = [{wch:65}];
+    XLSX.utils.book_append_sheet(wb, instr, 'Instructions');
 
-    const wsInstructions = XLSX.utils.json_to_sheet(instructions);
-    wsInstructions['!cols'] = [{ wch: 60 }];
-    XLSX.utils.book_append_sheet(wb, wsInstructions, 'Instructions');
-
-    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-
+    const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
     res.setHeader('Content-Disposition', 'attachment; filename=student_upload_template.xlsx');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.send(buffer);
-  } catch (error) {
-    console.error('❌ Template generation error:', error.message);
-    res.status(500).json({ success: false, message: 'Error generating template' });
+    res.send(buf);
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error generating template: ' + e.message });
   }
 });
 
 // ============================
-// Preview uploaded Excel (parse & validate without inserting)
+// POST /preview
 // ============================
 router.post('/preview', authenticateAdmin, async (req, res) => {
   try {
     const { fileData } = req.body;
-    if (!fileData) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
+    if (!fileData) return res.status(400).json({ success: false, message: 'No file' });
 
-    const buffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const data = XLSX.utils.sheet_to_json(
+      XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).Sheets[
+        XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).SheetNames[0]
+      ], { defval: '' }
+    );
+    if (!data.length) return res.status(400).json({ success: false, message: 'File is empty' });
 
-    if (data.length === 0) {
-      return res.status(400).json({ success: false, message: 'Excel file is empty' });
-    }
+    const promisePool        = db.promise;
+    const [existingStudents] = await promisePool.query('SELECT username FROM students');
+    const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
 
-    if (data.length > 2000) {
-      return res.status(400).json({ success: false, message: 'Maximum 2000 students per upload' });
-    }
+    const existingUsernames  = new Set(existingStudents.map(s => s.username.toLowerCase()));
+    const busMap             = {};
+    existingBuses.forEach(b => { busMap[b.bus_number.toString().toLowerCase()] = b.id; });
 
-    // Fetch existing data for validation
-    const promisePool = db.promise ? db.promise : require('../db').promise;
-    const [existingStudents] = await promisePool.query('SELECT username, roll_no FROM students');
-    const [existingBuses] = await promisePool.query('SELECT id, bus_number FROM buses');
+    const fileUsernames = new Set();
 
-    const existingEmails = new Set(existingStudents.map(s => s.username.toLowerCase()));
-    const existingRolls = new Set(existingStudents.map(s => s.roll_no.toLowerCase()));
-    const busMap = {};
-    existingBuses.forEach(b => { busMap[b.bus_number.toLowerCase()] = b.id; });
+    const rows = data.map((row, i) => {
+      const name           = (row['Name']           || '').toString().trim();
+      const class_name     = (row['Class']           || '').toString().trim();
+      const phone          = (row['Phone']           || '').toString().trim();
+      const bus_number     = (row['Bus Number']      || '').toString().trim();
+      const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
+      const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
+      const current_fees   = parseFloat(row['Current Fees'])    || 0;
+      const discount_amount= parseFloat(row['Discount Amount']) || 0;
+      const fees_paid      = parseFloat(row['Fees Paid'])       || 0;
+      const password       = (row['Password'] || '123456').toString().trim() || '123456';
 
-    // Track duplicates within the file itself
-    const fileEmails = new Set();
-    const fileRolls = new Set();
+      const username = phone
+        ? phone.substring(0, 30) + '.' + (i + 1)
+        : name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '').substring(0, 20) + '.' + (i+1);
 
-    const rows = data.map((row, index) => {
+      const bus_id = busMap[bus_number.toLowerCase()] || null;
+      const t      = computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid);
+
       const errors = [];
-      const name = (row['Name'] || '').toString().trim();
-      let roll_no = (row['Roll No'] || '').toString().trim();
-      let email = (row['Email'] || '').toString().trim();
-      let password = (row['Password'] || '').toString().trim();
-      const department = (row['Department'] || '').toString().trim();
-      const course_year = (row['Course Year'] || '').toString().trim();
-      const section = (row['Section'] || '').toString().trim();
-      const phone = (row['Phone'] || '').toString().trim();
-      const address = (row['Address'] || '').toString().trim();
-
-      // Apply defaults for optional fields
-      if (!roll_no) roll_no = 'TEMP-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000) + index;
-      if (!password) password = '123456';
-      if (!email && phone) email = phone;
-      if (!email) email = roll_no;
-      const bus_number = (row['Bus Number'] || '').toString().trim();
-      const total_fees = parseFloat(row['Total Fees']) || 0;
-      const fees_paid = parseFloat(row['Fees Paid']) || 0;
-      const pass_valid_from = (row['Pass Valid From'] || '').toString().trim();
-      const pass_valid_to = (row['Pass Valid To'] || '').toString().trim();
-
-      // Required field checks
-      if (!name) errors.push('Name is required');
-      else if (!/^[A-Za-z\s]+$/.test(name)) errors.push('Name: letters and spaces only');
-      
-      if (!phone) errors.push('Phone is required');
-      if (!department) errors.push('Department is required');
-      if (!address) errors.push('Address is required');
-
-      // Duplicate checks
-      if (email && existingEmails.has(email.toLowerCase())) errors.push('Email already registered');
-      if (roll_no && existingRolls.has(roll_no.toLowerCase())) errors.push('Roll No already exists');
-      if (email && fileEmails.has(email.toLowerCase())) errors.push('Duplicate email in file');
-      if (roll_no && fileRolls.has(roll_no.toLowerCase())) errors.push('Duplicate roll no in file');
-
-      // Bus validation
-      let bus_id = null;
-      if (bus_number) {
-        bus_id = busMap[bus_number.toLowerCase()] || null;
-        if (!bus_id) errors.push(`Bus "${bus_number}" not found`);
-      }
-
-      if (email) fileEmails.add(email.toLowerCase());
-      if (roll_no) fileRolls.add(roll_no.toLowerCase());
+      if (!name)                           errors.push('Name required');
+      if (!phone)                          errors.push('Phone required');
+      if (!bus_number)                     errors.push('Bus Number required');
+      if (bus_number && !bus_id)           errors.push(`Bus "${bus_number}" not found`);
+      if (existingUsernames.has(username.toLowerCase())) errors.push('Username already exists');
+      if (fileUsernames.has(username.toLowerCase()))     errors.push('Duplicate in file');
+      fileUsernames.add(username.toLowerCase());
 
       return {
-        row: index + 2, // +2 because Excel is 1-indexed and header is row 1
-        name, roll_no, email, password, department, course_year, section,
-        phone, address, bus_number, bus_id, total_fees, fees_paid,
-        pass_valid_from, pass_valid_to,
-        remaining_fees: Math.max(0, total_fees - fees_paid),
-        valid: errors.length === 0,
-        errors
+        row: i + 2, name, class_name, phone, bus_number, bus_id, pick_up_point,
+        old_bus_fees, current_fees, discount_amount, fees_paid,
+        ...t, username, password,
+        valid: errors.length === 0, errors
       };
     });
 
-    const validCount = rows.filter(r => r.valid).length;
-    const invalidCount = rows.filter(r => !r.valid).length;
-
     res.json({
-      success: true,
-      totalRows: rows.length,
-      validCount,
-      invalidCount,
+      success: true, totalRows: rows.length,
+      validCount: rows.filter(r => r.valid).length,
+      invalidCount: rows.filter(r => !r.valid).length,
       rows
     });
-
-  } catch (error) {
-    console.error('❌ Preview error:', error.message);
-    res.status(500).json({ success: false, message: 'Error parsing Excel file: ' + error.message });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Parse error: ' + e.message });
   }
 });
 
 // ============================
-// Bulk upload (insert validated students)
+// POST /upload
 // ============================
 router.post('/upload', authenticateAdmin, async (req, res) => {
   try {
     const { fileData } = req.body;
-    if (!fileData) {
-      return res.status(400).json({ success: false, message: 'No file uploaded' });
-    }
+    if (!fileData) return res.status(400).json({ success: false, message: 'No file' });
 
-    const buffer = Buffer.from(fileData, 'base64');
-    const workbook = XLSX.read(buffer, { type: 'buffer' });
-    const sheetName = workbook.SheetNames[0];
-    const worksheet = workbook.Sheets[sheetName];
-    const data = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+    const data = XLSX.utils.sheet_to_json(
+      XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).Sheets[
+        XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).SheetNames[0]
+      ], { defval: '' }
+    );
+    if (!data.length) return res.status(400).json({ success: false, message: 'File is empty' });
 
-    if (data.length === 0) {
-      return res.status(400).json({ success: false, message: 'Excel file is empty' });
-    }
+    const promisePool        = db.promise;
+    const [existingStudents] = await promisePool.query('SELECT username FROM students');
+    const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
 
-    if (data.length > 2000) {
-      return res.status(400).json({ success: false, message: 'Maximum 2000 students per upload' });
-    }
+    const existingUsernames  = new Set(existingStudents.map(s => s.username.toLowerCase()));
+    const busMap             = {};
+    existingBuses.forEach(b => { busMap[b.bus_number.toString().toLowerCase()] = b.id; });
 
-    const promisePool = db.promise ? db.promise : require('../db').promise;
-    const [existingStudents] = await promisePool.query('SELECT username, roll_no FROM students');
-    const [existingBuses] = await promisePool.query('SELECT id, bus_number FROM buses');
-
-    const existingEmails = new Set(existingStudents.map(s => s.username.toLowerCase()));
-    const existingRolls = new Set(existingStudents.map(s => s.roll_no.toLowerCase()));
-    const busMap = {};
-    existingBuses.forEach(b => { busMap[b.bus_number.toLowerCase()] = b.id; });
-
-    const fileEmails = new Set();
-    const fileRolls = new Set();
+    const fileUsernames = new Set();
     const results = [];
-    let successCount = 0;
-    let failCount = 0;
+    let successCount = 0, failCount = 0;
 
     for (let i = 0; i < data.length; i++) {
       const row = data[i];
-      const rowNum = i + 2;
-      const name = (row['Name'] || '').toString().trim();
-      let roll_no = (row['Roll No'] || '').toString().trim();
-      let email = (row['Email'] || '').toString().trim();
-      let password = (row['Password'] || '').toString().trim();
-      const department = (row['Department'] || '').toString().trim();
-      const course_year = (row['Course Year'] || '').toString().trim();
-      const section = (row['Section'] || '').toString().trim();
-      const phone = (row['Phone'] || '').toString().trim();
-      const address = (row['Address'] || '').toString().trim();
+      const name           = (row['Name']           || '').toString().trim();
+      const class_name     = (row['Class']           || '').toString().trim();
+      const phone          = (row['Phone']           || '').toString().trim();
+      const bus_number     = (row['Bus Number']      || '').toString().trim();
+      const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
+      const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
+      const current_fees   = parseFloat(row['Current Fees'])    || 0;
+      const discount_amount= parseFloat(row['Discount Amount']) || 0;
+      const fees_paid      = parseFloat(row['Fees Paid'])       || 0;
+      const password       = (row['Password'] || '123456').toString().trim() || '123456';
 
-      // Apply defaults for optional fields
-      if (!roll_no) roll_no = 'TEMP-' + Date.now().toString().slice(-6) + Math.floor(Math.random() * 1000) + rowNum;
-      if (!password) password = '123456';
-      if (!email && phone) email = phone;
-      if (!email) email = roll_no;
+      const username = phone
+        ? phone.substring(0, 30) + '.' + (i + 1)
+        : name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '').substring(0, 20) + '.' + (i+1);
 
-      const bus_number = (row['Bus Number'] || '').toString().trim();
-      const total_fees = parseFloat(row['Total Fees']) || 0;
-      const fees_paid = parseFloat(row['Fees Paid']) || 0;
-      const remaining_fees = Math.max(0, total_fees - fees_paid);
-      const pass_valid_from = (row['Pass Valid From'] || '').toString().trim() || null;
-      const pass_valid_to = (row['Pass Valid To'] || '').toString().trim() || null;
-
-      // Validation
+      const bus_id = busMap[bus_number.toLowerCase()] || null;
+      const t      = computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid);
       const errors = [];
-      if (!name || !/^[A-Za-z\s]+$/.test(name)) errors.push('Invalid name');
-      
-      if (!phone) errors.push('Phone is required');
-      if (!department) errors.push('Department is required');
-      if (!address) errors.push('Address is required');
-      if (existingEmails.has(email.toLowerCase()) || fileEmails.has(email.toLowerCase())) errors.push('Duplicate email');
-      if (existingRolls.has(roll_no.toLowerCase()) || fileRolls.has(roll_no.toLowerCase())) errors.push('Duplicate roll no');
 
-      let bus_id = null;
-      if (bus_number) {
-        bus_id = busMap[bus_number.toLowerCase()] || null;
-        if (!bus_id) errors.push(`Bus not found`);
-      }
+      if (!name)             errors.push('Name required');
+      if (!phone)            errors.push('Phone required');
+      if (bus_number && !bus_id) errors.push(`Bus "${bus_number}" not found`);
+      if (existingUsernames.has(username.toLowerCase())) errors.push('Username exists');
+      if (fileUsernames.has(username.toLowerCase()))     errors.push('Duplicate in file');
+      fileUsernames.add(username.toLowerCase());
 
-      if (errors.length > 0) {
-        failCount++;
-        results.push({ row: rowNum, name, roll_no, success: false, errors });
-        continue;
-      }
+      if (errors.length) { failCount++; results.push({ row: i+2, name, success: false, errors }); continue; }
 
       try {
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const sql = `INSERT INTO students 
-          (username, password, name, roll_no, department, course_year, section, address, phone, email, 
-           pass_valid_from, pass_valid_to, bus_id, total_fees, fees_paid, remaining_fees, joining_date) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURDATE())`;
-
-        await promisePool.query(sql, [
-          email.substring(0, 50),
-          hashedPassword,
-          name.substring(0, 150),
-          roll_no.substring(0, 50),
-          department.substring(0, 150),
-          course_year.substring(0, 50),
-          section.substring(0, 50),
-          address.substring(0, 500),
-          phone.substring(0, 20),
-          email.substring(0, 100),
-          pass_valid_from,
-          pass_valid_to,
-          bus_id,
-          total_fees.toFixed(2),
-          fees_paid.toFixed(2),
-          remaining_fees.toFixed(2)
-        ]);
-
+        const hashed = await bcrypt.hash(password, 12);
+        await promisePool.query(`INSERT INTO students
+          (username, password, name, class_name, phone, bus_id, pick_up_point,
+           old_bus_fees, current_fees, discount_amount, total_fees, fees_paid, remaining_fees,
+           student_status, joining_date)
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'active',CURDATE())`,
+          [
+            username.substring(0, 100), hashed,
+            name.substring(0, 150), class_name.substring(0, 100), phone.substring(0, 20),
+            bus_id, pick_up_point.substring(0, 150),
+            old_bus_fees.toFixed(2), current_fees.toFixed(2), discount_amount.toFixed(2),
+            t.total_fees, fees_paid.toFixed(2), t.remaining_fees
+          ]);
+        existingUsernames.add(username.toLowerCase());
         successCount++;
-        fileEmails.add(email.toLowerCase());
-        fileRolls.add(roll_no.toLowerCase());
-        results.push({ row: rowNum, name, roll_no, success: true, errors: [] });
-
-      } catch (dbErr) {
+        results.push({ row: i+2, name, success: true, errors: [] });
+      } catch (e) {
         failCount++;
-        const errMsg = dbErr.code === 'ER_DUP_ENTRY' ? 'Duplicate entry' : dbErr.message;
-        results.push({ row: rowNum, name, roll_no, success: false, errors: [errMsg] });
+        results.push({ row: i+2, name, success: false, errors: [e.code === 'ER_DUP_ENTRY' ? 'Duplicate' : e.message] });
       }
     }
 
-    console.log(`📤 Bulk upload complete: ${successCount} success, ${failCount} failed out of ${data.length} rows`);
-
     res.json({
       success: true,
-      message: `Upload complete: ${successCount} students added, ${failCount} failed`,
-      totalRows: data.length,
-      successCount,
-      failCount,
-      results
+      message: `Upload done: ${successCount} added, ${failCount} failed`,
+      successCount, failCount, totalRows: data.length, results
     });
-
-  } catch (error) {
-    console.error('❌ Bulk upload error:', error.message);
-    res.status(500).json({ success: false, message: 'Error processing upload: ' + error.message });
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Upload error: ' + e.message });
   }
 });
-
-// Removed Multer error handler
 
 module.exports = router;
