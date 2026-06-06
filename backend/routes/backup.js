@@ -53,6 +53,7 @@ router.get('/create', authenticateAdmin, async (req, res) => {
         password: process.env.DB_PASSWORD || '',
         database: process.env.DB_NAME || 'college_bus_db',
         port: process.env.DB_PORT || 3306,
+        ...(process.env.DB_SSL === 'true' ? { ssl: { minVersion: 'TLSv1.2', rejectUnauthorized: true } } : {})
       },
       dumpToFile: false // Return as string
     });

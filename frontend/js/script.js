@@ -514,7 +514,9 @@ async function loadBuses() {
   try {
     const res = await apiFetch('/api/buses');
     const tbody = document.querySelector('#busesTable tbody');
-    tbody.innerHTML = '';
+    const cardsContainer = document.getElementById('busesCards');
+    if (tbody) tbody.innerHTML = '';
+    if (cardsContainer) cardsContainer.innerHTML = '';
 
     if (Array.isArray(res)) {
       const searchInput = document.getElementById('searchBus');
@@ -526,32 +528,72 @@ async function loadBuses() {
           (bus.route && bus.route.toLowerCase().includes(searchTerm));
       });
 
+      let cardsHtml = '';
+
       filteredBuses.forEach(bus => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${bus.id}</td>
-          <td><a href="#" onclick="viewBusDetails(${bus.id}); return false;" style="color: var(--primary); font-weight: bold; text-decoration: none;">${escapeHtml(bus.bus_number)}</a></td>
-          <td>${escapeHtml(bus.driver_name || 'N/A')}</td>
-          <td>${bus.capacity || 0}</td>
-          <td>${escapeHtml(bus.route || 'N/A')}</td>
-          <td>
-            <button onclick="editBus(${bus.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
-            <button onclick="deleteBus(${bus.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
-          </td>
+        if (tbody) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>${bus.id}</td>
+            <td><a href="#" onclick="viewBusDetails(${bus.id}); return false;" style="color: var(--primary); font-weight: bold; text-decoration: none;">${escapeHtml(bus.bus_number)}</a></td>
+            <td>${escapeHtml(bus.driver_name || 'N/A')}</td>
+            <td>${bus.capacity || 0}</td>
+            <td>${escapeHtml(bus.route || 'N/A')}</td>
+            <td>
+              <button onclick="editBus(${bus.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button onclick="deleteBus(${bus.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        cardsHtml += `
+          <div class="bus-card">
+            <div class="bc-header">
+              <div class="bc-name">
+                <i class="fa-solid fa-bus"></i>
+                <a href="#" onclick="viewBusDetails(${bus.id}); return false;" style="color:inherit;text-decoration:none;">${escapeHtml(bus.bus_number)}</a>
+              </div>
+              <div class="bc-id">#${bus.id}</div>
+            </div>
+            <div class="bc-info-grid">
+              <div class="bc-info-item">
+                <span class="lbl">Driver</span>
+                <span class="val">${escapeHtml(bus.driver_name || 'N/A')}</span>
+              </div>
+              <div class="bc-info-item">
+                <span class="lbl">Capacity</span>
+                <span class="val">${bus.capacity || 0}</span>
+              </div>
+              <div class="bc-info-item">
+                <span class="lbl">Route</span>
+                <span class="val" style="grid-column: 1 / -1;">${escapeHtml(bus.route || 'N/A')}</span>
+              </div>
+            </div>
+            <div class="bc-actions">
+              <button onclick="editBus(${bus.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button onclick="deleteBus(${bus.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
       });
 
+      if (cardsContainer) cardsContainer.innerHTML = cardsHtml;
+
       if (filteredBuses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No buses found</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align:center;padding:20px;">No buses found</td></tr>';
+        if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:var(--clr-muted);">No buses found</div>';
       }
     } else {
-      tbody.innerHTML = '<tr><td colspan="6" class="error">Error loading buses</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error" style="text-align:center;padding:20px;">Error loading buses</td></tr>';
+      if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">Error loading buses</div>';
     }
   } catch (error) {
     console.error('Error loading buses:', error);
-    document.querySelector('#busesTable tbody').innerHTML =
-      '<tr><td colspan="6" class="error">Failed to load buses. Please try again.</td></tr>';
+    const tbody = document.querySelector('#busesTable tbody');
+    const cardsContainer = document.getElementById('busesCards');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error" style="text-align:center;padding:20px;">Failed to load buses. Please try again.</td></tr>';
+    if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">Failed to load buses.</div>';
   }
 }
 
@@ -559,8 +601,9 @@ async function loadDrivers() {
   try {
     const res = await apiFetch('/api/drivers');
     const tbody = document.querySelector('#driversTable tbody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const cardsContainer = document.getElementById('driverCards');
+    if (tbody) tbody.innerHTML = '';
+    if (cardsContainer) cardsContainer.innerHTML = '';
 
     if (Array.isArray(res)) {
       const searchInput = document.getElementById('searchDriver');
@@ -572,33 +615,72 @@ async function loadDrivers() {
           (driver.license_number && driver.license_number.toLowerCase().includes(searchTerm));
       });
 
+      let cardsHtml = '';
+
       filteredDrivers.forEach(d => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td style="color: var(--clr-text, inherit);">${d.id}</td>
-          <td style="color: var(--clr-text, inherit); font-weight: 500;">${escapeHtml(d.name)}</td>
-          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.phone)} ${d.phone ? `<a href="https://wa.me/91${d.phone.replace(/\D/g, '')}" target="_blank" title="WhatsApp" style="color: #25d366; margin-left: 5px;"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</td>
-          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.license_number || 'N/A')}</td>
-          <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.address || 'N/A')}</td>
-          <td>
-            <button onclick="editDriver(${d.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
-            <button onclick="deleteDriver(${d.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
-            ${d.phone ? `<button onclick="sendDriverWhatsApp(${d.id}, '${escapeHtml(d.name)}', '${d.phone.replace(/\D/g, '')}')" style="background: #25d366; padding: 6px 10px; font-size: 0.8rem; border-radius: 6px; border: none; color: #fff; cursor: pointer;" title="Send WhatsApp Message"><i class="fa-brands fa-whatsapp"></i></button>` : ''}
-          </td>
+        if (tbody) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td style="color: var(--clr-text, inherit);">${d.id}</td>
+            <td style="color: var(--clr-text, inherit); font-weight: 500;">${escapeHtml(d.name)}</td>
+            <td style="color: var(--clr-muted, inherit);">${escapeHtml(d.phone)} ${d.phone ? `<a href="https://wa.me/91${d.phone.replace(/\D/g, '')}" target="_blank" title="WhatsApp" style="color: #25d366; margin-left: 5px;"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</td>
+            <td style="color: var(--clr-text, inherit);">${escapeHtml(d.license_number || 'N/A')}</td>
+            <td style="color: var(--clr-muted, inherit); max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${escapeHtml(d.address || 'N/A')}</td>
+            <td>
+              <button onclick="editDriver(${d.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button onclick="deleteDriver(${d.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        cardsHtml += `
+          <div class="driver-card">
+            <div class="dc-header">
+              <div class="dc-name">
+                <i class="fa-solid fa-id-card"></i>
+                <span>${escapeHtml(d.name)}</span>
+              </div>
+              <div class="dc-id">#${d.id}</div>
+            </div>
+            <div class="dc-info-grid">
+              <div class="dc-info-item">
+                <span class="lbl">Phone</span>
+                <span class="val">${escapeHtml(d.phone)} ${d.phone ? `<a href="https://wa.me/91${d.phone.replace(/\D/g, '')}" target="_blank" title="WhatsApp" class="wa-link"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</span>
+              </div>
+              <div class="dc-info-item">
+                <span class="lbl">License</span>
+                <span class="val">${escapeHtml(d.license_number || 'N/A')}</span>
+              </div>
+              <div class="dc-info-item">
+                <span class="lbl">Address</span>
+                <span class="val" style="grid-column: 1 / -1;">${escapeHtml(d.address || 'N/A')}</span>
+              </div>
+            </div>
+            <div class="dc-actions">
+              <button onclick="editDriver(${d.id})" class="btn-table btn-edit"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button onclick="deleteDriver(${d.id})" class="btn-table btn-del"><i class="fa-solid fa-trash"></i> Delete</button>
+            </div>
+          </div>
         `;
-        tbody.appendChild(tr);
       });
 
+      if (cardsContainer) cardsContainer.innerHTML = cardsHtml;
+
       if (filteredDrivers.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="no-data">No drivers found</td></tr>';
+        if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="no-data" style="text-align:center;padding:20px;">No drivers found</td></tr>';
+        if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:var(--clr-muted);">No drivers found</div>';
       }
     } else {
-      tbody.innerHTML = '<tr><td colspan="6" class="error">Error loading drivers</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error" style="text-align:center;padding:20px;">Error loading drivers</td></tr>';
+      if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">Error loading drivers</div>';
     }
   } catch (error) {
     console.error('Error loading drivers:', error);
     const tbody = document.querySelector('#driversTable tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error">Failed to load drivers. Please try again.</td></tr>';
+    const cardsContainer = document.getElementById('driverCards');
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error" style="text-align:center;padding:20px;">Failed to load drivers. Please try again.</td></tr>';
+    if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">Failed to load drivers.</div>';
   }
 }
 
@@ -2606,6 +2688,7 @@ async function viewStudentDetails(id) {
 
           <div style="display: flex; gap: 8px; flex-wrap: wrap;">
             <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay Fees</button>
+            ${remainingFees <= 0 ? `<button onclick="printNoDuesReceipt(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-file-invoice"></i> No Dues</button>` : ''}
             <button onclick="generateBusPass(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-id-card"></i> Bus Pass</button>
             <button onclick="closeModal(); setTimeout(()=>deleteStudent(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-trash"></i> Delete</button>
           </div>

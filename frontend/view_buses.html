@@ -78,6 +78,96 @@
       .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:150;}
       .sidebar-overlay.show{display:block;}
       .search-box{min-width:150px;width:100%;}
+      /* Hide desktop table, show cards */
+      .desktop-table{display:none;}
+      .buses-cards{display:flex;flex-direction:column;gap:12px;padding:12px;}
+    }
+    @media(min-width:769px){
+      /* On desktop, cards are hidden */
+      .buses-cards{display:none;}
+      .desktop-table{display:table;}
+    }
+
+    /* ── Bus Card (mobile) ── */
+    .bus-card {
+      background: var(--clr-surface-2);
+      border: 1px solid var(--clr-border);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .bus-card .bc-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid var(--clr-border);
+      padding-bottom: 10px;
+    }
+    .bus-card .bc-name {
+      font-size: 1.1rem;
+      font-weight: 700;
+      color: var(--clr-accent);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .bus-card .bc-id {
+      font-size: 0.75rem;
+      background: rgba(255,255,255,0.08);
+      padding: 3px 8px;
+      border-radius: 4px;
+      color: var(--clr-muted);
+    }
+    .bus-card .bc-info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+    .bus-card .bc-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+    .bus-card .bc-info-item .lbl {
+      font-size: 0.7rem;
+      color: var(--clr-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .bus-card .bc-info-item .val {
+      font-size: 0.85rem;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+    .bus-card .bc-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 4px;
+      padding-top: 12px;
+      border-top: 1px solid var(--clr-border);
+    }
+    .bus-card .bc-actions button {
+      flex: 1;
+      justify-content: center;
+    }
+    
+    body.light-theme .bus-card {
+      background: #ffffff;
+      border-color: #e2e8f0;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    body.light-theme .bus-card .bc-info-item .val {
+      color: #0f172a;
+    }
+    body.light-theme .bus-card .bc-header,
+    body.light-theme .bus-card .bc-actions {
+      border-color: #f1f5f9;
+    }
+    body.light-theme .bus-card .bc-id {
+      background: #f1f5f9;
+      color: #64748b;
     }
   </style>
 </head>
@@ -115,16 +205,17 @@
       <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchBus" placeholder="Search buses..." oninput="loadBuses()"></div>
     </div>
     <div class="panel-body">
-      <table id="busesTable">
+      <table id="busesTable" class="desktop-table">
         <thead><tr><th>ID</th><th>Bus Number</th><th>Driver</th><th>Capacity</th><th>Route</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table>
+      <div class="buses-cards" id="busesCards"></div>
     </div>
   </div>
 </div>
 </div>
 </div>
-<script src="js/script.js?v=4"></script>
+<script src="js/script.js?v=5"></script>
 <script>
   const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
   btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
