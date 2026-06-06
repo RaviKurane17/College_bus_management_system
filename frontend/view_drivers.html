@@ -537,6 +537,7 @@
       .search-box {
         min-width: 150px;
         width: 100%;
+      }
       /* Hide desktop table, show cards */
       .desktop-table{display:none;}
       .driver-cards{display:flex;flex-direction:column;gap:12px;padding:12px;}
@@ -696,7 +697,7 @@
       </div>
     </div>
   </div>
-  <script src="js/script.js?v=5"></script>
+  <script src="js/script.js?v=6"></script>
   <script>
     const sidebar = document.getElementById('sidebar'), btnToggle = document.getElementById('btnSidebarToggle'), overlay = document.getElementById('sidebarOverlay');
     btnToggle.addEventListener('click', () => { if (window.innerWidth <= 768) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); } else { sidebar.classList.toggle('collapsed'); } });
