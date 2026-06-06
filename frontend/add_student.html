@@ -166,6 +166,19 @@
               <div><label>Concession (₹)</label><input type="number" id="concession" placeholder="e.g. 1000" step="0.01" min="0" oninput="calcRemaining()"></div>
               <div><label>Concession Reason</label><input type="text" id="concession_reason" placeholder="e.g. Merit, Staff Child"></div>
             </div>
+            <div class="form-row">
+              <div>
+                <label>Payment Cycle</label>
+                <select id="payment_cycle">
+                  <option value="">-- Select Cycle --</option>
+                  <option value="Yearly">Yearly</option>
+                  <option value="Half-Yearly">Half-Yearly</option>
+                  <option value="Quarterly">Quarterly</option>
+                  <option value="Monthly">Monthly</option>
+                </select>
+              </div>
+              <div style="visibility:hidden;"><label>Hidden</label><input type="text"></div>
+            </div>
             <div class="form-row-3">
               <div><label>Total Fees (₹)</label><input type="number" id="total_fees" placeholder="e.g. 10000" step="0.01" min="0" oninput="calcRemaining()"></div>
               <div><label>Fees Paid (₹)</label><input type="number" id="fees_paid" placeholder="Optional" step="0.01" min="0" oninput="calcRemaining()"></div>

@@ -389,14 +389,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           photo_url = await uploadPhoto() || '';
         }
 
-        // Fetch active payment cycle
-        let payment_cycle = '';
-        try {
-          const sRes = await apiFetch('/api/settings');
-          if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
-            payment_cycle = sRes.settings.payment_cycle;
-          }
-        } catch (e) { console.warn('Could not fetch payment cycle', e); }
+        // Payment cycle from form or settings
+        let payment_cycle = document.getElementById('payment_cycle')?.value;
+        if (!payment_cycle) {
+          try {
+            const sRes = await apiFetch('/api/settings');
+            if (sRes.success && sRes.settings && sRes.settings.payment_cycle) {
+              payment_cycle = sRes.settings.payment_cycle;
+            }
+          } catch (e) { console.warn('Could not fetch payment cycle', e); }
+        }
 
         const res = await apiFetch('/api/students/add-student', {
           method: 'POST',
