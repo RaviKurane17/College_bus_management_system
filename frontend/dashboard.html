@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin Dashboard — College Bus Management</title>
-  <link rel="stylesheet" href="css/style.css?v=4">
+  <link rel="stylesheet" href="css/style.css?v=8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
     /* ========================================================
@@ -885,7 +885,62 @@
 
     /* ---------- LIGHT THEME OVERRIDES ---------- */
 
-    /* ---------- RESPONSIVE ---------- */
+    /* Brand & Sidebar */
+    body.light-theme .sidebar-brand .brand-text h3 { color: #0f172a !important; }
+    body.light-theme .sidebar-nav a { color: #1e293b !important; }
+    body.light-theme .sidebar-nav a:hover { background: #f1f5f9; color: #0f172a !important; }
+    body.light-theme .sidebar-footer .user-mini .user-info strong { color: #0f172a !important; }
+    body.light-theme .sidebar-footer .user-mini .user-info small { color: #475569 !important; }
+
+    /* Topbar */
+    body.light-theme .topbar-left .page-title { color: #0f172a !important; }
+    body.light-theme .topbar-right .header-date strong { color: #0f172a !important; }
+    body.light-theme .topbar-right .header-date { color: #475569 !important; }
+    body.light-theme .btn-sidebar-toggle:hover { color: #0f172a; border-color: #cbd5e1; }
+    body.light-theme .btn-icon:hover { color: #0f172a; background: #f1f5f9; }
+
+    /* Welcome Banner */
+    body.light-theme .welcome-banner { background: linear-gradient(135deg, #e0f2fe 0%, #f0fdf4 100%) !important; border-color: #bae6fd; }
+    body.light-theme .welcome-banner .welcome-text h2 { color: #0f172a !important; }
+    body.light-theme .welcome-banner .welcome-text p { color: #475569 !important; }
+    body.light-theme .welcome-stat-item .val { color: #0f172a !important; }
+    body.light-theme .welcome-stat-item .lbl { color: #475569 !important; }
+
+    /* Stat Cards */
+    body.light-theme .stat-card .stat-data .stat-value { color: #0f172a !important; }
+    body.light-theme .stat-card .stat-data h4 { color: #475569 !important; }
+    body.light-theme .stat-card .stat-data .stat-sub { color: #64748b !important; }
+
+    /* Section Headers */
+    body.light-theme .section-header h3 { color: #0f172a !important; }
+
+    /* Action Cards */
+    body.light-theme .action-card .ac-info strong { color: #0f172a !important; }
+    body.light-theme .action-card .ac-info span { color: #475569 !important; }
+
+    /* Panels */
+    body.light-theme .panel-header h4 { color: #0f172a !important; }
+
+    /* Query Items */
+    body.light-theme .query-item .qi-subject { color: #0f172a !important; }
+    body.light-theme .query-item .qi-meta { color: #64748b !important; }
+    body.light-theme .query-item .qi-message { color: #334155 !important; }
+    body.light-theme .query-item .qi-reply { background: rgba(245,158,11,0.08); color: #334155 !important; }
+
+    /* Activity */
+    body.light-theme .activity-info strong { color: #0f172a !important; }
+    body.light-theme .activity-info span { color: #64748b !important; }
+
+    /* Modal Dialog */
+    body.light-theme .modal-dialog select,
+    body.light-theme .modal-dialog textarea { background: #ffffff; color: #0f172a; border-color: #e2e8f0; }
+    body.light-theme .btn-cancel { background: #f1f5f9; color: #334155; border-color: #e2e8f0; }
+    body.light-theme .btn-cancel:hover { background: #e2e8f0; }
+
+    /* Filter select */
+    body.light-theme .filter-select { background: #ffffff; color: #0f172a; border-color: #e2e8f0; }
+
+
     @media (max-width: 768px) {
       .sidebar {
         position: fixed;
