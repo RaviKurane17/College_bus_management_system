@@ -841,6 +841,13 @@ async function loadStudents() {
 
         return matchesSearch && matchesClass && matchesStatus;
       });
+      
+      // Sort students by Bus Number (numeric sort)
+      filteredStudents.sort((a, b) => {
+        const busA = String(a.bus_number || '');
+        const busB = String(b.bus_number || '');
+        return busA.localeCompare(busB, undefined, { numeric: true, sensitivity: 'base' });
+      });
 
       window.currentFilteredStudents = filteredStudents;
 
