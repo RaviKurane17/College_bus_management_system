@@ -2850,27 +2850,248 @@ window.printStudentReceipt = function(paymentId) {
 window.printNoDuesReceipt = async function(id) {
   try {
     const res = await apiFetch(`/api/students/get/${id}`);
-    if (!res || !res.success) {
-      alert('Failed to load student data');
-      return;
-    }
+    if (!res || !res.success) { alert('Failed to load student data'); return; }
     const student = res.student;
-    if (parseFloat(student.remaining_fees || 0) > 0) {
-      alert('Student still has dues pending!');
-      return;
-    }
-    const paymentObj = {
-      amount: 0,
-      payment_mode: 'N/A',
-      utr_number: '',
-      date: new Date()
-    };
-    generateReceipt(student, paymentObj, 'NO-DUES');
+    if (parseFloat(student.remaining_fees || 0) > 0) { alert('Student still has dues pending!'); return; }
+    generateNoDuesCertificate(student);
   } catch (error) {
-    console.error('Error generating NO DUES receipt:', error);
-    alert('Failed to generate NO DUES receipt.');
+    console.error('Error generating NO DUES certificate:', error);
+    alert('Failed to generate NO DUES certificate.');
   }
 };
+
+function generateNoDuesCertificate(student) {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
+  const certNo = 'NDC/' + today.getFullYear() + '/' + String(student.id).padStart(4, '0');
+  const photoHtml = student.photo_url
+    ? `<img src="${student.photo_url}" style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid #7d3c43;display:block;margin:0 auto 8px;" alt="Photo">`
+    : `<div style="width:90px;height:90px;border-radius:50%;border:2px dashed #7d3c43;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;color:#7d3c43;font-size:2rem;">👤</div>`;
+
+  const certWin = window.open('', '_blank', 'width=800,height=1050');
+  certWin.document.write(`<!DOCTYPE html>
+<html>
+<head>
+  <title>No Dues Certificate - ${student.name}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Times New Roman', Georgia, serif;
+      background: #e8e8e8;
+      display: flex; justify-content: center; align-items: flex-start;
+      padding: 20px;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+    .page {
+      background: #fff;
+      width: 210mm;
+      min-height: 297mm;
+      padding: 18mm 18mm 14mm 18mm;
+      position: relative;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    /* Decorative outer border */
+    .outer-border {
+      border: 5px double #7d3c43;
+      padding: 14px;
+      height: 100%;
+      min-height: calc(297mm - 32mm);
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    .inner-border {
+      border: 1.5px solid #7d3c43;
+      padding: 16px 20px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+    }
+    /* Corner ornaments */
+    .corner { position: absolute; width: 30px; height: 30px; color: #7d3c43; font-size: 22px; line-height: 1; }
+    .corner.tl { top: 4px; left: 4px; }
+    .corner.tr { top: 4px; right: 4px; }
+    .corner.bl { bottom: 4px; left: 4px; }
+    .corner.br { bottom: 4px; right: 4px; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #7d3c43; padding-bottom: 12px; margin-bottom: 10px; }
+    .logo-wrap { width: 70px; height: 70px; display: flex; align-items: center; justify-content: center; }
+    .logo-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .college-info { text-align: center; flex: 1; }
+    .col-small { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: #555; margin-bottom: 2px; }
+    .col-name { font-size: 26px; font-weight: bold; color: #7d3c43; letter-spacing: 2px; line-height: 1.1; }
+    .col-sub { font-size: 11px; color: #7d3c43; font-weight: bold; margin-top: 3px; }
+    .col-addr { font-size: 9px; color: #666; margin-top: 3px; }
+    .right-box { font-size: 9px; color: #555; border-left: 1.5px solid #7d3c43; padding-left: 10px; min-width: 140px; line-height: 1.6; }
+    .right-box b { color: #7d3c43; }
+
+    /* Certificate Title */
+    .cert-title-wrap { text-align: center; margin: 12px 0 10px; }
+    .cert-title {
+      display: inline-block;
+      font-size: 19px;
+      font-weight: bold;
+      letter-spacing: 3px;
+      color: #fff;
+      background: #7d3c43;
+      padding: 7px 30px;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+    .cert-no-row { display: flex; justify-content: space-between; font-size: 11px; color: #555; margin: 8px 0; font-weight: bold; }
+
+    /* Photo + Details Row */
+    .main-row { display: flex; gap: 20px; align-items: flex-start; margin: 10px 0; }
+    .photo-col { flex-shrink: 0; text-align: center; }
+    .photo-label { font-size: 9px; color: #888; margin-top: 3px; }
+    .details-col { flex: 1; }
+
+    /* Details Table */
+    .det-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .det-table td { padding: 6px 8px; border: 1px solid #d4a5a8; }
+    .det-table td:first-child { color: #7d3c43; font-weight: bold; width: 38%; background: #fcf8f8; }
+    .det-table td:last-child { color: #222; font-weight: 600; }
+
+    /* Certificate Body Text */
+    .cert-body { margin: 14px 0 10px; font-size: 13px; line-height: 1.8; color: #222; text-align: justify; }
+    .cert-body b { color: #7d3c43; }
+    .highlight { display: inline-block; background: #fcf8f8; border: 1px solid #d4a5a8; padding: 2px 8px; border-radius: 3px; font-weight: bold; color: #7d3c43; }
+
+    /* Cleared Badge */
+    .cleared-badge {
+      display: block;
+      margin: 8px auto;
+      width: fit-content;
+      background: #dcfce7;
+      border: 2px solid #16a34a;
+      color: #15803d;
+      padding: 6px 24px;
+      border-radius: 20px;
+      font-weight: bold;
+      font-size: 13px;
+      letter-spacing: 1px;
+    }
+
+    /* Signature Row */
+    .sig-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: auto; padding-top: 18px; border-top: 1px dashed #c9a0a3; }
+    .sig-box { text-align: center; }
+    .sig-line { border-top: 1.5px solid #7d3c43; width: 160px; margin: 28px auto 4px; }
+    .sig-label { font-size: 10.5px; color: #7d3c43; font-weight: bold; }
+    .sig-sub { font-size: 9px; color: #888; }
+
+    /* Stamp area */
+    .stamp-area { width: 90px; height: 90px; border: 2px dashed #ccc; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #bbb; font-size: 9px; text-align: center; }
+
+    /* Note */
+    .note { font-size: 9px; color: #888; text-align: center; margin-top: 10px; font-style: italic; border-top: 1px solid #eee; padding-top: 6px; }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .page { box-shadow: none; width: 210mm; min-height: 297mm; }
+      @page { size: A4 portrait; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+<div class="page">
+  <div class="outer-border">
+    <span class="corner tl">❧</span>
+    <span class="corner tr" style="transform:scaleX(-1);">❧</span>
+    <span class="corner bl" style="transform:scaleY(-1);">❧</span>
+    <span class="corner br" style="transform:scale(-1);">❧</span>
+
+    <div class="inner-border">
+      <!-- HEADER -->
+      <div class="header">
+        <div class="logo-wrap">
+          <img src="/images/sgilogo.png" alt="Logo" onerror="this.style.display='none'">
+        </div>
+        <div class="college-info">
+          <div class="col-small">Holy-Wood Academy's</div>
+          <div class="col-name">SANJEEVAN</div>
+          <div class="col-sub">PUBLIC SCHOOL, PANHALA.</div>
+          <div class="col-addr">At. Sanjeevan Group of Schools, Somwar Peth-Injole, Post. &amp; Tal. Panhala, Dist. Kolhapur - 416201.</div>
+        </div>
+        <div class="right-box">
+          <div><b>Affiliation No.:</b> 1130172</div>
+          <div><b>UDISE No.:</b> 27340202704</div>
+          <div><b>School Code:</b> 30128</div>
+          <div><b>Ph:</b> +91-XXXXXXXXXX</div>
+        </div>
+      </div>
+
+      <!-- TITLE -->
+      <div class="cert-title-wrap">
+        <span class="cert-title">✦ No Dues Certificate ✦</span>
+      </div>
+      <div class="cert-no-row">
+        <span>Certificate No: <b>${certNo}</b></span>
+        <span>Date of Issue: <b>${dateStr}</b></span>
+      </div>
+
+      <!-- PHOTO + DETAILS -->
+      <div class="main-row">
+        <div class="photo-col">
+          ${photoHtml}
+          <div class="photo-label">Student Photo</div>
+        </div>
+        <div class="details-col">
+          <table class="det-table">
+            <tr><td>Student Name</td><td>${student.name || 'N/A'}</td></tr>
+            <tr><td>Roll / Reg. No.</td><td>${student.roll_no || 'N/A'}</td></tr>
+            <tr><td>Department</td><td>${student.department || 'N/A'}</td></tr>
+            <tr><td>Course / Year</td><td>${student.course_year || 'N/A'}</td></tr>
+            <tr><td>Section</td><td>${student.section || 'N/A'}</td></tr>
+            <tr><td>Bus No.</td><td>${student.bus_number || 'N/A'}</td></tr>
+            <tr><td>Route</td><td>${student.route || 'N/A'}</td></tr>
+            <tr><td>Payment Cycle</td><td><span class="highlight">${student.payment_cycle || 'N/A'}</span></td></tr>
+            <tr><td>Total Bus Fees</td><td>₹${parseFloat(student.total_fees || 0).toLocaleString('en-IN')}</td></tr>
+            <tr><td>Fees Paid</td><td>₹${parseFloat(student.fees_paid || 0).toLocaleString('en-IN')}</td></tr>
+            <tr><td>Remaining Dues</td><td style="color:#16a34a;font-weight:bold;">₹ NIL</td></tr>
+          </table>
+        </div>
+      </div>
+
+      <!-- BODY TEXT -->
+      <div class="cert-body">
+        This is to certify that the above named student <b>${student.name}</b>, bearing Roll/Reg. No. <b>${student.roll_no || 'N/A'}</b>,
+        of <b>${student.department || 'N/A'}</b> — <b>${student.course_year || ''}</b>, has <b>cleared all bus transportation fees</b>
+        for the current academic year. No dues are outstanding against this student as on the date of issue of this certificate.
+      </div>
+
+      <div style="text-align:center;">
+        <span class="cleared-badge">✅ ALL BUS FEES CLEARED — NO DUES PENDING</span>
+      </div>
+
+      <!-- SIGNATURES -->
+      <div class="sig-row">
+        <div class="sig-box">
+          <div class="stamp-area">Official<br>Stamp</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-label">Accountant / Cashier</div>
+          <div class="sig-sub">Sanjeevan Public School</div>
+        </div>
+        <div class="sig-box">
+          <div class="sig-line"></div>
+          <div class="sig-label">Principal</div>
+          <div class="sig-sub">Sanjeevan Public School</div>
+        </div>
+      </div>
+
+      <div class="note">* This certificate is issued on request and is valid for official purposes only. &nbsp;|&nbsp; Generated on: ${dateStr}</div>
+    </div><!-- inner-border -->
+  </div><!-- outer-border -->
+</div><!-- page -->
+<script>window.onload = function(){ window.print(); };<\/script>
+</body>
+</html>`);
+  certWin.document.close();
+}
 
 // ===================== ADMIN MANAGEMENT (Super Admin) =====================
 async function loadAdminList() {

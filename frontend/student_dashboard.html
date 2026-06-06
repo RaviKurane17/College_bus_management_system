@@ -250,6 +250,42 @@
       color: var(--primary, #ffb703);
     }
 
+    /* Photo Upload Wrapper */
+    .photo-upload-wrap {
+      position: relative;
+      display: inline-block;
+      margin-bottom: 15px;
+      cursor: pointer;
+    }
+    .photo-upload-wrap:hover .photo-upload-overlay {
+      opacity: 1;
+    }
+    .photo-upload-overlay {
+      position: absolute;
+      inset: 0;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.5);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transition: opacity 0.25s;
+      cursor: pointer;
+      font-size: 0.65rem;
+      color: #fff;
+      font-weight: 600;
+      gap: 3px;
+    }
+    .photo-upload-overlay i { font-size: 1.2rem; }
+    #photoFileInput { display: none; }
+    .photo-upload-msg {
+      font-size: 0.75rem;
+      color: #94a3b8;
+      margin-top: -10px;
+      margin-bottom: 12px;
+    }
+
     .profile-name {
       position: relative;
       z-index: 1;
@@ -1063,10 +1099,18 @@
 
           studentInfo.innerHTML = `
             <div class="profile-hero">
-              ${s.photo_url
-                ? `<img src="${s.photo_url}" class="profile-avatar" alt="Photo">`
-                : `<div class="profile-avatar-placeholder"><i class="fa-solid fa-user-graduate"></i></div>`
-              }
+              <div class="photo-upload-wrap" onclick="document.getElementById('photoFileInput').click()" title="Click to change profile photo">
+                ${s.photo_url
+                  ? `<img src="${s.photo_url}" class="profile-avatar" alt="Photo" id="profileAvatarImg">`
+                  : `<div class="profile-avatar-placeholder" id="profileAvatarImg"><i class="fa-solid fa-user-graduate"></i></div>`
+                }
+                <div class="photo-upload-overlay">
+                  <i class="fa-solid fa-camera"></i>
+                  <span>Change Photo</span>
+                </div>
+              </div>
+              <input type="file" id="photoFileInput" accept="image/jpeg,image/png,image/webp" />
+              <div class="photo-upload-msg" id="photoUploadMsg">Max size: 250KB &bull; JPG/PNG/WEBP</div>
               <h1 class="profile-name">${escapeHtml(s.name) || 'Student'}</h1>
               <p class="profile-subtitle">${escapeHtml(s.department || '')} ${s.course_year ? '• ' + escapeHtml(s.course_year) : ''} ${s.section ? '• Section ' + escapeHtml(s.section) : ''}</p>
               <div class="profile-badges">
@@ -1076,6 +1120,48 @@
               </div>
             </div>
           `;
+
+          // Attach photo upload handler
+          document.getElementById('photoFileInput').addEventListener('change', async function() {
+            const file = this.files[0];
+            const msgEl = document.getElementById('photoUploadMsg');
+            if (!file) return;
+            if (file.size > 250 * 1024) {
+              msgEl.innerHTML = '<span style="color:#f87171;">❌ File too large! Max size is 250KB.</span>';
+              this.value = '';
+              return;
+            }
+            msgEl.innerHTML = '<span style="color:#ffb703;"><i class="fa-solid fa-spinner fa-spin"></i> Uploading...</span>';
+            const formData = new FormData();
+            formData.append('photo', file);
+            try {
+              const token = localStorage.getItem('studentToken');
+              const res = await fetch('/api/upload/profile-photo', {
+                method: 'POST',
+                headers: { 'Authorization': 'Bearer ' + token },
+                body: formData
+              });
+              const data = await res.json();
+              if (data.success) {
+                // Update avatar preview
+                const avatarEl = document.getElementById('profileAvatarImg');
+                if (avatarEl) {
+                  const newImg = document.createElement('img');
+                  newImg.src = data.photo_url;
+                  newImg.className = 'profile-avatar';
+                  newImg.id = 'profileAvatarImg';
+                  newImg.alt = 'Photo';
+                  avatarEl.replaceWith(newImg);
+                }
+                msgEl.innerHTML = '<span style="color:#4ade80;">✅ Photo updated successfully!</span>';
+                setTimeout(() => { msgEl.innerHTML = 'Max size: 250KB &bull; JPG/PNG/WEBP'; }, 3000);
+              } else {
+                msgEl.innerHTML = `<span style="color:#f87171;">❌ ${data.message || 'Upload failed'}</span>`;
+              }
+            } catch(e) {
+              msgEl.innerHTML = '<span style="color:#f87171;">❌ Upload error. Try again.</span>';
+            }
+          });
 
           // Fee Summary
           document.getElementById('feeSummary').style.display = 'block';
