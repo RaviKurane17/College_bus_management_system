@@ -814,22 +814,44 @@ async function loadStudents() {
       const searchInput = document.getElementById('searchStudent');
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
+      const filterClass = document.getElementById('filterClass');
+      const filterStatus = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'active';
+      
+      if (filterClass && filterClass.options.length <= 1) {
+        const uniqueClasses = [...new Set(res.map(s => s.class_name).filter(Boolean))].sort();
+        uniqueClasses.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c; opt.text = c;
+          filterClass.appendChild(opt);
+        });
+      }
+      const classValue = filterClass ? filterClass.value : '';
+
       const filteredStudents = res.filter(s => {
         const name = s.name || '';
         const cls = s.class_name || '';
-        return name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
+        const stat = s.student_status || 'active';
+        
+        const matchesSearch = name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
+        const matchesClass = classValue === '' || cls === classValue;
+        
+        let matchesStatus = true;
+        if (filterStatus === 'active') matchesStatus = (stat === 'active');
+        if (filterStatus === 'passout') matchesStatus = (stat === 'passout' || stat === 'school_left');
+
+        return matchesSearch && matchesClass && matchesStatus;
       });
 
       window.currentFilteredStudents = filteredStudents;
 
-      filteredStudents.forEach(s => {
+      filteredStudents.forEach((s, index) => {
         const isOverdue = parseFloat(s.remaining_fees || 0) > 0;
 
         // ── Desktop table row ──
         const tr = document.createElement('tr');
         if (isOverdue) tr.style.borderLeft = '3px solid var(--error)';
         tr.innerHTML = `
-          <td>${s.id}</td>
+          <td>${index + 1}</td>
           <td>
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
               <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.9rem;"></i>
@@ -841,6 +863,8 @@ async function loadStudents() {
           <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
           <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
+          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
+          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.current_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
@@ -850,7 +874,6 @@ async function loadStudents() {
           </td>
           <td style="white-space: nowrap;">
             <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
-            <button onclick="sendEmailReminder(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-accent-2, var(--accent)),#2563eb);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-envelope"></i> Email</button>
             <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-trash"></i> Delete</button>
           </td>
         `;
@@ -864,7 +887,7 @@ async function loadStudents() {
           card.innerHTML = `
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="text-decoration:none;">
               <div class="sc-name">${escapeHtml(s.name)}</div>
-              <div class="sc-roll">ID: ${s.id}</div>
+              <div class="sc-roll">Sr No. ${index + 1}</div>
             </a>
             <div class="sc-dept">${escapeHtml(s.class_name || 'N/A')}</div>
             <div class="sc-row">
@@ -900,8 +923,7 @@ async function loadStudents() {
             </div>
             <div class="sc-actions">
               <button onclick="payFees(${s.id})" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
-              <button onclick="sendEmailReminder(${s.id})" style="background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;"><i class="fa-solid fa-envelope"></i> Email</button>
-              <button onclick="deleteStudent(${s.id})" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="deleteStudent(${s.id})" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;"><i class="fa-solid fa-trash"></i> Delete</button>
             </div>
           `;
           cardsContainer.appendChild(card);
@@ -909,7 +931,7 @@ async function loadStudents() {
       });
 
       if (filteredStudents.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="10" class="no-data">No students found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="12" class="no-data">No students found</td></tr>';
         if (cardsContainer) cardsContainer.innerHTML = '<p style="text-align:center;padding:20px;color:var(--clr-muted);">No students found</p>';
       }
     } else {
@@ -918,7 +940,7 @@ async function loadStudents() {
   } catch (error) {
     console.error('Error loading students:', error);
     const tbody = document.querySelector('#studentsTable tbody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="10" class="error">Failed to load students. Please try again.</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="12" class="error">Failed to load students. Please try again.</td></tr>';
   }
 }
 
@@ -2792,35 +2814,34 @@ window.downloadStudentPDF = function() {
   doc.text('Student Directory', 14, 22);
 
   let filtersText = '';
-  const fDeptEl = document.getElementById('filterDept');
-  const fYearEl = document.getElementById('filterYear');
-  const fSecEl = document.getElementById('filterSec');
+  const fClassEl = document.getElementById('filterClass');
+  const fStatusEl = document.getElementById('filterStatus');
   
-  const fDept = fDeptEl && fDeptEl.selectedIndex > 0 ? fDeptEl.options[fDeptEl.selectedIndex].text : 'All Departments';
-  const fYear = fYearEl && fYearEl.selectedIndex > 0 ? fYearEl.options[fYearEl.selectedIndex].text : 'All Years';
-  const fSec = fSecEl && fSecEl.selectedIndex > 0 ? fSecEl.options[fSecEl.selectedIndex].text : 'All Sections';
+  const fClass = fClassEl && fClassEl.selectedIndex > 0 ? fClassEl.options[fClassEl.selectedIndex].text : 'All Classes';
+  const fStatus = fStatusEl && fStatusEl.selectedIndex > 0 ? fStatusEl.options[fStatusEl.selectedIndex].text : 'All Students';
   
-  filtersText = `Filters: ${fDept} | ${fYear} | ${fSec}`;
+  filtersText = `Filters: ${fClass} | ${fStatus}`;
   
   doc.setFontSize(11);
   doc.setTextColor(100);
   doc.text(filtersText, 14, 30);
 
-  const tableColumn = ["Name", "Roll No", "Dept", "Year/Sec", "Bus No", "Route", "Total Fees", "Fees Paid", "Remaining", "Joining Date"];
+  const tableColumn = ["Sr No", "Name", "Class", "Bus No", "Pick-up", "Old Fees", "Current Fees", "Total Fees", "Discount", "Paid", "Remaining"];
   const tableRows = [];
 
-  students.forEach(s => {
+  students.forEach((s, index) => {
     const studentData = [
+      `${index + 1}`,
       s.name,
-      s.roll_no,
-      s.department || 'N/A',
-      `${s.course_year || 'N/A'} - ${s.section || 'N/A'}`,
+      s.class_name || 'N/A',
       s.bus_number || 'None',
-      s.route || 'N/A',
+      s.pick_up_point || 'N/A',
+      `${parseFloat(s.old_bus_fees || 0)}`,
+      `${parseFloat(s.current_fees || 0)}`,
       `${parseFloat(s.total_fees || 0)}`,
+      `${parseFloat(s.discount_amount || 0)}`,
       `${parseFloat(s.fees_paid || 0)}`,
-      `${parseFloat(s.remaining_fees || 0)}`,
-      formatDate(s.joining_date)
+      `${parseFloat(s.remaining_fees || 0)}`
     ];
     tableRows.push(studentData);
   });
