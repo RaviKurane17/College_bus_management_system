@@ -1620,6 +1620,21 @@ async function resetStudentPassword(id) {
   }
 }
 
+async function bulkResetPasswords() {
+  if (!confirm('WARNING: This will reset ALL students\\' passwords to "123456". Are you sure you want to proceed?')) return;
+  try {
+    const res = await apiFetch(`/api/students/bulk-reset-passwords`, { method: 'PUT' });
+    if (res.success) {
+      alert(res.message);
+    } else {
+      alert(res.message || 'Failed to reset passwords');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error resetting passwords');
+  }
+}
+
 // View Student Details Function
 async function viewStudentDetails(id) {
   try {

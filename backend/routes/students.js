@@ -249,6 +249,21 @@ router.get('/:id/payments', authenticateAny, (req, res) => {
 });
 
 // ============================
+// PUT bulk reset all passwords (admin only)
+// ============================
+router.put('/bulk-reset-passwords', authenticateAdmin, async (req, res) => {
+  try {
+    const hashed = await bcrypt.hash('123456', 12);
+    db.query('UPDATE students SET password=?', [hashed], (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: 'Database error' });
+      res.json({ success: true, message: `Successfully reset passwords for ${result.affectedRows} students to 123456` });
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============================
 // PUT reset student password (admin only)
 // ============================
 router.put('/reset-password/:id', authenticateAdmin, async (req, res) => {
