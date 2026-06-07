@@ -674,8 +674,11 @@
         <div class="panel">
           <div class="panel-header">
             <h3><i class="fa-solid fa-id-card"></i> Drivers Directory</h3>
-            <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchDriver"
-                placeholder="Search drivers..." oninput="loadDrivers()"></div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <button onclick="exportDriversCSV()" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-green),#059669); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
+              <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchDriver"
+                  placeholder="Search drivers..." oninput="loadDrivers()"></div>
+            </div>
           </div>
           <div class="panel-body">
             <table id="driversTable" class="desktop-table">

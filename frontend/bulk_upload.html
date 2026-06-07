@@ -249,9 +249,9 @@
             <h4><i class="fa-solid fa-circle-info"></i> Instructions</h4>
             <ul>
               <li>Download the template file to ensure your data matches the required format.</li>
-              <li>Required columns: <strong>Name, Roll No, Email</strong>.</li>
+              <li>Required columns: <strong>Name, Class, Phone, Bus No, Pick-Up Point, Old Bus Fees, Current Fees, Discount, Paid</strong>.</li>
               <li>Do not remove or rename the header row in the template.</li>
-              <li>Duplicate roll numbers or emails will be flagged as errors.</li>
+              <li>Duplicate phone numbers will be flagged as errors.</li>
               <li>Upload only <strong>.xlsx</strong> files.</li>
             </ul>
             <div style="margin-top:12px;">
@@ -299,9 +299,10 @@
                     <th>Status</th>
                     <th>Row</th>
                     <th>Name</th>
-                    <th>Roll No</th>
-                    <th>Email</th>
-                    <th>Dept/Yr</th>
+                    <th>Class</th>
+                    <th>Phone</th>
+                    <th>Bus No</th>
+                    <th>Fees Info</th>
                     <th>Details / Errors</th>
                   </tr>
                 </thead>
@@ -512,9 +513,10 @@
                 <td>${statusBadge}</td>
                 <td>${row.row}</td>
                 <td style="font-weight:600; color:#f1f5f9;">${row.name || '-'}</td>
-                <td>${row.roll_no || '-'}</td>
-                <td>${row.email || '-'}</td>
-                <td>${row.department || '-'} / ${row.course_year || '-'}</td>
+                <td>${row.class_name || '-'}</td>
+                <td>${row.phone || '-'}</td>
+                <td>${row.bus_number || '-'}</td>
+                <td style="font-size:0.75rem;">Old:${row.old_bus_fees||0} Cur:${row.current_fees||0} Dis:${row.discount_amount||0} Pd:${row.fees_paid||0}</td>
                 <td>${detailsHtml}</td>
               </tr>
             `;

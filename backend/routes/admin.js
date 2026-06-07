@@ -50,12 +50,16 @@ router.get('/stats', authenticateAdmin, (req, res) => {
     activeStudents: 0,
     passoutStudents: 0,
     schoolLeftStudents: 0,
+    totalDrivers: 0,
     busWiseStats: [],
     classWiseStats: []
   };
 
   db.query('SELECT COUNT(*) as count FROM buses', (err, busResults) => {
     if (!err && busResults.length > 0) stats.totalBuses = busResults[0].count;
+
+    db.query('SELECT COUNT(*) as count FROM drivers', (err, driverResults) => {
+      if (!err && driverResults.length > 0) stats.totalDrivers = driverResults[0].count;
 
     db.query(`SELECT
         COUNT(*) as total,
@@ -102,6 +106,7 @@ router.get('/stats', authenticateAdmin, (req, res) => {
           });
         });
       });
+    });
     });
   });
 });

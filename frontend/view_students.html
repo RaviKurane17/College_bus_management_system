@@ -176,7 +176,20 @@
       <!-- Desktop: scrollable table -->
       <div class="desktop-table" style="overflow-x:auto;">
         <table id="studentsTable">
-          <thead><tr><th>Sr No.</th><th>Name</th><th>Class</th><th>Bus No</th><th>Pick-up</th><th>Old Fees</th><th>Current Fees</th><th>Total Fees</th><th>Concession</th><th>Paid Fees</th><th>Remaining Fees</th><th>Action</th></tr></thead>
+          <thead><tr>
+            <th onclick="setStudentSort('id')" style="cursor:pointer;">Sr No. <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('name')" style="cursor:pointer;">Name <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('class_name')" style="cursor:pointer;">Class <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('bus_number')" style="cursor:pointer;">Bus No <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer;">Pick-up <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;">Old Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('current_fees')" style="cursor:pointer;">Current Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('total_fees')" style="cursor:pointer;">Total Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('discount_amount')" style="cursor:pointer;">Concession <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('fees_paid')" style="cursor:pointer;">Paid Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer;">Remaining Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th>Action</th>
+          </tr></thead>
           <tbody></tbody>
         </table>
       </div>

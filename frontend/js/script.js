@@ -684,6 +684,42 @@ async function loadDrivers() {
   }
 }
 
+async function exportDriversCSV() {
+  try {
+    const res = await apiFetch('/api/drivers');
+    if (!Array.isArray(res)) {
+      alert('Failed to fetch drivers data');
+      return;
+    }
+
+    const headers = ['ID', 'Name', 'Phone', 'License Number', 'Address'];
+    const csvRows = [headers.join(',')];
+
+    res.forEach(d => {
+      const row = [
+        d.id,
+        `"${(d.name || '').replace(/"/g, '""')}"`,
+        `"${(d.phone || '').replace(/"/g, '""')}"`,
+        `"${(d.license_number || '').replace(/"/g, '""')}"`,
+        `"${(d.address || '').replace(/"/g, '""')}"`
+      ];
+      csvRows.push(row.join(','));
+    });
+
+    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "drivers_list.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (e) {
+    console.error('Export error:', e);
+    alert('Error exporting drivers list');
+  }
+}
+
 async function deleteDriver(id) {
   if (confirm('Are you sure you want to delete this driver?')) {
     try {
@@ -800,6 +836,19 @@ async function populateBusSelect() {
   }
 }
 
+let studentSortCol = 'id';
+let studentSortAsc = true;
+
+window.setStudentSort = function(col) {
+  if (studentSortCol === col) {
+    studentSortAsc = !studentSortAsc;
+  } else {
+    studentSortCol = col;
+    studentSortAsc = true;
+  }
+  loadStudents();
+};
+
 async function loadStudents() {
   try {
     const res = await apiFetch('/api/students');
@@ -842,11 +891,28 @@ async function loadStudents() {
         return matchesSearch && matchesClass && matchesStatus;
       });
       
-      // Sort students by Bus Number (numeric sort)
+      // Sort students dynamically based on selected column
       filteredStudents.sort((a, b) => {
-        const busA = String(a.bus_number || '');
-        const busB = String(b.bus_number || '');
-        return busA.localeCompare(busB, undefined, { numeric: true, sensitivity: 'base' });
+        let valA = a[studentSortCol] !== undefined && a[studentSortCol] !== null ? a[studentSortCol] : '';
+        let valB = b[studentSortCol] !== undefined && b[studentSortCol] !== null ? b[studentSortCol] : '';
+
+        // Handle numeric fields
+        const numericFields = ['old_bus_fees', 'current_fees', 'total_fees', 'discount_amount', 'fees_paid', 'remaining_fees', 'id'];
+        if (numericFields.includes(studentSortCol)) {
+          valA = parseFloat(valA) || 0;
+          valB = parseFloat(valB) || 0;
+          return studentSortAsc ? valA - valB : valB - valA;
+        }
+
+        // String fields (including bus_number which might have mix of numbers/letters)
+        valA = String(valA).toLowerCase();
+        valB = String(valB).toLowerCase();
+        
+        if (studentSortAsc) {
+          return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
+        } else {
+          return valB.localeCompare(valA, undefined, { numeric: true, sensitivity: 'base' });
+        }
       });
 
       window.currentFilteredStudents = filteredStudents;
@@ -881,7 +947,7 @@ async function loadStudents() {
           </td>
           <td style="white-space: nowrap;">
             <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
-            <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;margin-left:5px;"><i class="fa-solid fa-trash"></i> Delete</button>
+            <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;margin-left:5px;" title="Delete"><i class="fa-solid fa-trash"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -930,7 +996,7 @@ async function loadStudents() {
             </div>
             <div class="sc-actions">
               <button onclick="payFees(${s.id})" style="background:linear-gradient(135deg,#10b981,#059669);color:#fff;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
-              <button onclick="deleteStudent(${s.id})" style="background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;"><i class="fa-solid fa-trash"></i> Delete</button>
+              <button onclick="deleteStudent(${s.id})" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);flex:0 0 45px;display:flex;justify-content:center;align-items:center;"><i class="fa-solid fa-trash"></i></button>
             </div>
           `;
           cardsContainer.appendChild(card);

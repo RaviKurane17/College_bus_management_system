@@ -420,7 +420,7 @@
     /* ---------- STAT CARDS GRID ---------- */
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -475,6 +475,7 @@
       font-weight: 800;
       color: #f1f5f9;
       line-height: 1.1;
+      word-break: break-word;
     }
 
     .stat-card .stat-data .stat-sub {
@@ -1538,11 +1539,11 @@
             </div>
           `;
 
-          // Populate Year-wise analytics
+          // Populate Year-wise analytics (Now Class-wise)
           const yearWiseContainer = document.getElementById('yearWiseAnalytics');
-          if (s.yearWiseStudents && s.yearWiseStudents.length > 0) {
-            yearWiseContainer.innerHTML = s.yearWiseStudents.map(y => {
-              const year = y.course_year || 'Unspecified';
+          if (s.classWiseStats && s.classWiseStats.length > 0) {
+            yearWiseContainer.innerHTML = s.classWiseStats.map(y => {
+              const year = y.class_name || 'Unspecified';
               return `
                 <div class="activity-item" style="justify-content: space-between; align-items: center;">
                   <div class="activity-info">
