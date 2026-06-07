@@ -3698,9 +3698,9 @@ function downloadStudentExcel() {
     alert("No student data available to download.");
     return;
   }
-  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
+  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\n";
   students.forEach(s => {
-    csv += `"${s.id}","${s.name}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${s.pick_up_point || ''}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
+    csv += `"${s.id}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
@@ -3721,9 +3721,9 @@ function downloadBusPDF() {
 
 function downloadBusExcel() {
   if (!window.busesData || window.busesData.length === 0) { alert("No data."); return; }
-  let csv = "ID,Bus Number,Driver Name,Driver Phone,Route,Capacity\\n";
+  let csv = "ID,Bus Number,Driver Name,Driver Phone,Route,Capacity\n";
   window.busesData.forEach(b => {
-    csv += `"${b.id}","${b.bus_number}","${b.driver_name || ''}","${b.driver_phone || ''}","${b.route || ''}","${b.capacity || 50}"\\n`;
+    csv += `"${b.id}","${b.bus_number}","${b.driver_name || ''}","${b.driver_phone || ''}","${(b.route || '').replace(/"/g, '""')}","${b.capacity || 50}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
@@ -3743,9 +3743,9 @@ function downloadDriverPDF() {
 
 function downloadDriverExcel() {
   if (!window.driversData || window.driversData.length === 0) { alert("No data."); return; }
-  let csv = "ID,Name,Phone,License Number,Salary\\n";
+  let csv = "ID,Name,Phone,License Number,Salary\n";
   window.driversData.forEach(d => {
-    csv += `"${d.id}","${d.name}","${d.phone}","${d.license_number}","${d.salary || 0}"\\n`;
+    csv += `"${d.id}","${d.name}","${d.phone}","${d.license_number}","${d.salary || 0}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
