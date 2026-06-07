@@ -13,7 +13,7 @@ async function apiFetch(path, options = {}) {
 
   try {
     const res = await fetch(path, options);
-    
+
     // Handle 401 Unauthorized - token expired or invalid
     if (res.status === 401) {
       // Don't redirect if we're on login page or reset pages
@@ -24,7 +24,7 @@ async function apiFetch(path, options = {}) {
         return { success: false, message: 'Session expired. Please login again.' };
       }
     }
-    
+
     // Handle 429 Too Many Requests (rate limited)
     if (res.status === 429) {
       const data = await res.json().catch(() => ({}));
@@ -113,16 +113,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const msgEl = document.getElementById('adminResetMsg');
       const email = document.getElementById('admin_email').value.trim();
-      
+
       msgEl.textContent = '⏳ Sending reset code...';
-      
+
       try {
         const res = await apiFetch('/api/admin/request-reset', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email })
         });
-        
+
         if (res.success) {
           msgEl.textContent = '✅ ' + (res.message || 'Reset code sent to your email.');
           adminResetForm.style.display = 'none';
@@ -147,21 +147,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       const newPassword = document.getElementById('new_password').value.trim();
       const confirmPassword = document.getElementById('confirm_password').value.trim();
       const email = window.adminResetEmail || document.getElementById('admin_email').value.trim();
-      
+
       if (newPassword !== confirmPassword) {
         msgEl.textContent = '❌ Passwords do not match.';
         return;
       }
-      
+
       msgEl.textContent = '⏳ Resetting password...';
-      
+
       try {
         const res = await apiFetch('/api/admin/reset-password', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, token, newPassword })
         });
-        
+
         if (res.success) {
           msgEl.innerHTML = '✅ Password reset successfully! <br><a href="/" style="display:inline-block; margin-top:10px; padding:8px 16px; background:var(--primary-color, #ffb703); color:#fff; text-decoration:none; border-radius:8px;">Click here to login</a>';
           adminResetTokenForm.reset();
@@ -194,12 +194,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
         console.log('Login response:', res);
 
-         if (res.success) {
+        if (res.success) {
           // Store JWT token for authenticated requests
           if (res.token) {
             localStorage.setItem('authToken', res.token);
           }
-          
+
           if (role === 'admin' || res.role === 'admin' || res.role === 'super_admin') {
             localStorage.setItem('loggedIn', res.role || 'admin');
             localStorage.setItem('adminRole', res.role || 'admin');
@@ -949,7 +949,7 @@ async function populateDriverSelect() {
       res.forEach(d => {
         const option = document.createElement('option');
         option.value = d.id;
-        
+
         option.textContent = `${d.name} (${d.phone})`;
         select.appendChild(option);
       });
@@ -982,14 +982,14 @@ async function populateBusSelect() {
 let studentSortCol = 'id';
 let studentSortAsc = true;
 
-window.setStudentSort = function(col) {
+window.setStudentSort = function (col) {
   if (studentSortCol === col) {
     studentSortAsc = !studentSortAsc;
   } else {
     studentSortCol = col;
     studentSortAsc = true;
   }
-  
+
   // Update UI icons
   const headers = document.querySelectorAll('#studentsTable th');
   headers.forEach(th => {
@@ -1026,7 +1026,7 @@ async function loadStudents() {
       const filterBus = document.getElementById('filterBus');
       const filterPickup = document.getElementById('filterPickup');
       const filterStatus = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'active';
-      
+
       if (filterClass && filterClass.options.length <= 1) {
         const uniqueClasses = [...new Set(res.map(s => s.class_name).filter(Boolean))].sort();
         uniqueClasses.forEach(c => {
@@ -1064,19 +1064,19 @@ async function loadStudents() {
         const bus = s.bus_number || '';
         const pickup = s.pick_up_point || '';
         const stat = s.student_status || 'active';
-        
+
         const matchesSearch = name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
         const matchesClass = classValue === '' || cls === classValue;
         const matchesBus = busValue === '' || bus === busValue;
         const matchesPickup = pickupValue === '' || pickup === pickupValue;
-        
+
         let matchesStatus = true;
         if (filterStatus === 'active') matchesStatus = (stat === 'active');
         if (filterStatus === 'passout') matchesStatus = (stat === 'passout' || stat === 'school_left');
 
         return matchesSearch && matchesClass && matchesBus && matchesPickup && matchesStatus;
       });
-      
+
       // Sort students dynamically based on selected column
       filteredStudents.sort((a, b) => {
         let valA = a[studentSortCol] !== undefined && a[studentSortCol] !== null ? a[studentSortCol] : '';
@@ -1093,7 +1093,7 @@ async function loadStudents() {
         // String fields (including bus_number which might have mix of numbers/letters)
         valA = String(valA).toLowerCase();
         valB = String(valB).toLowerCase();
-        
+
         if (studentSortAsc) {
           return valA.localeCompare(valB, undefined, { numeric: true, sensitivity: 'base' });
         } else {
@@ -1420,7 +1420,7 @@ async function editBus(id) {
 }
 
 // Helper function for edit student modal
-window.calcEditRemaining = function() {
+window.calcEditRemaining = function () {
   const t = parseFloat(document.getElementById('edit_total_fees').value) || 0;
   const c = parseFloat(document.getElementById('edit_concession').value) || 0;
   const p = parseFloat(document.getElementById('edit_fees_paid').value) || 0;
@@ -1950,8 +1950,8 @@ async function payFees(id) {
 
 // Number to words helper for receipt
 function numberToWords(num) {
-  const a = ['','One ','Two ','Three ','Four ', 'Five ','Six ','Seven ','Eight ','Nine ','Ten ','Eleven ','Twelve ','Thirteen ','Fourteen ','Fifteen ','Sixteen ','Seventeen ','Eighteen ','Nineteen '];
-  const b = ['', '', 'Twenty','Thirty','Forty','Fifty', 'Sixty','Seventy','Eighty','Ninety'];
+  const a = ['', 'One ', 'Two ', 'Three ', 'Four ', 'Five ', 'Six ', 'Seven ', 'Eight ', 'Nine ', 'Ten ', 'Eleven ', 'Twelve ', 'Thirteen ', 'Fourteen ', 'Fifteen ', 'Sixteen ', 'Seventeen ', 'Eighteen ', 'Nineteen '];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
   if ((num = num.toString()).length > 9) return 'overflow';
   let n = ('000000000' + num).substr(-9).match(/^(\d{2})(\d{2})(\d{2})(\d{1})(\d{2})$/);
   if (!n) return;
@@ -2606,14 +2606,14 @@ let isSendingEmail = false;
 async function sendEmailReminder(studentId) {
   if (isSendingEmail) return;
   if (!confirm('Send fee reminder email to this student?')) return;
-  
+
   const originalBtn = event && event.target && event.target.closest ? event.target.closest('button') : null;
   const originalHtml = originalBtn ? originalBtn.innerHTML : '';
   if (originalBtn) {
     originalBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
     originalBtn.style.opacity = '0.7';
   }
-  
+
   isSendingEmail = true;
   try {
     const res = await apiFetch(`/api/reminders/send-email-reminder/${studentId}`, { method: 'POST' });
@@ -2653,7 +2653,7 @@ async function bulkWhatsApp() {
       const waUrl = `https://wa.me/${phone}?text=${personalMsg}`;
       return `
         <tr style="border-bottom:1px solid rgba(255,255,255,0.07);">
-          <td style="padding:8px 6px;font-weight:600;">${i+1}</td>
+          <td style="padding:8px 6px;font-weight:600;">${i + 1}</td>
           <td style="padding:8px 6px;">${s.name}</td>
           <td style="padding:8px 6px;color:#94a3b8;">${s.phone}</td>
           <td style="padding:8px 6px;">
@@ -2932,7 +2932,7 @@ async function viewStudentDetails(id) {
 
     const s = res.student;
     const payments = paymentsRes.success ? paymentsRes.payments : [];
-    
+
     // Store for receipt printing
     window.currentStudentData = s;
     window.currentPayments = payments;
@@ -2960,11 +2960,11 @@ async function viewStudentDetails(id) {
           </thead>
           <tbody>
             ${payments.map(p => {
-              const receiptNo = p.receipt_number || 'REC-' + p.id.toString().padStart(5, '0');
-              return `
+        const receiptNo = p.receipt_number || 'REC-' + p.id.toString().padStart(5, '0');
+        return `
               <tr style="border-bottom: 1px solid rgba(255,255,255,0.06);">
                 <td style="padding: 8px 6px; font-weight: 600; color: var(--clr-accent, #f59e0b);">${escapeHtml(receiptNo)}</td>
-                <td style="padding: 8px 6px;">${new Date(p.payment_date).toLocaleDateString('en-IN', {day:'2-digit', month:'short', year:'numeric'})}</td>
+                <td style="padding: 8px 6px;">${new Date(p.payment_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                 <td style="padding: 8px 6px; color: #34d399; font-weight: 700;">₹${parseFloat(p.amount).toLocaleString('en-IN')}</td>
                 <td style="padding: 8px 6px;">${escapeHtml(p.payment_mode)}</td>
                 <td style="padding: 8px 6px; color: var(--clr-muted, #94a3b8);">${escapeHtml(p.utr_number || '-')}</td>
@@ -2974,7 +2974,7 @@ async function viewStudentDetails(id) {
                   <button onclick="sendReceiptWhatsApp(${p.id})" style="padding:4px 8px;background:rgba(37,211,102,0.15);color:#25d366;border:1px solid rgba(37,211,102,0.3);border-radius:4px;cursor:pointer;font-size:0.72rem;font-weight:600;" title="WhatsApp Receipt"><i class="fa-brands fa-whatsapp"></i></button>
                 </td>
               </tr>`;
-            }).join('')}
+      }).join('')}
           </tbody>
         </table>
       `;
@@ -3066,7 +3066,7 @@ async function viewStudentDetails(id) {
 
     // Change Save button text to "Edit Student"
     document.getElementById('modalSaveBtn').textContent = 'Edit Student';
-    
+
     // Make modal wider for student details
     const modalContent = document.querySelector('#dynamicModal .modal-content');
     if (modalContent) {
@@ -3123,7 +3123,7 @@ async function resendReceiptEmail(paymentId) {
   }
 }
 
-window.downloadStudentPDF = function() {
+window.downloadStudentPDF = function () {
   if (!window.jspdf) {
     alert('PDF library not loaded yet.');
     return;
@@ -3143,12 +3143,12 @@ window.downloadStudentPDF = function() {
   let filtersText = '';
   const fClassEl = document.getElementById('filterClass');
   const fStatusEl = document.getElementById('filterStatus');
-  
+
   const fClass = fClassEl && fClassEl.selectedIndex > 0 ? fClassEl.options[fClassEl.selectedIndex].text : 'All Classes';
   const fStatus = fStatusEl && fStatusEl.selectedIndex > 0 ? fStatusEl.options[fStatusEl.selectedIndex].text : 'All Students';
-  
+
   filtersText = `Filters: ${fClass} | ${fStatus}`;
-  
+
   doc.setFontSize(11);
   doc.setTextColor(100);
   doc.text(filtersText, 14, 30);
@@ -3185,7 +3185,7 @@ window.downloadStudentPDF = function() {
   doc.save('student_list.pdf');
 }
 
-window.printStudentReceipt = async function(paymentId) {
+window.printStudentReceipt = async function (paymentId) {
   if (!window.currentStudentData || !window.currentPayments) return;
   const p = window.currentPayments.find(pay => pay.id === paymentId);
   if (p) {
@@ -3195,7 +3195,7 @@ window.printStudentReceipt = async function(paymentId) {
       utr_number: p.utr_number,
       date: p.payment_date
     };
-    
+
     // Fetch global payment cycle
     let activeCycle = window.currentStudentData.payment_cycle || '';
     if (!activeCycle) {
@@ -3206,19 +3206,19 @@ window.printStudentReceipt = async function(paymentId) {
         }
       } catch (e) { console.warn(e); }
     }
-    
+
     const studentWithCycle = { ...window.currentStudentData, payment_cycle: activeCycle };
     generateReceipt(studentWithCycle, paymentObj, p.receipt_number || p.id);
   }
 };
 
-window.printNoDuesReceipt = async function(id) {
+window.printNoDuesReceipt = async function (id) {
   try {
     const res = await apiFetch(`/api/students/get/${id}`);
     if (!res || !res.success) { alert('Failed to load student data'); return; }
     const student = res.student;
     if (parseFloat(student.remaining_fees || 0) > 0) { alert('Student still has dues pending!'); return; }
-    
+
     // Fetch global payment cycle
     if (!student.payment_cycle) {
       try {
@@ -3228,7 +3228,7 @@ window.printNoDuesReceipt = async function(id) {
         }
       } catch (e) { console.warn(e); }
     }
-    
+
     generateNoDuesCertificate(student);
   } catch (error) {
     console.error('Error generating NO DUES certificate:', error);
@@ -3474,14 +3474,14 @@ async function loadAdminList() {
   try {
     const res = await apiFetch('/api/admin/list');
     if (!res.success) { alert(res.message || 'Failed to load admins'); return; }
-    
+
     const admins = res.admins || [];
     const rows = admins.map((a, i) => {
       const isSuperAdmin = a.role === 'super_admin';
       const roleLabel = isSuperAdmin ? '<span style="color:#f59e0b;font-weight:700;">Super Admin</span>' : '<span style="color:#60a5fa;">Admin</span>';
       return `
         <tr style="border-bottom:1px solid rgba(255,255,255,0.06);">
-          <td style="padding:10px 8px;">${i+1}</td>
+          <td style="padding:10px 8px;">${i + 1}</td>
           <td style="padding:10px 8px;font-weight:600;">${escapeHtml(a.username)}</td>
           <td style="padding:10px 8px;color:var(--clr-muted);">${escapeHtml(a.email)}</td>
           <td style="padding:10px 8px;">${roleLabel}</td>
@@ -3602,7 +3602,7 @@ async function editAdminUser(id, username, email) {
   try {
     const body = { username: newUsername, email: newEmail };
     if (newPassword && newPassword.length >= 6) body.password = newPassword;
-    
+
     const res = await apiFetch(`/api/admin/update/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },

@@ -55,23 +55,13 @@ router.get('/stats', authenticateAdmin, (req, res) => {
     classWiseStats: []
   };
 
-  const fy = req.query.fy || 'ALL';
-  let dateFilter = '';
-  if (fy === 'OLD') {
-    dateFilter = " WHERE joining_date < '2026-04-01 00:00:00' ";
-  } else if (fy === 'FY_2027') {
-    dateFilter = " WHERE joining_date >= '2026-04-01 00:00:00' AND joining_date <= '2027-03-31 23:59:59' ";
-  } else if (fy === 'FY_2028') {
-    dateFilter = " WHERE joining_date >= '2027-04-01 00:00:00' AND joining_date <= '2028-03-31 23:59:59' ";
-  }
-
   db.query('SELECT COUNT(*) as count FROM buses', (err, busResults) => {
     if (!err && busResults.length > 0) stats.totalBuses = busResults[0].count;
 
     db.query('SELECT COUNT(*) as count FROM drivers', (err, driverResults) => {
       if (!err && driverResults.length > 0) stats.totalDrivers = driverResults[0].count;
 
-    db.query(`SELECT
+      db.query(`SELECT
         COUNT(*) as total,
         SUM(fees_paid) as paid,
         SUM(remaining_fees) as remaining,
@@ -81,23 +71,23 @@ router.get('/stats', authenticateAdmin, (req, res) => {
         SUM(CASE WHEN student_status='active'      THEN 1 ELSE 0 END) as active_count,
         SUM(CASE WHEN student_status='passout'     THEN 1 ELSE 0 END) as passout_count,
         SUM(CASE WHEN student_status='school_left' THEN 1 ELSE 0 END) as left_count
-      FROM students ${dateFilter}`, (err, sr) => {
-      if (!err && sr.length > 0) {
-        stats.totalStudents       = sr[0].total || 0;
-        stats.totalFeesCollected  = sr[0].paid || 0;
-        stats.totalRemainingFees  = sr[0].remaining || 0;
-        stats.totalOldFees        = sr[0].old_fees || 0;
-        stats.totalCurrentFees    = sr[0].curr_fees || 0;
-        stats.totalGrandFees      = sr[0].grand_total || 0;
-        stats.activeStudents      = sr[0].active_count || 0;
-        stats.passoutStudents     = sr[0].passout_count || 0;
-        stats.schoolLeftStudents  = sr[0].left_count || 0;
-      }
+      FROM students`, (err, sr) => {
+        if (!err && sr.length > 0) {
+          stats.totalStudents = sr[0].total || 0;
+          stats.totalFeesCollected = sr[0].paid || 0;
+          stats.totalRemainingFees = sr[0].remaining || 0;
+          stats.totalOldFees = sr[0].old_fees || 0;
+          stats.totalCurrentFees = sr[0].curr_fees || 0;
+          stats.totalGrandFees = sr[0].grand_total || 0;
+          stats.activeStudents = sr[0].active_count || 0;
+          stats.passoutStudents = sr[0].passout_count || 0;
+          stats.schoolLeftStudents = sr[0].left_count || 0;
+        }
 
-      db.query(`SELECT COUNT(*) as count FROM students ${dateFilter ? dateFilter + ' AND remaining_fees > 0' : 'WHERE remaining_fees > 0'}`, (err, overdueResults) => {
-        if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
+        db.query('SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0', (err, overdueResults) => {
+          if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
 
-        db.query(`SELECT
+          db.query(`SELECT
             b.bus_number, b.route,
             COUNT(s.id) as student_count,
             SUM(s.fees_paid) as collected,
@@ -105,21 +95,22 @@ router.get('/stats', authenticateAdmin, (req, res) => {
             SUM(s.old_bus_fees) as old_fees,
             SUM(s.current_fees) as current_fees
           FROM buses b
-          LEFT JOIN students s ON s.bus_id = b.id ${dateFilter ? dateFilter.replace('WHERE', 'AND') : ''}
+          LEFT JOIN students s ON s.bus_id = b.id
           GROUP BY b.id, b.bus_number, b.route
           ORDER BY b.bus_number`, (err, busStats) => {
-          if (!err) stats.busWiseStats = busStats;
+            if (!err) stats.busWiseStats = busStats;
 
-          db.query(`SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students ${dateFilter} GROUP BY class_name ORDER BY class_name`, (err, classResults) => {
-            if (!err) stats.classWiseStats = classResults;
-            res.json({ success: true, stats });
+            db.query('SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students GROUP BY class_name ORDER BY class_name', (err, classResults) => {
+              if (!err) stats.classWiseStats = classResults;
+              res.json({ success: true, stats });
+            });
           });
         });
       });
     });
-    });
   });
 });
+
 
 // ============================
 // Get current admin info (protected)
@@ -208,12 +199,12 @@ router.get('/setup', async (req, res) => {
     if (admins.length > 0) {
       return res.json({ success: true, message: 'Super admin already exists.' });
     }
-    
+
     const hashedPassword = await bcrypt.hash('SuperAdmin@2024', 12);
-    
+
     // Check if the email is already in use by a regular admin
     const [existing] = await db.promise.query('SELECT * FROM admins WHERE email = ?', ['ravikurane12@gmail.com']);
-    
+
     if (existing.length > 0) {
       // Upgrade existing admin to super admin
       await db.promise.query(
@@ -255,8 +246,8 @@ router.put('/update/:id', authenticateSuperAdmin, async (req, res) => {
 
   try {
     // Check for duplicates (excluding current admin)
-    db.query('SELECT id FROM admins WHERE (username = ? OR email = ?) AND id != ?', 
-      [username.trim(), email.trim(), id], 
+    db.query('SELECT id FROM admins WHERE (username = ? OR email = ?) AND id != ?',
+      [username.trim(), email.trim(), id],
       async (err, results) => {
         if (err) return res.status(500).json({ success: false, message: 'Database error' });
         if (results.length > 0) {
