@@ -241,6 +241,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     busForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const bus_number = document.getElementById('bus_number').value.trim();
+      const short_name = document.getElementById('short_name') ? document.getElementById('short_name').value.trim() : '';
       const driver_id = document.getElementById('driver_id').value;
       const capacity = parseInt(document.getElementById('capacity').value) || 0;
       const route = document.getElementById('route').value.trim();
@@ -259,6 +260,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             bus_number,
+            short_name,
             driver_id: driver_id ? parseInt(driver_id) : null,
             capacity,
             route
@@ -536,6 +538,7 @@ async function loadBuses() {
           tr.innerHTML = `
             <td>${bus.id}</td>
             <td><a href="#" onclick="viewBusDetails(${bus.id}); return false;" style="color: var(--primary); font-weight: bold; text-decoration: none;">${escapeHtml(bus.bus_number)}</a></td>
+            <td><span style="background:rgba(255,255,255,0.1);padding:4px 8px;border-radius:4px;font-weight:600;font-size:0.8rem;">${escapeHtml(bus.short_name || 'N/A')}</span></td>
             <td>${escapeHtml(bus.driver_name || 'N/A')}</td>
             <td>${bus.capacity || 0}</td>
             <td>${escapeHtml(bus.route || 'N/A')}</td>
@@ -557,6 +560,10 @@ async function loadBuses() {
               <div class="bc-id">#${bus.id}</div>
             </div>
             <div class="bc-info-grid">
+              <div class="bc-info-item">
+                <span class="lbl">Short Name</span>
+                <span class="val"><span style="background:rgba(255,255,255,0.1);padding:2px 6px;border-radius:4px;font-weight:600;">${escapeHtml(bus.short_name || 'N/A')}</span></span>
+              </div>
               <div class="bc-info-item">
                 <span class="lbl">Driver</span>
                 <span class="val">${escapeHtml(bus.driver_name || 'N/A')}</span>
@@ -595,6 +602,73 @@ async function loadBuses() {
     if (tbody) tbody.innerHTML = '<tr><td colspan="6" class="error" style="text-align:center;padding:20px;">Failed to load buses. Please try again.</td></tr>';
     if (cardsContainer) cardsContainer.innerHTML = '<div style="text-align:center;padding:30px;color:#ef4444;">Failed to load buses.</div>';
   }
+}
+
+async function importDriversCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const text = e.target.result;
+    const lines = text.split('\\n');
+    if (lines.length < 2) {
+      alert('File is empty or missing headers');
+      return;
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const nameIdx = headers.findIndex(h => h.toLowerCase() === 'name');
+    const phoneIdx = headers.findIndex(h => h.toLowerCase() === 'phone');
+    const licenseIdx = headers.findIndex(h => h.toLowerCase().includes('license'));
+    const addressIdx = headers.findIndex(h => h.toLowerCase() === 'address');
+
+    if (nameIdx === -1 || phoneIdx === -1) {
+      alert('CSV must contain at least "Name" and "Phone" columns.');
+      return;
+    }
+
+    const drivers = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      drivers.push({
+        name: cols[nameIdx] || '',
+        phone: cols[phoneIdx] || '',
+        license_number: licenseIdx !== -1 ? cols[licenseIdx] : '',
+        address: addressIdx !== -1 ? cols[addressIdx] : ''
+      });
+    }
+
+    if (drivers.length === 0) {
+      alert('No data found to import');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/drivers/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ drivers })
+      });
+
+      if (res.success) {
+        alert(res.message);
+        loadDrivers();
+      } else {
+        alert(res.message || 'Error importing drivers');
+      }
+      if (res.errors && res.errors.length > 0) {
+        console.error('Import Errors:', res.errors);
+        alert('Some drivers failed to import. Check console for details.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to import drivers.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // Reset input
 }
 
 async function loadDrivers() {
@@ -825,7 +899,7 @@ async function populateBusSelect() {
       res.forEach(b => {
         const opt = document.createElement('option');
         opt.value = b.id;
-        opt.text = `${b.bus_number} - ${b.route || 'No route'} (Capacity: ${b.capacity || 0})`;
+        opt.text = `${b.bus_number}${b.short_name ? ' (' + b.short_name + ')' : ''} - ${b.route || 'No route'}`;
         sel.appendChild(opt);
       });
     }
@@ -1148,6 +1222,10 @@ async function editBus(id) {
         <input type="text" id="edit_bus_number" value="${escapeHtml(b.bus_number)}" class="modal-input">
       </div>
       <div style="margin-bottom: 15px;">
+        <label class="modal-label">Short Bus Name</label>
+        <input type="text" id="edit_short_name" value="${escapeHtml(b.short_name || '')}" class="modal-input">
+      </div>
+      <div style="margin-bottom: 15px;">
         <label class="modal-label">Assign Driver</label>
         <select id="edit_driver_id" class="modal-input">
           <option value="">-- No Driver Assigned --</option>
@@ -1167,6 +1245,7 @@ async function editBus(id) {
     showModal('Edit Bus Data', content, async () => {
       const updateData = {
         bus_number: document.getElementById('edit_bus_number').value.trim(),
+        short_name: document.getElementById('edit_short_name').value.trim(),
         driver_id: document.getElementById('edit_driver_id').value || null,
         capacity: parseInt(document.getElementById('edit_capacity').value) || 0,
         route: document.getElementById('edit_route').value.trim()
@@ -1228,7 +1307,7 @@ async function editStudent(id) {
     if (Array.isArray(busesRes)) {
       busesRes.forEach(b => {
         const selected = (s.bus_id === b.id) ? 'selected' : '';
-        busOptions += `<option value="${b.id}" ${selected}>${b.bus_number} - ${b.route || ''}</option>`;
+        busOptions += `<option value="${b.id}" ${selected}>${b.bus_number}${b.short_name ? ' (' + b.short_name + ')' : ''} - ${b.route || ''}</option>`;
       });
     }
 
@@ -2899,7 +2978,7 @@ window.downloadStudentPDF = function() {
   doc.setTextColor(100);
   doc.text(filtersText, 14, 30);
 
-  const tableColumn = ["Sr No", "Name", "Class", "Bus No", "Pick-up", "Old Fees", "Current Fees", "Total Fees", "Discount", "Paid", "Remaining"];
+  const tableColumn = ["Sr No", "Name", "Class", "Bus No", "Pick-up", "Old Fees (Pending fees till March 26)", "Fees Apr 26 - Mar 27", "Total Fees", "Concession", "Paid Fees", "Remaining Fees"];
   const tableRows = [];
 
   students.forEach((s, index) => {

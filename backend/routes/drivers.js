@@ -98,4 +98,47 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
   });
 });
 
+// Import drivers (protected)
+router.post('/import', authenticateAdmin, async (req, res) => {
+  const { drivers } = req.body;
+  
+  if (!drivers || !Array.isArray(drivers) || drivers.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid drivers data provided' });
+  }
+
+  const promisePool = db.promise;
+  let successCount = 0;
+  let errors = [];
+
+  for (let i = 0; i < drivers.length; i++) {
+    const d = drivers[i];
+    const name = (d.Name || d.name || '').toString().trim().substring(0, 100);
+    let phone = (d.Phone || d.phone || '').toString().trim().replace(/[^0-9+]/g, '');
+    const license = (d['License Number'] || d.license_number || d.license || '').toString().trim().substring(0, 50);
+    const address = (d.Address || d.address || '').toString().trim().substring(0, 500);
+
+    if (!name || !phone) {
+      errors.push(`Row ${i + 1}: Name and phone are required.`);
+      continue;
+    }
+
+    try {
+      await promisePool.query(
+        'INSERT INTO drivers (name, phone, license_number, address) VALUES (?, ?, ?, ?)',
+        [name, phone, license, address]
+      );
+      successCount++;
+    } catch (err) {
+      errors.push(`Row ${i + 1} (${name}): Database error - ${err.message}`);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Import complete. Successfully added ${successCount} drivers.`,
+    successCount,
+    errors
+  });
+});
+
 module.exports = router;

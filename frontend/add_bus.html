@@ -86,14 +86,10 @@
       <nav class="sidebar-nav">
         <div class="nav-section">Main Menu</div>
         <a href="dashboard.html"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
-        <div class="nav-section">Buses & Drivers</div>
-        <a href="add_bus.html" class="active"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
-        <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
-        <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
-        <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
-        <div class="nav-section">Students</div>
-        <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
-        <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+        <div class="nav-section">Directory</div>
+        <a href="view_buses.html" class="active"><i class="fa-solid fa-bus"></i> <span>Buses</span></a>
+        <a href="view_drivers.html"><i class="fa-solid fa-id-card"></i> <span>Drivers</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-user-graduate"></i> <span>Students</span></a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-mini"><div class="avatar"><i class="fa-solid fa-user-shield"></i></div><div class="user-info"><strong>Admin</strong><small>Super Admin</small></div></div>
@@ -111,7 +107,9 @@
         <div class="form-card">
           <form id="busForm">
             <label>Bus Number</label>
-            <input type="text" id="bus_number" placeholder="e.g. BUS-01" required pattern="[A-Za-z0-9-]+" title="Letters, numbers, and hyphens only">
+            <input type="text" id="bus_number" placeholder="e.g. MH-09-GJ-4392" required pattern="[A-Za-z0-9- ]+" title="Letters, numbers, spaces, and hyphens only">
+            <label>Short Bus Name</label>
+            <input type="text" id="short_name" placeholder="e.g. 4392">
             <label>Assign Driver</label>
             <select id="driver_id"><option value="">-- Select Driver (optional) --</option></select>
             <label>Capacity</label>

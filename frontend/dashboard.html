@@ -420,7 +420,7 @@
     /* ---------- STAT CARDS GRID ---------- */
     .stats-row {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
       gap: 16px;
       margin-bottom: 24px;
     }
@@ -429,10 +429,10 @@
       background: var(--clr-surface);
       border: 1px solid var(--clr-border);
       border-radius: var(--radius-md);
-      padding: 20px 22px;
+      padding: 24px 26px;
       display: flex;
       align-items: center;
-      gap: 16px;
+      gap: 20px;
       transition: all var(--transition);
       cursor: default;
       position: relative;
@@ -457,21 +457,21 @@
     }
 
     .stat-card .stat-icon-wrap {
-      width: 50px; height: 50px; min-width: 50px;
+      width: 60px; height: 60px; min-width: 60px;
       border-radius: var(--radius-sm);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.3rem;
+      font-size: 1.6rem;
     }
 
     .stat-card .stat-data h4 {
-      font-size: 0.78rem;
+      font-size: 0.85rem;
       font-weight: 500;
       color: var(--clr-muted);
       margin-bottom: 2px;
     }
 
     .stat-card .stat-data .stat-value {
-      font-size: 1.55rem;
+      font-size: 1.8rem;
       font-weight: 800;
       color: #f1f5f9;
       line-height: 1.1;
@@ -992,37 +992,14 @@
           <span>Management Panel</span>
         </div>
       </div>
-
       <nav class="sidebar-nav">
         <div class="nav-section">Main Menu</div>
-        <a href="dashboard.html" class="active">
-          <i class="fa-solid fa-gauge"></i> <span>Dashboard</span>
-        </a>
-
-        <div class="nav-section">Buses & Drivers</div>
-        <a href="add_bus.html">
-          <i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span>
-        </a>
-        <a href="view_buses.html">
-          <i class="fa-solid fa-list-check"></i> <span>View Buses</span>
-        </a>
-        <a href="add_driver.html">
-          <i class="fa-solid fa-id-card"></i> <span>Add Driver</span>
-        </a>
-        <a href="view_drivers.html">
-          <i class="fa-solid fa-users-gear"></i> <span>View Drivers</span>
-        </a>
-
-        <div class="nav-section">Students</div>
-        <a href="add_student.html">
-          <i class="fa-solid fa-user-plus"></i> <span>Add Student</span>
-        </a>
-        <a href="bulk_upload.html">
-          <i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span>
-        </a>
-        <a href="view_students.html">
-          <i class="fa-solid fa-users"></i> <span>View Students</span>
-        </a>
+        <a href="dashboard.html" class="active"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
+        <div class="nav-section">Directory</div>
+        <a href="view_buses.html"><i class="fa-solid fa-bus"></i> <span>Buses</span></a>
+        <a href="view_drivers.html"><i class="fa-solid fa-id-card"></i> <span>Drivers</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-user-graduate"></i> <span>Students</span></a>
+        <a href="bulk_upload.html"><i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span></a>
         <a href="#" onclick="document.querySelector('#queriesSection').scrollIntoView({behavior:'smooth'}); loadAdminQueries(); return false;">
           <i class="fa-solid fa-inbox"></i> <span>Student Queries</span>
           <span class="badge" id="openQueryCount" style="display:none;"></span>
@@ -1548,8 +1525,9 @@
                 <div class="activity-item" style="justify-content: space-between; align-items: center;">
                   <div class="activity-info">
                     <strong>${year}</strong>
+                    <div style="font-size:0.75rem;color:var(--clr-muted);margin-top:4px;">Pending: <span style="color:#fb923c;">₹${parseFloat(y.pending || 0).toLocaleString('en-IN')}</span></div>
                   </div>
-                  <div style="font-weight: 700; color: var(--clr-accent);">${y.count}</div>
+                  <div style="font-weight: 700; color: var(--clr-accent);font-size:1.1rem;">${y.count} <span style="font-size:0.7rem;font-weight:500;color:var(--clr-muted);">Students</span></div>
                 </div>
               `;
             }).join('');

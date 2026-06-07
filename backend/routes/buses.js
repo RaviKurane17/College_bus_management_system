@@ -39,7 +39,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
     return res.status(400).json({ success: false, message: 'Invalid bus ID' });
   }
 
-  const { bus_number, driver_id, capacity, route } = req.body;
+  const { bus_number, short_name, driver_id, capacity, route } = req.body;
 
   if (!bus_number) {
     return res.status(400).json({ success: false, message: 'Bus number is required' });
@@ -56,9 +56,10 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
       return res.status(400).json({ success: false, message: 'Bus number already exists' });
     }
 
-    const sql = `UPDATE buses SET bus_number = ?, driver_id = ?, capacity = ?, route = ? WHERE id = ?`;
+    const sql = `UPDATE buses SET bus_number = ?, short_name = ?, driver_id = ?, capacity = ?, route = ? WHERE id = ?`;
     const values = [
       bus_number.toString().trim().substring(0, 20),
+      short_name ? short_name.toString().trim().substring(0, 50) : null,
       driver_id ? parseInt(driver_id) : null, 
       parseInt(capacity) || 0,
       (route || '').toString().trim().substring(0, 255),
@@ -80,7 +81,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
 
 // Add bus (protected)
 router.post('/add-bus', authenticateAdmin, (req, res) => {
-  const { bus_number, driver_id, capacity, route } = req.body || {};
+  const { bus_number, short_name, driver_id, capacity, route } = req.body || {};
   
   if (!bus_number) {
     return res.status(400).json({ success: false, message: 'Bus number is required' });
@@ -110,9 +111,10 @@ router.post('/add-bus', authenticateAdmin, (req, res) => {
       return res.status(400).json({ success: false, message: 'Bus number already exists' });
     }
 
-    const sql = 'INSERT INTO buses (bus_number, driver_id, capacity, route) VALUES (?, ?, ?, ?)';
+    const sql = 'INSERT INTO buses (bus_number, short_name, driver_id, capacity, route) VALUES (?, ?, ?, ?, ?)';
     db.query(sql, [
       bus_number.toString().trim().substring(0, 20),
+      short_name ? short_name.toString().trim().substring(0, 50) : null,
       driver_id ? parseInt(driver_id) : null,
       capacityNum,
       (route || '').toString().trim().substring(0, 255)

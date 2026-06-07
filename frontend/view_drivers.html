@@ -644,14 +644,10 @@
       <nav class="sidebar-nav">
         <div class="nav-section">Main Menu</div>
         <a href="dashboard.html"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
-        <div class="nav-section">Buses & Drivers</div>
-        <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
-        <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
-        <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
-        <a href="view_drivers.html" class="active"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
-        <div class="nav-section">Students</div>
-        <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
-        <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+        <div class="nav-section">Directory</div>
+        <a href="view_buses.html"><i class="fa-solid fa-bus"></i> <span>Buses</span></a>
+        <a href="view_drivers.html" class="active"><i class="fa-solid fa-id-card"></i> <span>Drivers</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-user-graduate"></i> <span>Students</span></a>
       </nav>
       <div class="sidebar-footer">
         <div class="user-mini">
@@ -675,6 +671,9 @@
           <div class="panel-header">
             <h3><i class="fa-solid fa-id-card"></i> Drivers Directory</h3>
             <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <button onclick="window.location.href='add_driver.html'" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-plus-circle"></i> Add Driver</button>
+              <button onclick="document.getElementById('driverCsvInput').click()" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-accent-2),#2563eb); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-import"></i> Import CSV</button>
+              <input type="file" id="driverCsvInput" accept=".csv" style="display:none;" onchange="importDriversCSV(event)">
               <button onclick="exportDriversCSV()" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-green),#059669); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-csv"></i> Export CSV</button>
               <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchDriver"
                   placeholder="Search drivers..." oninput="loadDrivers()"></div>

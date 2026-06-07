@@ -128,18 +128,11 @@
   <div class="sidebar-brand"><div class="brand-icon"><i class="fa-solid fa-bus"></i></div><div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div></div>
   <nav class="sidebar-nav">
     <div class="nav-section">Main Menu</div>
-    <a href="dashboard.html">
-      <i class="fa-solid fa-gauge"></i> <span>Dashboard</span>
-    </a>
-    <div class="nav-section">Buses & Drivers</div>
-    <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
-    <a href="view_buses.html"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
-    <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
-    <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
-    <div class="nav-section">Students</div>
-    <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
-    <a href="bulk_upload.html"><i class="fa-solid fa-file-excel"></i> <span>Bulk Upload</span></a>
-    <a href="view_students.html" class="active"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
+    <a href="dashboard.html"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
+    <div class="nav-section">Directory</div>
+    <a href="view_buses.html"><i class="fa-solid fa-bus"></i> <span>Buses</span></a>
+    <a href="view_drivers.html"><i class="fa-solid fa-id-card"></i> <span>Drivers</span></a>
+    <a href="view_students.html" class="active"><i class="fa-solid fa-user-graduate"></i> <span>Students</span></a>
   </nav>
   <div class="sidebar-footer">
     <div class="user-mini"><div class="avatar"><i class="fa-solid fa-user-shield"></i></div><div class="user-info"><strong>Admin</strong><small>Super Admin</small></div></div>
@@ -156,7 +149,8 @@
   <div class="panel">
     <div class="panel-header">
       <h3><i class="fa-solid fa-user-graduate"></i> Student Directory</h3>
-      <div style="display:flex; gap:10px; align-items:center;">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+        <button onclick="window.location.href='add_student.html'" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-plus-circle"></i> Add Student</button>
         <button onclick="window.location.href='bulk_upload.html'" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-excel"></i> Bulk Upload</button>
         <button onclick="downloadStudentPDF()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
       </div>
@@ -182,8 +176,8 @@
             <th onclick="setStudentSort('class_name')" style="cursor:pointer;">Class <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('bus_number')" style="cursor:pointer;">Bus No <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer;">Pick-up <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;">Old Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('current_fees')" style="cursor:pointer;">Current Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;">Old Fees (Pending fees till March 26) <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('current_fees')" style="cursor:pointer;">Fees Apr 26 - Mar 27 <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('total_fees')" style="cursor:pointer;">Total Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('discount_amount')" style="cursor:pointer;">Concession <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('fees_paid')" style="cursor:pointer;">Paid Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>

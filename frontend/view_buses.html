@@ -175,18 +175,14 @@
 <div class="app-shell">
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-brand"><div class="brand-icon"><i class="fa-solid fa-bus"></i></div><div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div></div>
-  <nav class="sidebar-nav">
-    <div class="nav-section">Main Menu</div>
-    <a href="dashboard.html"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
-    <div class="nav-section">Buses & Drivers</div>
-    <a href="add_bus.html"><i class="fa-solid fa-plus-circle"></i> <span>Add Bus</span></a>
-    <a href="view_buses.html" class="active"><i class="fa-solid fa-list-check"></i> <span>View Buses</span></a>
-    <a href="add_driver.html"><i class="fa-solid fa-id-card"></i> <span>Add Driver</span></a>
-    <a href="view_drivers.html"><i class="fa-solid fa-users-gear"></i> <span>View Drivers</span></a>
-    <div class="nav-section">Students</div>
-    <a href="add_student.html"><i class="fa-solid fa-user-plus"></i> <span>Add Student</span></a>
-    <a href="view_students.html"><i class="fa-solid fa-users"></i> <span>View Students</span></a>
-  </nav>
+      <nav class="sidebar-nav">
+        <div class="nav-section">Main Menu</div>
+        <a href="dashboard.html"><i class="fa-solid fa-gauge"></i> <span>Dashboard</span></a>
+        <div class="nav-section">Directory</div>
+        <a href="view_buses.html" class="active"><i class="fa-solid fa-bus"></i> <span>Buses</span></a>
+        <a href="view_drivers.html"><i class="fa-solid fa-id-card"></i> <span>Drivers</span></a>
+        <a href="view_students.html"><i class="fa-solid fa-user-graduate"></i> <span>Students</span></a>
+      </nav>
   <div class="sidebar-footer">
     <div class="user-mini"><div class="avatar"><i class="fa-solid fa-user-shield"></i></div><div class="user-info"><strong>Admin</strong><small>Super Admin</small></div></div>
     <button class="btn-logout" id="logoutBtn"><i class="fa-solid fa-right-from-bracket"></i> <span>Logout</span></button>
@@ -200,13 +196,16 @@
 </header>
 <div class="page-content">
   <div class="panel">
-    <div class="panel-header">
-      <h3><i class="fa-solid fa-bus"></i> Bus Fleet</h3>
-      <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchBus" placeholder="Search buses..." oninput="loadBuses()"></div>
-    </div>
+          <div class="panel-header">
+            <h3><i class="fa-solid fa-list-check"></i> Bus Fleet Directory</h3>
+            <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+              <button onclick="window.location.href='add_bus.html'" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-plus-circle"></i> Add Bus</button>
+              <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchBus" placeholder="Search route..." oninput="loadBuses()"></div>
+            </div>
+          </div>
     <div class="panel-body">
       <table id="busesTable" class="desktop-table">
-        <thead><tr><th>ID</th><th>Bus Number</th><th>Driver</th><th>Capacity</th><th>Route</th><th>Actions</th></tr></thead>
+        <thead><tr><th>ID</th><th>Bus Number</th><th>Short Name</th><th>Driver</th><th>Capacity</th><th>Route</th><th>Actions</th></tr></thead>
         <tbody></tbody>
       </table>
       <div class="buses-cards" id="busesCards"></div>
