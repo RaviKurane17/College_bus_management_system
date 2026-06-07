@@ -1054,8 +1054,8 @@ async function loadStudents() {
         const tr = document.createElement('tr');
         if (isOverdue) tr.style.borderLeft = '3px solid var(--error)';
         tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>
+          <td style="position: sticky; left: 0; background: var(--clr-surface); z-index: 5;">${index + 1}</td>
+          <td style="position: sticky; left: 65px; background: var(--clr-surface); z-index: 5; box-shadow: inset -2px 0 5px rgba(0,0,0,0.1);">
             <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
               <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.9rem;"></i>
               <div>
