@@ -1606,7 +1606,7 @@ async function editStudent(id) {
 }
 
 async function resetStudentPassword(id) {
-  if (!confirm('Are you sure you want to reset this student\\'s password to "123456"?')) return;
+  if (!confirm("Are you sure you want to reset this student's password to '123456'?")) return;
   try {
     const res = await apiFetch(`/api/students/reset-password/${id}`, { method: 'PUT' });
     if (res.success) {
@@ -1621,7 +1621,7 @@ async function resetStudentPassword(id) {
 }
 
 async function bulkResetPasswords() {
-  if (!confirm('WARNING: This will reset ALL students\\' passwords to "123456". Are you sure you want to proceed?')) return;
+  if (!confirm("WARNING: This will reset ALL students' passwords to '123456'. Are you sure you want to proceed?")) return;
   try {
     const res = await apiFetch(`/api/students/bulk-reset-passwords`, { method: 'PUT' });
     if (res.success) {
