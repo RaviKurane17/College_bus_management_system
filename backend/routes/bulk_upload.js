@@ -26,6 +26,7 @@ router.get('/template', authenticateAdmin, (req, res) => {
       'Name':             'AARUSH ATUL KHOT',
       'Class':            'Class - 3rd',
       'Phone':            '9860127879',
+      'Email':            'aarush@example.com',
       'Bus Number':       '82',
       'Pick-Up Point':    'NIKAMWADI',
       'Old Bus Fees':     0,
@@ -35,7 +36,7 @@ router.get('/template', authenticateAdmin, (req, res) => {
       'Password':         '123456'
     }]);
     ws['!cols'] = [
-      {wch:28},{wch:15},{wch:15},{wch:12},{wch:20},
+      {wch:28},{wch:15},{wch:15},{wch:25},{wch:12},{wch:20},
       {wch:14},{wch:14},{wch:16},{wch:12},{wch:15}
     ];
     XLSX.utils.book_append_sheet(wb, ws, 'Students');
@@ -44,7 +45,7 @@ router.get('/template', authenticateAdmin, (req, res) => {
       { Instructions: 'BULK UPLOAD TEMPLATE — HOLY-WOOD ACADEMY' },
       { Instructions: '' },
       { Instructions: 'Required: Name, Phone, Bus Number' },
-      { Instructions: 'Optional: Class, Pick-Up Point, Old Bus Fees, Current Fees, Discount Amount, Fees Paid, Password' },
+      { Instructions: 'Optional: Class, Email, Pick-Up Point, Old Bus Fees, Current Fees, Discount Amount, Fees Paid, Password' },
       { Instructions: '' },
       { Instructions: 'total_fees = Old Bus Fees + Current Fees - Discount (auto-computed)' },
       { Instructions: 'remaining_fees = total_fees - Fees Paid (auto-computed)' },
@@ -59,6 +60,55 @@ router.get('/template', authenticateAdmin, (req, res) => {
     res.setHeader('Content-Disposition', 'attachment; filename=student_upload_template.xlsx');
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(buf);
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error generating template: ' + e.message });
+  }
+});
+
+// ============================
+// GET driver template
+// ============================
+router.get('/template/drivers', authenticateAdmin, (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([{
+      'Name':             'RAMESH KUMAR',
+      'Phone':            '9876543210',
+      'License Number':   'MH0920230001234',
+      'Address':          '123 MAIN STREET, CITY'
+    }]);
+    ws['!cols'] = [ {wch:25}, {wch:15}, {wch:20}, {wch:35} ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Drivers');
+
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    res.setHeader('Content-Disposition', 'attachment; filename=driver_upload_template.csv');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(csv);
+  } catch (e) {
+    res.status(500).json({ success: false, message: 'Error generating template: ' + e.message });
+  }
+});
+
+// ============================
+// GET bus template
+// ============================
+router.get('/template/buses', authenticateAdmin, (req, res) => {
+  try {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet([{
+      'Bus Number':  'MH 09 AB 1234',
+      'Short Name':  'Bus 1',
+      'Driver Name': 'RAMESH KUMAR',
+      'Capacity':    50,
+      'Route':       'CITY CENTER TO COLLEGE'
+    }]);
+    ws['!cols'] = [ {wch:15}, {wch:12}, {wch:25}, {wch:10}, {wch:35} ];
+    XLSX.utils.book_append_sheet(wb, ws, 'Buses');
+
+    const csv = XLSX.utils.sheet_to_csv(ws);
+    res.setHeader('Content-Disposition', 'attachment; filename=bus_upload_template.csv');
+    res.setHeader('Content-Type', 'text/csv');
+    res.send(csv);
   } catch (e) {
     res.status(500).json({ success: false, message: 'Error generating template: ' + e.message });
   }
@@ -93,6 +143,7 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       const name           = (row['Name']           || '').toString().trim();
       const class_name     = (row['Class']           || '').toString().trim();
       const phone          = (row['Phone']           || '').toString().trim();
+      const email          = (row['Email']           || '').toString().trim();
       const bus_number     = (row['Bus Number']      || '').toString().trim();
       const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
       const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
@@ -118,7 +169,7 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       fileUsernames.add(username.toLowerCase());
 
       return {
-        row: i + 2, name, class_name, phone, bus_number, bus_id, pick_up_point,
+        row: i + 2, name, class_name, phone, email, bus_number, bus_id, pick_up_point,
         old_bus_fees, current_fees, discount_amount, fees_paid,
         ...t, username, password,
         valid: errors.length === 0, errors
@@ -168,6 +219,7 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       const name           = (row['Name']           || '').toString().trim();
       const class_name     = (row['Class']           || '').toString().trim();
       const phone          = (row['Phone']           || '').toString().trim();
+      const email          = (row['Email']           || '').toString().trim();
       const bus_number     = (row['Bus Number']      || '').toString().trim();
       const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
       const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
@@ -196,13 +248,13 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       try {
         const hashed = await bcrypt.hash(password, 12);
         await promisePool.query(`INSERT INTO students
-          (username, password, name, class_name, phone, bus_id, pick_up_point,
+          (username, password, name, class_name, phone, email, bus_id, pick_up_point,
            old_bus_fees, current_fees, discount_amount, total_fees, fees_paid, remaining_fees,
            student_status, joining_date)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,'active',CURDATE())`,
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active',CURDATE())`,
           [
             username.substring(0, 100), hashed,
-            name.substring(0, 150), class_name.substring(0, 100), phone.substring(0, 20),
+            name.substring(0, 150), class_name.substring(0, 100), phone.substring(0, 20), email.substring(0, 100),
             bus_id, pick_up_point.substring(0, 150),
             old_bus_fees.toFixed(2), current_fees.toFixed(2), discount_amount.toFixed(2),
             t.total_fees, fees_paid.toFixed(2), t.remaining_fees

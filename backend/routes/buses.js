@@ -174,4 +174,70 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
   });
 });
 
+// Import buses (protected)
+router.post('/import', authenticateAdmin, async (req, res) => {
+  const { buses } = req.body;
+  
+  if (!buses || !Array.isArray(buses) || buses.length === 0) {
+    return res.status(400).json({ success: false, message: 'No valid buses data provided' });
+  }
+
+  const promisePool = db.promise;
+  let successCount = 0;
+  let errors = [];
+
+  const [existingDrivers] = await promisePool.query('SELECT id, name FROM drivers');
+  const driverMap = {};
+  existingDrivers.forEach(d => {
+    if (d.name) driverMap[d.name.toLowerCase()] = d.id;
+  });
+
+  for (let i = 0; i < buses.length; i++) {
+    const b = buses[i];
+    const bus_number = (b['Bus Number'] || b.bus_number || '').toString().trim().substring(0, 20);
+    const short_name = (b['Short Name'] || b.short_name || '').toString().trim().substring(0, 50);
+    const driver_name = (b['Driver Name'] || b.driver_name || '').toString().trim();
+    const capacityNum = parseInt(b['Capacity'] || b.capacity) || 50;
+    const route = (b['Route'] || b.route || '').toString().trim().substring(0, 255);
+
+    if (!bus_number) {
+      errors.push(`Row ${i + 1}: Bus Number is required.`);
+      continue;
+    }
+
+    // Check duplicate
+    try {
+      const [existing] = await promisePool.query('SELECT id FROM buses WHERE bus_number = ?', [bus_number]);
+      if (existing.length > 0) {
+        errors.push(`Row ${i + 1} (${bus_number}): Bus number already exists.`);
+        continue;
+      }
+
+      let driver_id = null;
+      if (driver_name) {
+        driver_id = driverMap[driver_name.toLowerCase()] || null;
+        if (!driver_id) {
+          errors.push(`Row ${i + 1} (${bus_number}): Driver "${driver_name}" not found in system.`);
+          continue;
+        }
+      }
+
+      await promisePool.query(
+        'INSERT INTO buses (bus_number, short_name, driver_id, capacity, route) VALUES (?, ?, ?, ?, ?)',
+        [bus_number, short_name || null, driver_id, capacityNum, route]
+      );
+      successCount++;
+    } catch (err) {
+      errors.push(`Row ${i + 1} (${bus_number}): Database error - ${err.message}`);
+    }
+  }
+
+  res.json({
+    success: true,
+    message: `Import complete. Successfully added ${successCount} buses.`,
+    successCount,
+    errors
+  });
+});
+
 module.exports = router;

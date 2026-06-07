@@ -74,8 +74,8 @@ router.get('/get/:id', authenticateAny, (req, res) => {
 // ============================
 router.get('/profile/:identifier', authenticateAny, (req, res) => {
   const id = req.params.identifier.toString().trim().substring(0, 150);
-  db.query('SELECT s.*, b.bus_number, b.route, b.short_name, d.name as driver_name, d.phone as driver_phone FROM students s LEFT JOIN buses b ON s.bus_id=b.id LEFT JOIN drivers d ON b.driver_id=d.id WHERE s.username=? OR s.phone=? OR s.name=?',
-    [id, id, id], (err, results) => {
+  db.query('SELECT s.*, b.bus_number, b.route, b.short_name, d.name as driver_name, d.phone as driver_phone FROM students s LEFT JOIN buses b ON s.bus_id=b.id LEFT JOIN drivers d ON b.driver_id=d.id WHERE s.username=? OR s.phone=? OR s.email=? OR s.name=?',
+    [id, id, id, id], (err, results) => {
       if (err || !results.length) return res.status(404).json({ success: false, message: 'Student not found' });
       const s = results[0]; delete s.password; delete s.reset_token; delete s.reset_token_expires;
       res.json({ success: true, student: s });
@@ -88,7 +88,7 @@ router.get('/profile/:identifier', authenticateAny, (req, res) => {
 router.post('/add-student', authenticateAdmin, async (req, res) => {
   try {
     let {
-      name, class_name, phone,
+      name, class_name, phone, email,
       bus_id, pick_up_point,
       old_bus_fees, current_fees, discount_amount, fees_paid,
       student_status,
@@ -113,16 +113,17 @@ router.post('/add-student', authenticateAdmin, async (req, res) => {
 
       const hashed = await bcrypt.hash(password, 12);
       const sql = `INSERT INTO students
-        (username, password, name, class_name, phone, bus_id, pick_up_point,
+        (username, password, name, class_name, phone, email, bus_id, pick_up_point,
          old_bus_fees, current_fees, discount_amount, total_fees, fees_paid, remaining_fees,
          student_status, joining_date)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURDATE())`;
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURDATE())`;
 
       db.query(sql, [
         username.trim().substring(0, 100), hashed,
         name.trim().substring(0, 150),
         (class_name || '').trim().substring(0, 100),
         (phone || '').trim().substring(0, 20),
+        (email || '').trim().substring(0, 100) || null,
         bus_id || null,
         (pick_up_point || '').trim().substring(0, 150),
         parseFloat(old_bus_fees  || 0).toFixed(2),
@@ -153,7 +154,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
   if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
 
   const {
-    name, class_name, phone, bus_id, pick_up_point,
+    name, class_name, phone, email, bus_id, pick_up_point,
     old_bus_fees, current_fees, discount_amount, fees_paid,
     student_status
   } = req.body;
@@ -164,7 +165,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
   const t      = computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid);
 
   db.query(`UPDATE students SET
-    name=?, class_name=?, phone=?, bus_id=?, pick_up_point=?,
+    name=?, class_name=?, phone=?, email=?, bus_id=?, pick_up_point=?,
     old_bus_fees=?, current_fees=?, discount_amount=?,
     total_fees=?, fees_paid=?, remaining_fees=?, student_status=?
     WHERE id=?`,
@@ -172,6 +173,7 @@ router.put('/update/:id', authenticateAdmin, (req, res) => {
       name.trim().substring(0, 150),
       (class_name || '').trim().substring(0, 100),
       (phone || '').trim().substring(0, 20),
+      (email || '').trim().substring(0, 100) || null,
       bus_id || null,
       (pick_up_point || '').trim().substring(0, 150),
       parseFloat(old_bus_fees  || 0).toFixed(2),
@@ -264,7 +266,7 @@ router.delete('/:id', authenticateAdmin, (req, res) => {
 router.post('/login', async (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) return res.status(400).json({ success: false, message: 'Username and password required' });
-  db.query('SELECT * FROM students WHERE username=? OR phone=?', [username, username], async (err, rows) => {
+  db.query('SELECT * FROM students WHERE username=? OR phone=? OR email=?', [username, username, username], async (err, rows) => {
     if (err || !rows.length) return res.status(401).json({ success: false, message: 'Invalid credentials' });
     if (!await bcrypt.compare(password, rows[0].password)) return res.status(401).json({ success: false, message: 'Invalid credentials' });
     const { password:_, reset_token, reset_token_expires, ...data } = rows[0];
@@ -279,7 +281,7 @@ router.post('/reset-password', (req, res) => {
   const { username, phone } = req.body;
   const identifier = (username || phone || '').toString().trim();
   if (!identifier) return res.status(400).json({ success: false, message: 'Username or phone required' });
-  db.query('SELECT id, username FROM students WHERE username=? OR phone=?', [identifier, identifier], async (err, rows) => {
+  db.query('SELECT id, username FROM students WHERE username=? OR phone=? OR email=?', [identifier, identifier, identifier], async (err, rows) => {
     if (err || !rows.length) return res.status(404).json({ success: false, message: 'Student not found' });
     const newPass = Math.random().toString(36).slice(-8);
     await bcrypt.hash(newPass, 12).then(h => {

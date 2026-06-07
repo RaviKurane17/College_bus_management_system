@@ -671,6 +671,75 @@ async function importDriversCSV(event) {
   event.target.value = ''; // Reset input
 }
 
+async function importBusesCSV(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = async function (e) {
+    const text = e.target.result;
+    const lines = text.split('\n');
+    if (lines.length < 2) {
+      alert('File is empty or missing headers');
+      return;
+    }
+
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    const busNumberIdx = headers.findIndex(h => h.toLowerCase() === 'bus number');
+    const shortNameIdx = headers.findIndex(h => h.toLowerCase() === 'short name');
+    const driverNameIdx = headers.findIndex(h => h.toLowerCase() === 'driver name');
+    const capacityIdx = headers.findIndex(h => h.toLowerCase() === 'capacity');
+    const routeIdx = headers.findIndex(h => h.toLowerCase() === 'route');
+
+    if (busNumberIdx === -1) {
+      alert('CSV must contain at least "Bus Number" column.');
+      return;
+    }
+
+    const buses = [];
+    for (let i = 1; i < lines.length; i++) {
+      if (!lines[i].trim()) continue;
+      const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+      buses.push({
+        bus_number: cols[busNumberIdx] || '',
+        short_name: shortNameIdx !== -1 ? cols[shortNameIdx] : '',
+        driver_name: driverNameIdx !== -1 ? cols[driverNameIdx] : '',
+        capacity: capacityIdx !== -1 ? cols[capacityIdx] : '',
+        route: routeIdx !== -1 ? cols[routeIdx] : ''
+      });
+    }
+
+    if (buses.length === 0) {
+      alert('No data found to import');
+      return;
+    }
+
+    try {
+      const res = await apiFetch('/api/buses/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ buses })
+      });
+
+      if (res.success) {
+        alert(res.message);
+        loadBuses();
+      } else {
+        alert(res.message || 'Error importing buses');
+      }
+      if (res.errors && res.errors.length > 0) {
+        console.error('Import Errors:', res.errors);
+        alert('Some buses failed to import. Check console for details.');
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Failed to import buses.');
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // Reset input
+}
+
 async function loadDrivers() {
   try {
     const res = await apiFetch('/api/drivers');
