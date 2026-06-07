@@ -1605,6 +1605,21 @@ async function editStudent(id) {
   }
 }
 
+async function resetStudentPassword(id) {
+  if (!confirm('Are you sure you want to reset this student\\'s password to "123456"?')) return;
+  try {
+    const res = await apiFetch(`/api/students/reset-password/${id}`, { method: 'PUT' });
+    if (res.success) {
+      alert(res.message);
+    } else {
+      alert(res.message || 'Failed to reset password');
+    }
+  } catch (err) {
+    console.error(err);
+    alert('Error resetting password');
+  }
+}
+
 // View Student Details Function
 async function viewStudentDetails(id) {
   try {
@@ -3012,6 +3027,7 @@ async function viewStudentDetails(id) {
             <button onclick="closeModal(); setTimeout(()=>payFees(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay Fees</button>
             ${remainingFees <= 0 ? `<button onclick="printNoDuesReceipt(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#3b82f6,#2563eb);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-file-invoice"></i> No Dues</button>` : ''}
             <button onclick="generateBusPass(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#f59e0b,#d97706);color:#000;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-id-card"></i> Bus Pass</button>
+            <button onclick="resetStudentPassword(${s.id})" style="flex:1;padding:10px;background:linear-gradient(135deg,#6366f1,#4f46e5);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-key"></i> Reset Pass</button>
             <button onclick="closeModal(); setTimeout(()=>deleteStudent(${s.id}), 300)" style="flex:1;padding:10px;background:linear-gradient(135deg,#ef4444,#dc2626);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;display:flex;align-items:center;justify-content:center;gap:6px;"><i class="fa-solid fa-trash"></i> Delete</button>
           </div>
         </div>

@@ -249,6 +249,24 @@ router.get('/:id/payments', authenticateAny, (req, res) => {
 });
 
 // ============================
+// PUT reset student password (admin only)
+// ============================
+router.put('/reset-password/:id', authenticateAdmin, async (req, res) => {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
+  
+  try {
+    const hashed = await bcrypt.hash('123456', 12);
+    db.query('UPDATE students SET password=? WHERE id=?', [hashed, id], (err, result) => {
+      if (err) return res.status(500).json({ success: false, message: 'Database error' });
+      res.json({ success: true, message: 'Password reset to 123456 successfully' });
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+});
+
+// ============================
 // DELETE student
 // ============================
 router.delete('/:id', authenticateAdmin, (req, res) => {
