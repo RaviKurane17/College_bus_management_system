@@ -38,6 +38,17 @@ router.post('/login', async (req, res) => {
 
 // Get dashboard statistics (protected) — Client-Wise Structure
 router.get('/stats', authenticateAdmin, (req, res) => {
+  const fy = req.query.fy || 'ALL';
+  
+  let dateFilter = '';
+  if (fy === 'OLD') {
+    dateFilter = " AND joining_date < '2026-04-01' ";
+  } else if (fy === 'FY_2027') {
+    dateFilter = " AND joining_date >= '2026-04-01' AND joining_date <= '2027-03-31 23:59:59' ";
+  } else if (fy === 'FY_2028') {
+    dateFilter = " AND joining_date >= '2027-04-01' AND joining_date <= '2028-03-31 23:59:59' ";
+  }
+
   const stats = {
     totalBuses: 0,
     totalStudents: 0,
@@ -71,7 +82,7 @@ router.get('/stats', authenticateAdmin, (req, res) => {
         SUM(CASE WHEN student_status='active'      THEN 1 ELSE 0 END) as active_count,
         SUM(CASE WHEN student_status='passout'     THEN 1 ELSE 0 END) as passout_count,
         SUM(CASE WHEN student_status='school_left' THEN 1 ELSE 0 END) as left_count
-      FROM students`, (err, sr) => {
+      FROM students WHERE 1=1 ${dateFilter}`, (err, sr) => {
         if (!err && sr.length > 0) {
           stats.totalStudents = sr[0].total || 0;
           stats.totalFeesCollected = sr[0].paid || 0;
@@ -84,7 +95,7 @@ router.get('/stats', authenticateAdmin, (req, res) => {
           stats.schoolLeftStudents = sr[0].left_count || 0;
         }
 
-        db.query('SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0', (err, overdueResults) => {
+        db.query(`SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0 ${dateFilter}`, (err, overdueResults) => {
           if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
 
           db.query(`SELECT
@@ -95,12 +106,12 @@ router.get('/stats', authenticateAdmin, (req, res) => {
             SUM(s.old_bus_fees) as old_fees,
             SUM(s.current_fees) as current_fees
           FROM buses b
-          LEFT JOIN students s ON s.bus_id = b.id
+          LEFT JOIN students s ON s.bus_id = b.id AND 1=1 ${dateFilter.replace(/joining_date/g, 's.joining_date')}
           GROUP BY b.id, b.bus_number, b.route
           ORDER BY b.bus_number`, (err, busStats) => {
             if (!err) stats.busWiseStats = busStats;
 
-            db.query('SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students GROUP BY class_name ORDER BY class_name', (err, classResults) => {
+            db.query(`SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students WHERE 1=1 ${dateFilter} GROUP BY class_name ORDER BY class_name`, (err, classResults) => {
               if (!err) stats.classWiseStats = classResults;
               res.json({ success: true, stats });
             });

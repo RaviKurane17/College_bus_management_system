@@ -1464,11 +1464,34 @@ async function editStudent(id) {
         <label class="modal-label">Department</label>
         <select id="edit_department" class="modal-input">
           <option value="">-- Select Dept --</option>
-          <option value="CSE" ${s.department === 'CSE' ? 'selected' : ''}>Computer Science (CSE)</option>
-          <option value="IT" ${s.department === 'IT' ? 'selected' : ''}>Information Technology (IT)</option>
-          <option value="ECE" ${s.department === 'ECE' ? 'selected' : ''}>Electronics (ECE)</option>
-          <option value="MECH" ${s.department === 'MECH' ? 'selected' : ''}>Mechanical (MECH)</option>
-          <option value="CIVIL" ${s.department === 'CIVIL' ? 'selected' : ''}>Civil (CIVIL)</option>
+          <optgroup label="College Degree">
+            <option value="Degree - CSE" ${s.department === 'Degree - CSE' || s.department === 'CSE' ? 'selected' : ''}>Computer Science (CSE)</option>
+            <option value="Degree - IT" ${s.department === 'Degree - IT' || s.department === 'IT' ? 'selected' : ''}>Information Technology (IT)</option>
+            <option value="Degree - ECE" ${s.department === 'Degree - ECE' || s.department === 'ECE' ? 'selected' : ''}>Electronics (ECE)</option>
+            <option value="Degree - MECH" ${s.department === 'Degree - MECH' || s.department === 'MECH' ? 'selected' : ''}>Mechanical (MECH)</option>
+            <option value="Degree - CIVIL" ${s.department === 'Degree - CIVIL' || s.department === 'CIVIL' ? 'selected' : ''}>Civil (CIVIL)</option>
+            <option value="Degree - AIML" ${s.department === 'Degree - AIML' ? 'selected' : ''}>AI & ML (AIML)</option>
+            <option value="Degree - ELECTRICAL" ${s.department === 'Degree - ELECTRICAL' ? 'selected' : ''}>Electrical</option>
+            <option value="Degree - MBA" ${s.department === 'Degree - MBA' ? 'selected' : ''}>MBA</option>
+            <option value="Degree - BFA" ${s.department === 'Degree - BFA' ? 'selected' : ''}>BFA</option>
+          </optgroup>
+          <optgroup label="Polytechnic">
+            <option value="Poly - CSE" ${s.department === 'Poly - CSE' ? 'selected' : ''}>Computer Science</option>
+            <option value="Poly - CIVIL" ${s.department === 'Poly - CIVIL' ? 'selected' : ''}>Civil</option>
+            <option value="Poly - MECH" ${s.department === 'Poly - MECH' ? 'selected' : ''}>Mechanical</option>
+            <option value="Poly - ELECTRICAL" ${s.department === 'Poly - ELECTRICAL' ? 'selected' : ''}>Electrical</option>
+          </optgroup>
+          <optgroup label="Junior College (PUC)">
+            <option value="PUC - Science" ${s.department === 'PUC - Science' ? 'selected' : ''}>Science</option>
+            <option value="PUC - Commerce" ${s.department === 'PUC - Commerce' ? 'selected' : ''}>Commerce</option>
+            <option value="PUC - Arts" ${s.department === 'PUC - Arts' ? 'selected' : ''}>Arts</option>
+          </optgroup>
+          <optgroup label="School">
+            <option value="School - Primary" ${s.department === 'School - Primary' || s.department === 'LKG-UKG' ? 'selected' : ''}>Primary (LKG-UKG)</option>
+            <option value="School - Secondary" ${s.department === 'School - Secondary' || s.department === '1-10th' ? 'selected' : ''}>Secondary (1st-10th)</option>
+            <option value="School - High School" ${s.department === 'School - High School' || s.department === '11th-12th' ? 'selected' : ''}>High School (11th-12th)</option>
+          </optgroup>
+          ${!['', 'CSE', 'IT', 'ECE', 'MECH', 'CIVIL', 'Degree - CSE', 'Degree - IT', 'Degree - ECE', 'Degree - MECH', 'Degree - CIVIL', 'Degree - AIML', 'Degree - ELECTRICAL', 'Degree - MBA', 'Degree - BFA', 'Poly - CSE', 'Poly - CIVIL', 'Poly - MECH', 'Poly - ELECTRICAL', 'PUC - Science', 'PUC - Commerce', 'PUC - Arts', 'School - Primary', 'School - Secondary', 'School - High School', 'LKG-UKG', '1-10th', '11th-12th'].includes(s.department) ? `<option value="${escapeHtml(s.department)}" selected>${escapeHtml(s.department)}</option>` : ''}
         </select>
       </div>
       <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px;">
@@ -1476,10 +1499,31 @@ async function editStudent(id) {
           <label class="modal-label">Course / Year</label>
           <select id="edit_course_year" class="modal-input">
             <option value="">-- Select Year --</option>
-            <option value="1st Year" ${s.course_year === '1st Year' ? 'selected' : ''}>1st Year</option>
-            <option value="2nd Year" ${s.course_year === '2nd Year' ? 'selected' : ''}>2nd Year</option>
-            <option value="3rd Year" ${s.course_year === '3rd Year' ? 'selected' : ''}>3rd Year</option>
-            <option value="4th Year" ${s.course_year === '4th Year' ? 'selected' : ''}>4th Year</option>
+            <optgroup label="Degree / Poly">
+              <option value="1st Year" ${s.course_year === '1st Year' ? 'selected' : ''}>1st Year</option>
+              <option value="2nd Year" ${s.course_year === '2nd Year' ? 'selected' : ''}>2nd Year</option>
+              <option value="3rd Year" ${s.course_year === '3rd Year' ? 'selected' : ''}>3rd Year</option>
+              <option value="4th Year" ${s.course_year === '4th Year' ? 'selected' : ''}>4th Year</option>
+            </optgroup>
+            <optgroup label="PUC">
+              <option value="11th Std" ${s.course_year === '11th Std' || s.course_year === '11th Std (PUC 1)' ? 'selected' : ''}>11th Std (PUC 1)</option>
+              <option value="12th Std" ${s.course_year === '12th Std' || s.course_year === '12th Std (PUC 2)' ? 'selected' : ''}>12th Std (PUC 2)</option>
+            </optgroup>
+            <optgroup label="School">
+              <option value="LKG" ${s.course_year === 'LKG' ? 'selected' : ''}>LKG</option>
+              <option value="UKG" ${s.course_year === 'UKG' ? 'selected' : ''}>UKG</option>
+              <option value="1st Std" ${s.course_year === '1st Std' ? 'selected' : ''}>1st Std</option>
+              <option value="2nd Std" ${s.course_year === '2nd Std' ? 'selected' : ''}>2nd Std</option>
+              <option value="3rd Std" ${s.course_year === '3rd Std' ? 'selected' : ''}>3rd Std</option>
+              <option value="4th Std" ${s.course_year === '4th Std' ? 'selected' : ''}>4th Std</option>
+              <option value="5th Std" ${s.course_year === '5th Std' ? 'selected' : ''}>5th Std</option>
+              <option value="6th Std" ${s.course_year === '6th Std' ? 'selected' : ''}>6th Std</option>
+              <option value="7th Std" ${s.course_year === '7th Std' ? 'selected' : ''}>7th Std</option>
+              <option value="8th Std" ${s.course_year === '8th Std' ? 'selected' : ''}>8th Std</option>
+              <option value="9th Std" ${s.course_year === '9th Std' ? 'selected' : ''}>9th Std</option>
+              <option value="10th Std" ${s.course_year === '10th Std' ? 'selected' : ''}>10th Std</option>
+            </optgroup>
+            ${!['', '1st Year', '2nd Year', '3rd Year', '4th Year', '11th Std', '11th Std (PUC 1)', '12th Std', '12th Std (PUC 2)', 'LKG', 'UKG', '1st Std', '2nd Std', '3rd Std', '4th Std', '5th Std', '6th Std', '7th Std', '8th Std', '9th Std', '10th Std'].includes(s.course_year) ? `<option value="${escapeHtml(s.course_year)}" selected>${escapeHtml(s.course_year)}</option>` : ''}
           </select>
         </div>
         <div>
@@ -3600,39 +3644,9 @@ async function editAdminUser(id, username, email) {
   const newPassword = prompt('New Password (leave blank to keep current):');
 
   try {
-    const body = { username: newUsername, email: newEmail };
-    if (newPassword && newPassword.length >= 6) body.password = newPassword;
-
-    const res = await apiFetch(`/api/admin/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (res.success) {
-      alert('✅ Admin updated!');
-      document.getElementById('adminMgmtModal')?.remove();
-      loadAdminList();
-    } else {
-      alert('❌ ' + (res.message || 'Failed'));
-    }
-  } catch (e) { alert('Error updating admin'); }
-}
-
-async function deleteAdminUser(id, username) {
-  if (!confirm(`Delete admin "${username}"? This cannot be undone.`)) return;
-  try {
-    const res = await apiFetch(`/api/admin/delete/${id}`, { method: 'DELETE' });
-    if (res.success) {
-      alert('✅ Admin deleted');
-      document.getElementById('adminMgmtModal')?.remove();
-      loadAdminList();
-    } else {
-      alert('❌ ' + (res.message || 'Failed'));
-    }
-  } catch (e) { alert('Error deleting admin'); }
-}
-
 // Helper: Check if current user is super admin
 function isSuperAdmin() {
   return localStorage.getItem('adminRole') === 'super_admin';
 }
+ 
+ 

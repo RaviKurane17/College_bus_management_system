@@ -205,8 +205,9 @@
               <button onclick="window.location.href='/api/bulk-upload/template/buses'" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-purple),#a855f7); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-download"></i> Download Template</button>
               <button onclick="document.getElementById('busCsvInput').click()" style="padding:10px 16px; background:linear-gradient(135deg,var(--clr-accent-2),#2563eb); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-import"></i> Import CSV</button>
               <input type="file" id="busCsvInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" style="display:none;" onchange="importBusesCSV(event)">
+              <button onclick="downloadBusPDF()" style="padding:10px 16px; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+              <button onclick="downloadBusExcel()" style="padding:10px 16px; background:linear-gradient(135deg,#10b981,#059669); color:#fff; border:none; border-radius:var(--radius-sm); font-weight:600; cursor:pointer; font-size:0.85rem;"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
               <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchBus" placeholder="Search route..." oninput="loadBuses()"></div>
-
             </div>
           </div>
     <div class="panel-body">

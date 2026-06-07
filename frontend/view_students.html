@@ -155,6 +155,7 @@
         <button onclick="window.location.href='add_student.html'" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-plus-circle"></i> Add Student</button>
         <button onclick="window.location.href='bulk_upload.html'" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-excel"></i> Bulk Upload</button>
         <button onclick="downloadStudentPDF()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-pdf"></i> Download PDF</button>
+        <button onclick="downloadStudentExcel()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-file-excel"></i> Download Excel</button>
         <button onclick="bulkResetPasswords()" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i class="fa-solid fa-key"></i> Bulk Reset Pass</button>
       </div>
     </div>
@@ -185,12 +186,12 @@
             <th onclick="setStudentSort('class_name')" style="cursor:pointer;">Class <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('bus_number')" style="cursor:pointer;">Bus No <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer;">Pick-up <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;">Old Fees (Pending fees till March 26) <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('current_fees')" style="cursor:pointer;">Fees Apr 26 - Mar 27 <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('total_fees')" style="cursor:pointer;">Total Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('discount_amount')" style="cursor:pointer;">Concession <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('fees_paid')" style="cursor:pointer;">Paid Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-            <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer;">Remaining Fees <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;" title="Old Fees (Pending fees till March 26)">Old Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('current_fees')" style="cursor:pointer;" title="Fees Apr 26 - Mar 27">Curr. Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('total_fees')" style="cursor:pointer;" title="Total Fees">Total <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('discount_amount')" style="cursor:pointer;" title="Concession Amount">Conc. <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('fees_paid')" style="cursor:pointer;" title="Paid Fees">Paid <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+            <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer;" title="Remaining Fees">Rem. Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
             <th>Action</th>
           </tr></thead>
           <tbody></tbody>
