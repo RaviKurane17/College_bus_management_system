@@ -1519,6 +1519,7 @@ async function viewStudentDetails(id) {
               <p style="margin: 2px 0; font-size: 0.85rem; color: var(--gray);">${escapeHtml(s.roll_no)} | ${escapeHtml(s.department || 'N/A')}</p>
             </div>
           </div>
+          <p style="margin: 5px 0;"><strong>Username:</strong> ${escapeHtml(s.username || 'N/A')}</p>
           <p style="margin: 5px 0;"><strong>Year/Sec:</strong> ${escapeHtml(s.course_year || '')} ${s.section ? 'Sec ' + escapeHtml(s.section) : ''}</p>
           <p style="margin: 5px 0;"><strong>Address:</strong> ${escapeHtml(s.address || 'N/A')}</p>
           <p style="margin: 5px 0;"><strong>Phone:</strong> ${escapeHtml(s.phone || 'N/A')} ${s.phone ? `<a href="https://wa.me/91${s.phone}?text=Dear%20${encodeURIComponent(s.name)},%20your%20pending%20bus%20fee%20is%20₹${s.remaining_fees}.%20Please%20pay%20at%20the%20earliest.%20-%20SGI%20Bus%20Transport" target="_blank" style="color: #25D366; margin-left: 8px;" title="Send WhatsApp Reminder"><i class="fa-brands fa-whatsapp"></i></a>` : ''}</p>
@@ -1532,8 +1533,9 @@ async function viewStudentDetails(id) {
           <p style="margin: 5px 0;"><strong>Remaining:</strong> <span style="color: ${parseFloat(s.remaining_fees || 0) > 0 ? 'var(--error)' : 'var(--success)'};">₹${parseFloat(s.remaining_fees || 0).toLocaleString('en-IN')}</span></p>
           <hr style="border-color: rgba(255,255,255,0.1); margin: 15px 0;">
           <h4 style="margin: 0 0 10px 0; color: var(--primary);"><i class="fa-solid fa-bus"></i> Bus Info</h4>
-          <p style="margin: 5px 0;"><strong>Bus No:</strong> ${escapeHtml(s.bus_number || 'Not Assigned')}</p>
+          <p style="margin: 5px 0;"><strong>Bus No:</strong> ${escapeHtml(s.bus_number || 'Not Assigned')} ${s.short_name ? ' (' + escapeHtml(s.short_name) + ')' : ''}</p>
           <p style="margin: 5px 0;"><strong>Route:</strong> ${escapeHtml(s.route || 'N/A')}</p>
+          <p style="margin: 5px 0;"><strong>Driver:</strong> ${escapeHtml(s.driver_name || 'N/A')} ${s.driver_phone ? ' (' + escapeHtml(s.driver_phone) + ')' : ''}</p>
           <p style="margin: 5px 0;"><strong>Pass Valid:</strong> ${s.pass_valid_from ? formatDate(s.pass_valid_from) + ' to ' + formatDate(s.pass_valid_to) : 'Not Set'}</p>
           <button onclick="generateBusPass(${s.id})" style="width: 100%; margin-top: 10px; background: var(--accent); color: white; border: none; padding: 8px; border-radius: 6px; cursor: pointer; font-weight: 600;"><i class="fa-solid fa-id-card"></i> Generate Bus Pass</button>
         </div>

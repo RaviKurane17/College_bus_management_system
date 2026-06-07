@@ -61,7 +61,7 @@ router.get('/', authenticateAdmin, (req, res) => {
 router.get('/get/:id', authenticateAny, (req, res) => {
   const id = parseInt(req.params.id);
   if (isNaN(id)) return res.status(400).json({ success: false, message: 'Invalid ID' });
-  db.query('SELECT s.*, b.bus_number, b.route FROM students s LEFT JOIN buses b ON s.bus_id=b.id WHERE s.id=?', [id],
+  db.query('SELECT s.*, b.bus_number, b.route, b.short_name, d.name as driver_name, d.phone as driver_phone FROM students s LEFT JOIN buses b ON s.bus_id=b.id LEFT JOIN drivers d ON b.driver_id=d.id WHERE s.id=?', [id],
     (err, results) => {
       if (err || !results.length) return res.status(404).json({ success: false, message: 'Student not found' });
       const s = results[0]; delete s.password; delete s.reset_token; delete s.reset_token_expires;
@@ -74,7 +74,7 @@ router.get('/get/:id', authenticateAny, (req, res) => {
 // ============================
 router.get('/profile/:identifier', authenticateAny, (req, res) => {
   const id = req.params.identifier.toString().trim().substring(0, 150);
-  db.query('SELECT s.*, b.bus_number, b.route FROM students s LEFT JOIN buses b ON s.bus_id=b.id WHERE s.username=? OR s.phone=? OR s.name=?',
+  db.query('SELECT s.*, b.bus_number, b.route, b.short_name, d.name as driver_name, d.phone as driver_phone FROM students s LEFT JOIN buses b ON s.bus_id=b.id LEFT JOIN drivers d ON b.driver_id=d.id WHERE s.username=? OR s.phone=? OR s.name=?',
     [id, id, id], (err, results) => {
       if (err || !results.length) return res.status(404).json({ success: false, message: 'Student not found' });
       const s = results[0]; delete s.password; delete s.reset_token; delete s.reset_token_expires;

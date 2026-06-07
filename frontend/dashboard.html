@@ -1037,8 +1037,14 @@
           </button>
           <span class="page-title">Dashboard</span>
         </div>
-        <div class="topbar-right">
-          <div class="header-date" id="headerDate"></div>
+        <div class="topbar-right" style="gap:15px; display:flex; align-items:center;">
+          <select id="fyFilter" class="modal-input" style="padding: 6px 12px; height: auto; min-width: 120px;" onchange="loadAdminStats()">
+            <option value="ALL">ALL (All Data)</option>
+            <option value="OLD">OLD (Previous Data)</option>
+            <option value="FY_2027">FY 2027 (Apr 26 - Mar 27)</option>
+            <option value="FY_2028">FY 2028 (Apr 27 - Mar 28)</option>
+          </select>
+          <div class="header-date" id="headerDate" style="margin-left: 10px;"></div>
           <button class="btn-icon" title="Notifications">
             <i class="fa-solid fa-bell"></i>
             <span class="dot" id="notificationDot" style="display:none;"></span>
@@ -1452,11 +1458,13 @@
       loadAdminQueries();
 
       // Load dashboard stats
-      try {
-        const res = await apiFetch('/api/admin/stats');
-        if (res.success) {
-          dashboardStats = res.stats;
-          const s = res.stats;
+      window.loadAdminStats = async function() {
+        try {
+          const fy = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
+          const res = await apiFetch(`/api/admin/stats?fy=${fy}`);
+          if (res.success) {
+            dashboardStats = res.stats;
+            const s = res.stats;
 
           // Update welcome banner mini-stats
           document.getElementById('welcomeBuses').textContent = s.totalBuses;
@@ -1541,6 +1549,9 @@
       } catch (error) {
         console.error('Failed to fetch dashboard stats:', error);
       }
+      };
+
+      loadAdminStats();
     });
 
     // Handle window resize for responsive sidebar
