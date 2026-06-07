@@ -530,6 +530,7 @@ async function loadBuses() {
           (bus.route && bus.route.toLowerCase().includes(searchTerm));
       });
 
+      window.busesData = filteredBuses;
       let cardsHtml = '';
 
       filteredBuses.forEach(bus => {
@@ -758,6 +759,7 @@ async function loadDrivers() {
           (driver.license_number && driver.license_number.toLowerCase().includes(searchTerm));
       });
 
+      window.driversData = filteredDrivers;
       let cardsHtml = '';
 
       filteredDrivers.forEach(d => {
@@ -3691,12 +3693,13 @@ function downloadStudentPDF() {
 }
 
 function downloadStudentExcel() {
-  if (!window.studentsData || window.studentsData.length === 0) {
+  const students = window.currentFilteredStudents || [];
+  if (students.length === 0) {
     alert("No student data available to download.");
     return;
   }
   let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
-  window.studentsData.forEach(s => {
+  students.forEach(s => {
     csv += `"${s.id}","${s.name}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${s.pick_up_point || ''}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
