@@ -920,6 +920,22 @@ window.setStudentSort = function(col) {
     studentSortCol = col;
     studentSortAsc = true;
   }
+  
+  // Update UI icons
+  const headers = document.querySelectorAll('#studentsTable th');
+  headers.forEach(th => {
+    const icon = th.querySelector('i');
+    if (icon) {
+      if (th.getAttribute('onclick') && th.getAttribute('onclick').includes(`'${col}'`)) {
+        icon.className = studentSortAsc ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down';
+        icon.style.color = 'var(--primary, var(--clr-accent))';
+      } else {
+        icon.className = 'fa-solid fa-sort';
+        icon.style.color = 'var(--clr-muted)';
+      }
+    }
+  });
+
   loadStudents();
 };
 
@@ -1008,7 +1024,7 @@ async function loadStudents() {
             </a>
           </td>
           <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
-          <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')}</span></td>
+          <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')} ${s.short_name ? '<span style="font-size:0.75rem;opacity:0.8;">(' + escapeHtml(s.short_name) + ')</span>' : ''}</span></td>
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.current_fees || 0).toLocaleString()}</td>
@@ -2827,10 +2843,14 @@ async function viewStudentDetails(id) {
             </div>
           </div>
           <div style="font-size: 0.85rem; line-height: 1.8;">
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-graduation-cap" style="width:16px;color:var(--clr-accent);"></i></strong> Class: ${escapeHtml(s.class_name || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-user-circle" style="width:16px;color:var(--clr-accent);"></i></strong> Username: ${escapeHtml(s.username || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-lock" style="width:16px;color:var(--clr-accent);"></i></strong> Password: (Encrypted)</p>
             <p style="margin: 4px 0;"><strong><i class="fa-solid fa-phone" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.phone || 'N/A')} ${s.phone ? '<a href="https://wa.me/91' + s.phone.replace(/\D/g, '') + '" target="_blank" style="color:#25d366;margin-left:6px;" title="WhatsApp"><i class="fa-brands fa-whatsapp"></i></a>' : ''}</p>
             <p style="margin: 4px 0;"><strong><i class="fa-solid fa-envelope" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.email || 'N/A')}</p>
-            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-location-dot" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.address || 'N/A')}</p>
-            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-bus" style="width:16px;color:var(--clr-accent);"></i></strong> ${escapeHtml(s.bus_number || 'Not Assigned')} — ${escapeHtml(s.route || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-location-dot" style="width:16px;color:var(--clr-accent);"></i></strong> Pick-up: ${escapeHtml(s.pick_up_point || 'N/A')}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-bus" style="width:16px;color:var(--clr-accent);"></i></strong> Bus No: ${escapeHtml(s.bus_number || 'Not Assigned')} ${s.short_name ? '(' + escapeHtml(s.short_name) + ')' : ''}</p>
+            <p style="margin: 4px 0;"><strong><i class="fa-solid fa-id-badge" style="width:16px;color:var(--clr-accent);"></i></strong> Driver: ${escapeHtml(s.driver_name || 'N/A')} ${s.driver_phone ? '(' + escapeHtml(s.driver_phone) + ')' : ''}</p>
             <p style="margin: 4px 0;"><strong><i class="fa-solid fa-calendar" style="width:16px;color:var(--clr-accent);"></i></strong> Joined: ${formatDate(s.joining_date)}</p>
             <p style="margin: 4px 0;"><strong><i class="fa-solid fa-id-card" style="width:16px;color:var(--clr-accent);"></i></strong> Pass: ${s.pass_valid_from ? formatDate(s.pass_valid_from) + ' → ' + formatDate(s.pass_valid_to) : 'Not Set'}</p>
           </div>
