@@ -985,6 +985,7 @@
 
     <!-- ========== SIDEBAR ========== -->
     <aside class="sidebar" id="sidebar">
+      <script>if(localStorage.getItem('sidebar_collapsed')==='true' && window.innerWidth > 768) document.getElementById('sidebar').classList.add('collapsed');</script>
       <div class="sidebar-brand">
         <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
         <div class="brand-text">
@@ -1199,7 +1200,7 @@
         sidebar.classList.toggle('mobile-open');
         overlay.classList.toggle('show');
       } else {
-        sidebar.classList.toggle('collapsed');
+        sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));
       }
     });
 

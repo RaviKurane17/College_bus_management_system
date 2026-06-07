@@ -125,6 +125,7 @@
 <body>
 <div class="app-shell">
 <aside class="sidebar" id="sidebar">
+      <script>if(localStorage.getItem('sidebar_collapsed')==='true' && window.innerWidth > 768) document.getElementById('sidebar').classList.add('collapsed');</script>
   <div class="sidebar-brand"><div class="brand-icon"><i class="fa-solid fa-bus"></i></div><div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div></div>
   <nav class="sidebar-nav">
     <div class="nav-section">Main Menu</div>
@@ -160,6 +161,12 @@
       <select class="filter-select" id="filterClass" onchange="loadStudents()">
         <option value="">All Classes</option>
       </select>
+      <select class="filter-select" id="filterBus" onchange="loadStudents()">
+        <option value="">All Buses</option>
+      </select>
+      <select class="filter-select" id="filterPickup" onchange="loadStudents()">
+        <option value="">All Pick-ups</option>
+      </select>
       <select class="filter-select" id="filterStatus" onchange="loadStudents()">
         <option value="">All Students</option>
         <option value="active" selected>Active Only</option>
@@ -185,6 +192,16 @@
             <th>Action</th>
           </tr></thead>
           <tbody></tbody>
+          <tfoot id="tableFooter" style="position: sticky; bottom: 0; background: var(--clr-surface, #1e293b); box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: none;">
+            <tr>
+              <td colspan="7" style="text-align: right; font-weight: 700; color: var(--clr-accent, #f59e0b);">Filtered Totals:</td>
+              <td style="font-weight: 700; color: #f8fafc;" id="footTotalFees">₹0</td>
+              <td></td>
+              <td style="font-weight: 700; color: var(--success, #10b981);" id="footPaidFees">₹0</td>
+              <td style="font-weight: 700; color: var(--error, #ef4444);" id="footRemainingFees">₹0</td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
       <!-- Mobile: card layout -->
@@ -200,7 +217,7 @@
 </script>
 <script>
   const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
-  btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
+  btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));}});
   function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
   document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
   const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');

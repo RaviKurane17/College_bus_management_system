@@ -206,6 +206,7 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
+      <script>if(localStorage.getItem('sidebar_collapsed')==='true' && window.innerWidth > 768) document.getElementById('sidebar').classList.add('collapsed');</script>
       <div class="sidebar-brand">
         <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
         <div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div>
@@ -241,13 +242,74 @@
           <div class="instructions-card">
             <h4><i class="fa-solid fa-circle-info"></i> Instructions</h4>
             <ul>
-              <li>Download the template file to ensure your data matches the required format.</li>
-              <li>Required columns: <strong>Name, Class, Phone, Bus No, Pick-Up Point, Old Bus Fees, Current Fees, Discount, Paid</strong>.</li>
+              <li>Select whether you are uploading <strong>Students</strong>, <strong>Buses</strong>, or <strong>Drivers</strong> before choosing a file.</li>
+              <li>Ensure your data matches the exact column headers shown in the templates below.</li>
               <li>Do not remove or rename the header row in the template.</li>
-              <li>Duplicate phone numbers will be flagged as errors.</li>
               <li>Upload only <strong>.xlsx</strong> files.</li>
             </ul>
-            <div style="margin-top:12px;">
+            
+            <div style="margin-top:20px; margin-bottom:10px;">
+              <h4 style="margin-bottom:10px; color:var(--clr-accent);"><i class="fa-solid fa-table"></i> Required Excel Templates</h4>
+              
+              <!-- Student Template -->
+              <div style="margin-bottom: 15px;">
+                <strong style="display:block; margin-bottom:5px; color:#38bdf8;"><i class="fa-solid fa-user-graduate"></i> Student Template Structure</strong>
+                <div style="overflow-x:auto; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+                  <table style="width:100%; border-collapse:collapse; min-width:600px; font-size:0.8rem; text-align:left;">
+                    <thead>
+                      <tr style="background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <th style="padding:8px;">Name (Req)</th><th style="padding:8px;">Class (Req)</th><th style="padding:8px;">Phone (Req)</th><th style="padding:8px;">Bus No</th><th style="padding:8px;">Pick-Up Point</th><th style="padding:8px;">Old Bus Fees</th><th style="padding:8px;">Current Fees</th><th style="padding:8px;">Discount</th><th style="padding:8px;">Paid</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="padding:8px; color:var(--clr-muted);">John Doe</td><td style="padding:8px; color:var(--clr-muted);">10th</td><td style="padding:8px; color:var(--clr-muted);">9876543210</td><td style="padding:8px; color:var(--clr-muted);">MH-09-AB-1234</td><td style="padding:8px; color:var(--clr-muted);">Main Square</td><td style="padding:8px; color:var(--clr-muted);">0</td><td style="padding:8px; color:var(--clr-muted);">15000</td><td style="padding:8px; color:var(--clr-muted);">500</td><td style="padding:8px; color:var(--clr-muted);">5000</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Driver Template -->
+              <div style="margin-bottom: 15px;">
+                <strong style="display:block; margin-bottom:5px; color:#34d399;"><i class="fa-solid fa-id-card"></i> Driver Template Structure</strong>
+                <div style="overflow-x:auto; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+                  <table style="width:100%; border-collapse:collapse; min-width:600px; font-size:0.8rem; text-align:left;">
+                    <thead>
+                      <tr style="background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <th style="padding:8px;">Name (Req)</th><th style="padding:8px;">Phone (Req)</th><th style="padding:8px;">License Number</th><th style="padding:8px;">License Expiry</th><th style="padding:8px;">Address</th><th style="padding:8px;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="padding:8px; color:var(--clr-muted);">Ramesh Patil</td><td style="padding:8px; color:var(--clr-muted);">9988776655</td><td style="padding:8px; color:var(--clr-muted);">MH0920110012345</td><td style="padding:8px; color:var(--clr-muted);">2028-12-31</td><td style="padding:8px; color:var(--clr-muted);">Kolhapur</td><td style="padding:8px; color:var(--clr-muted);">active</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- Bus Template -->
+              <div>
+                <strong style="display:block; margin-bottom:5px; color:#f87171;"><i class="fa-solid fa-bus"></i> Bus Template Structure</strong>
+                <div style="overflow-x:auto; background:rgba(0,0,0,0.2); border:1px solid rgba(255,255,255,0.1); border-radius:6px;">
+                  <table style="width:100%; border-collapse:collapse; min-width:600px; font-size:0.8rem; text-align:left;">
+                    <thead>
+                      <tr style="background:rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.1);">
+                        <th style="padding:8px;">Bus Number (Req)</th><th style="padding:8px;">Short Name</th><th style="padding:8px;">Route</th><th style="padding:8px;">Capacity</th><th style="padding:8px;">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td style="padding:8px; color:var(--clr-muted);">MH-09-GJ-4392</td><td style="padding:8px; color:var(--clr-muted);">4392</td><td style="padding:8px; color:var(--clr-muted);">Rajputwadi - School</td><td style="padding:8px; color:var(--clr-muted);">50</td><td style="padding:8px; color:var(--clr-muted);">active</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;">
               <button onclick="downloadBulkTemplate()" class="btn btn-download"><i class="fa-solid fa-download"></i> Download Template</button>
             </div>
           </div>
@@ -320,7 +382,7 @@
   <script>
     // Sidebar logic
     const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
-    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
+    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));}});
     function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
     document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
     const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');

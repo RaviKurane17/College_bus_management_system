@@ -954,6 +954,8 @@ async function loadStudents() {
       const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
 
       const filterClass = document.getElementById('filterClass');
+      const filterBus = document.getElementById('filterBus');
+      const filterPickup = document.getElementById('filterPickup');
       const filterStatus = document.getElementById('filterStatus') ? document.getElementById('filterStatus').value : 'active';
       
       if (filterClass && filterClass.options.length <= 1) {
@@ -964,21 +966,46 @@ async function loadStudents() {
           filterClass.appendChild(opt);
         });
       }
+
+      if (filterBus && filterBus.options.length <= 1) {
+        const uniqueBuses = [...new Set(res.map(s => s.bus_number).filter(Boolean))].sort();
+        uniqueBuses.forEach(b => {
+          const opt = document.createElement('option');
+          opt.value = b; opt.text = b;
+          filterBus.appendChild(opt);
+        });
+      }
+
+      if (filterPickup && filterPickup.options.length <= 1) {
+        const uniquePickups = [...new Set(res.map(s => s.pick_up_point).filter(Boolean))].sort();
+        uniquePickups.forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p; opt.text = p;
+          filterPickup.appendChild(opt);
+        });
+      }
+
       const classValue = filterClass ? filterClass.value : '';
+      const busValue = filterBus ? filterBus.value : '';
+      const pickupValue = filterPickup ? filterPickup.value : '';
 
       const filteredStudents = res.filter(s => {
         const name = s.name || '';
         const cls = s.class_name || '';
+        const bus = s.bus_number || '';
+        const pickup = s.pick_up_point || '';
         const stat = s.student_status || 'active';
         
         const matchesSearch = name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
         const matchesClass = classValue === '' || cls === classValue;
+        const matchesBus = busValue === '' || bus === busValue;
+        const matchesPickup = pickupValue === '' || pickup === pickupValue;
         
         let matchesStatus = true;
         if (filterStatus === 'active') matchesStatus = (stat === 'active');
         if (filterStatus === 'passout') matchesStatus = (stat === 'passout' || stat === 'school_left');
 
-        return matchesSearch && matchesClass && matchesStatus;
+        return matchesSearch && matchesClass && matchesBus && matchesPickup && matchesStatus;
       });
       
       // Sort students dynamically based on selected column
@@ -1007,8 +1034,21 @@ async function loadStudents() {
 
       window.currentFilteredStudents = filteredStudents;
 
+      // Calculate aggregate totals
+      let aggTotalFees = 0;
+      let aggPaidFees = 0;
+      let aggRemainingFees = 0;
+
       filteredStudents.forEach((s, index) => {
-        const isOverdue = parseFloat(s.remaining_fees || 0) > 0;
+        const total = parseFloat(s.total_fees || 0);
+        const paid = parseFloat(s.fees_paid || 0);
+        const rem = parseFloat(s.remaining_fees || 0);
+
+        aggTotalFees += total;
+        aggPaidFees += paid;
+        aggRemainingFees += rem;
+
+        const isOverdue = rem > 0;
 
         // ── Desktop table row ──
         const tr = document.createElement('tr');
@@ -1089,9 +1129,22 @@ async function loadStudents() {
               <button onclick="deleteStudent(${s.id})" style="background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.3);flex:0 0 45px;display:flex;justify-content:center;align-items:center;"><i class="fa-solid fa-trash"></i></button>
             </div>
           `;
-          cardsContainer.appendChild(card);
+          if (cardsContainer) cardsContainer.appendChild(card);
         }
       });
+
+      // Update and show footer
+      const tfoot = document.getElementById('tableFooter');
+      if (tfoot) {
+        if (filteredStudents.length > 0) {
+          tfoot.style.display = 'table-footer-group';
+          document.getElementById('footTotalFees').innerText = '₹' + aggTotalFees.toLocaleString('en-IN');
+          document.getElementById('footPaidFees').innerText = '₹' + aggPaidFees.toLocaleString('en-IN');
+          document.getElementById('footRemainingFees').innerText = '₹' + aggRemainingFees.toLocaleString('en-IN');
+        } else {
+          tfoot.style.display = 'none';
+        }
+      }
 
       if (filteredStudents.length === 0) {
         tbody.innerHTML = '<tr><td colspan="12" class="no-data">No students found</td></tr>';

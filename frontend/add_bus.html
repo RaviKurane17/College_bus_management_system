@@ -79,6 +79,7 @@
 <body>
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
+      <script>if(localStorage.getItem('sidebar_collapsed')==='true' && window.innerWidth > 768) document.getElementById('sidebar').classList.add('collapsed');</script>
       <div class="sidebar-brand">
         <div class="brand-icon"><i class="fa-solid fa-bus"></i></div>
         <div class="brand-text"><h3>BusAdmin</h3><span>Management Panel</span></div>
@@ -126,7 +127,7 @@
   <script src="js/script.js?v=6"></script>
   <script>
     const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
-    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed');}});
+    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));}});
     function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
     document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
     const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');
