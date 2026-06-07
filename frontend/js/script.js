@@ -3644,9 +3644,109 @@ async function editAdminUser(id, username, email) {
   const newPassword = prompt('New Password (leave blank to keep current):');
 
   try {
+    const body = { username: newUsername, email: newEmail };
+    if (newPassword && newPassword.length >= 6) body.password = newPassword;
+
+    const res = await apiFetch(`/api/admin/update/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (res.success) {
+      alert('✅ Admin updated!');
+      document.getElementById('adminMgmtModal')?.remove();
+      loadAdminList();
+    } else {
+      alert('❌ ' + (res.message || 'Failed'));
+    }
+  } catch (e) { alert('Error updating admin'); }
+}
+
+async function deleteAdminUser(id, username) {
+  if (!confirm(`Delete admin "${username}"? This cannot be undone.`)) return;
+  try {
+    const res = await apiFetch(`/api/admin/delete/${id}`, { method: 'DELETE' });
+    if (res.success) {
+      alert('✅ Admin deleted');
+      document.getElementById('adminMgmtModal')?.remove();
+      loadAdminList();
+    } else {
+      alert('❌ ' + (res.message || 'Failed'));
+    }
+  } catch (e) { alert('Error deleting admin'); }
+}
+
 // Helper: Check if current user is super admin
 function isSuperAdmin() {
   return localStorage.getItem('adminRole') === 'super_admin';
 }
- 
- 
+
+function downloadStudentPDF() {
+  if (typeof window.jspdf === 'undefined') { alert("PDF library not loaded."); return; }
+  const doc = new window.jspdf.jsPDF();
+  doc.text("Students List", 14, 15);
+  const rows = (window.studentsData || []).map(s => [s.id, s.name, s.class_name, s.bus_number, s.fees_paid, s.remaining_fees]);
+  doc.autoTable({ head: [['ID', 'Name', 'Class', 'Bus No', 'Paid', 'Rem. Fees']], body: rows, startY: 20 });
+  doc.save("Students_List.pdf");
+}
+
+function downloadStudentExcel() {
+  if (!window.studentsData || window.studentsData.length === 0) {
+    alert("No student data available to download.");
+    return;
+  }
+  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
+  window.studentsData.forEach(s => {
+    csv += `"${s.id}","${s.name}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${s.pick_up_point || ''}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "Students_List.csv";
+  a.click();
+}
+
+function downloadBusPDF() {
+  if (typeof window.jspdf === 'undefined') { alert("PDF library not loaded."); return; }
+  const doc = new window.jspdf.jsPDF();
+  doc.text("Buses List", 14, 15);
+  const rows = (window.busesData || []).map(b => [b.id, b.bus_number, b.driver_name || '-', b.driver_phone || '-', b.route || '-', b.capacity || 50]);
+  doc.autoTable({ head: [['ID', 'Bus Number', 'Driver', 'Phone', 'Route', 'Capacity']], body: rows, startY: 20 });
+  doc.save("Buses_List.pdf");
+}
+
+function downloadBusExcel() {
+  if (!window.busesData || window.busesData.length === 0) { alert("No data."); return; }
+  let csv = "ID,Bus Number,Driver Name,Driver Phone,Route,Capacity\\n";
+  window.busesData.forEach(b => {
+    csv += `"${b.id}","${b.bus_number}","${b.driver_name || ''}","${b.driver_phone || ''}","${b.route || ''}","${b.capacity || 50}"\\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = window.URL.createObjectURL(blob);
+  a.download = "Buses_List.csv";
+  a.click();
+}
+
+function downloadDriverPDF() {
+  if (typeof window.jspdf === 'undefined') { alert("PDF library not loaded."); return; }
+  const doc = new window.jspdf.jsPDF();
+  doc.text("Drivers List", 14, 15);
+  const rows = (window.driversData || []).map(d => [d.id, d.name, d.phone, d.license_number, d.salary || 0]);
+  doc.autoTable({ head: [['ID', 'Name', 'Phone', 'License', 'Salary']], body: rows, startY: 20 });
+  doc.save("Drivers_List.pdf");
+}
+
+function downloadDriverExcel() {
+  if (!window.driversData || window.driversData.length === 0) { alert("No data."); return; }
+  let csv = "ID,Name,Phone,License Number,Salary\\n";
+  window.driversData.forEach(d => {
+    csv += `"${d.id}","${d.name}","${d.phone}","${d.license_number}","${d.salary || 0}"\\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = window.URL.createObjectURL(blob);
+  a.download = "Drivers_List.csv";
+  a.click();
+}
