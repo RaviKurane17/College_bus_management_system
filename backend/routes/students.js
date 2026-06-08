@@ -19,7 +19,8 @@ async function getFyColumns() {
   try {
     const [rows] = await promisePool.query("SELECT setting_value FROM settings WHERE setting_key='fy_columns'");
     if (rows.length && rows[0].setting_value) {
-      return JSON.parse(rows[0].setting_value);
+      let parsed = JSON.parse(rows[0].setting_value);
+      return Array.isArray(parsed) ? parsed : Object.values(parsed);
     }
   } catch(e) { /* ignore */ }
   return [];
@@ -68,7 +69,10 @@ router.get('/', authenticateAdmin, async (req, res) => {
       fyCols = ', ' + fyColumns.map(c => `s.\`${c}\``).join(', ');
     }
     
-    let sql = `SELECT s.*${fyCols}, b.bus_number, b.route FROM students s LEFT JOIN buses b ON s.bus_id=b.id`;
+    let sql = `SELECT s.*${fyCols}, b.bus_number, b.route, d.name as driver_name, d.phone as driver_phone 
+               FROM students s 
+               LEFT JOIN buses b ON s.bus_id=b.id 
+               LEFT JOIN drivers d ON b.driver_id=d.id`;
     const params = [], where = [];
     if (status) { where.push('s.student_status=?'); params.push(status); }
     if (bus_id) { where.push('s.bus_id=?');         params.push(bus_id); }
@@ -76,11 +80,15 @@ router.get('/', authenticateAdmin, async (req, res) => {
     sql += ' ORDER BY s.name';
 
     db.query(sql, params, (err, results) => {
-      if (err) return res.status(500).json({ success: false, message: 'Error retrieving students' });
+      if (err) {
+        console.error('SQL ERROR IN STUDENTS GET:', err);
+        return res.status(500).json({ success: false, message: 'Error retrieving students' });
+      }
       const data = results.map(({ password, reset_token, reset_token_expires, ...s }) => s);
       res.json(data);
     });
   } catch(e) {
+    console.error('CATCH ERROR IN STUDENTS GET:', e);
     res.status(500).json({ success: false, message: 'Error: ' + e.message });
   }
 });

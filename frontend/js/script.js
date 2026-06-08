@@ -1017,9 +1017,16 @@ async function loadStudents() {
     try {
       const fyRes = await apiFetch('/api/settings/fy-columns');
       if (fyRes && fyRes.success) {
-        fyColumns = fyRes.fyColumns || [];
+        const rawFy = fyRes.fyColumns;
+        if (Array.isArray(rawFy)) {
+          fyColumns = rawFy;
+        } else if (typeof rawFy === 'object' && rawFy !== null) {
+          fyColumns = Object.values(rawFy);
+        }
       }
     } catch(e) {}
+    
+    window.currentFyColumns = fyColumns; // cache for exports
 
     // Update dynamic headers
     const headerRow = document.getElementById('studentTableHeaderRow');
@@ -3210,10 +3217,11 @@ window.downloadStudentPDF = function () {
   }
 
   const { jsPDF } = window.jspdf;
-  const doc = new jsPDF('landscape');
+  // Use A2 landscape to fit all A-Z columns
+  const doc = new jsPDF('landscape', 'mm', 'a2');
 
-  doc.setFontSize(18);
-  doc.text('Student Directory', 14, 22);
+  doc.setFontSize(22);
+  doc.text('Full Student Directory (A-Z Report)', 14, 25);
 
   let filtersText = '';
   const fClassEl = document.getElementById('filterClass');
@@ -3222,42 +3230,116 @@ window.downloadStudentPDF = function () {
   const fClass = fClassEl && fClassEl.selectedIndex > 0 ? fClassEl.options[fClassEl.selectedIndex].text : 'All Classes';
   const fStatus = fStatusEl && fStatusEl.selectedIndex > 0 ? fStatusEl.options[fStatusEl.selectedIndex].text : 'All Students';
 
-  filtersText = `Filters: ${fClass} | ${fStatus}`;
+  filtersText = `Filters: ${fClass} | ${fStatus} | Total Students: ${students.length}`;
 
-  doc.setFontSize(11);
+  doc.setFontSize(14);
   doc.setTextColor(100);
-  doc.text(filtersText, 14, 30);
+  doc.text(filtersText, 14, 35);
 
-  const tableColumn = ["Sr No", "Name", "Class", "Bus No", "Pick-up", "Old Fees (Pending fees till March 26)", "Fees Apr 26 - Mar 27", "Total Fees", "Concession", "Paid Fees", "Remaining Fees"];
+  const fyCols = window.currentFyColumns || [];
+  
+  const tableColumn = [
+    "Sr No", "Name", "Username", "Email", "Phone", "Class", 
+    "Bus No", "Pick-up", "Route", "Driver", "Driver Ph", 
+    "Old Fees"
+  ];
+  fyCols.forEach(c => tableColumn.push(c.replace('fees_','FY ').replace('_','-')));
+  tableColumn.push("Curr. Fees", "Total Fees", "Concess.", "Paid", "Rem. Fees", "Status");
+
   const tableRows = [];
 
   students.forEach((s, index) => {
     const studentData = [
       `${index + 1}`,
-      s.name,
-      s.class_name || 'N/A',
-      s.bus_number || 'None',
-      s.pick_up_point || 'N/A',
-      `${parseFloat(s.old_bus_fees || 0)}`,
+      s.name || '-',
+      s.username || '-',
+      s.email || '-',
+      s.phone || '-',
+      s.class_name || '-',
+      s.bus_number || '-',
+      s.pick_up_point || '-',
+      s.route || '-',
+      s.driver_name || '-',
+      s.driver_phone || '-',
+      `${parseFloat(s.old_bus_fees || 0)}`
+    ];
+    
+    fyCols.forEach(c => studentData.push(`${parseFloat(s[c] || 0)}`));
+    
+    studentData.push(
       `${parseFloat(s.current_fees || 0)}`,
       `${parseFloat(s.total_fees || 0)}`,
       `${parseFloat(s.discount_amount || 0)}`,
       `${parseFloat(s.fees_paid || 0)}`,
-      `${parseFloat(s.remaining_fees || 0)}`
-    ];
+      `${parseFloat(s.remaining_fees || 0)}`,
+      s.student_status || 'active'
+    );
     tableRows.push(studentData);
   });
 
   doc.autoTable({
     head: [tableColumn],
     body: tableRows,
-    startY: 35,
+    startY: 42,
     theme: 'grid',
-    styles: { fontSize: 8, cellPadding: 2 },
+    styles: { fontSize: 9, cellPadding: 3 },
     headStyles: { fillColor: [41, 128, 185], textColor: 255 }
   });
 
-  doc.save('student_list.pdf');
+  doc.save('Full_Student_List.pdf');
+}
+
+window.downloadStudentExcel = function() {
+  const students = window.currentFilteredStudents || [];
+  if (students.length === 0) {
+    alert("No student data available to download.");
+    return;
+  }
+  
+  const fyCols = window.currentFyColumns || [];
+  
+  let header = ["Sr No", "Name", "Username", "Email", "Phone", "Class", "Bus No", "Pick-up", "Route", "Driver Name", "Driver Phone", "Old Fees"];
+  fyCols.forEach(c => header.push(c.replace('fees_','FY ').replace('_','-')));
+  header.push("Curr. Fees", "Total Fees", "Concession", "Paid", "Rem. Fees", "Status");
+  
+  let csv = header.join(",") + "\\n";
+  
+  students.forEach((s, index) => {
+    const row = [
+      index + 1,
+      `"${(s.name || '').replace(/"/g, '""')}"`,
+      `"${(s.username || '').replace(/"/g, '""')}"`,
+      `"${(s.email || '').replace(/"/g, '""')}"`,
+      `"${s.phone || ''}"`,
+      `"${s.class_name || ''}"`,
+      `"${s.bus_number || ''}"`,
+      `"${(s.pick_up_point || '').replace(/"/g, '""')}"`,
+      `"${(s.route || '').replace(/"/g, '""')}"`,
+      `"${(s.driver_name || '').replace(/"/g, '""')}"`,
+      `"${(s.driver_phone || '').replace(/"/g, '""')}"`,
+      `${s.old_bus_fees || 0}`
+    ];
+    
+    fyCols.forEach(c => row.push(`${s[c] || 0}`));
+    
+    row.push(
+      `${s.current_fees || 0}`,
+      `${s.total_fees || 0}`,
+      `${s.discount_amount || 0}`,
+      `${s.fees_paid || 0}`,
+      `${s.remaining_fees || 0}`,
+      `"${s.student_status || 'active'}"`
+    );
+    
+    csv += row.join(",") + "\\n";
+  });
+  
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "Full_Student_List.csv";
+  a.click();
 }
 
 window.printStudentReceipt = async function (paymentId) {
@@ -3712,32 +3794,7 @@ function isSuperAdmin() {
   return localStorage.getItem('adminRole') === 'super_admin';
 }
 
-function downloadStudentPDF() {
-  if (typeof window.jspdf === 'undefined') { alert("PDF library not loaded."); return; }
-  const doc = new window.jspdf.jsPDF();
-  doc.text("Students List", 14, 15);
-  const rows = (window.studentsData || []).map(s => [s.id, s.name, s.class_name, s.bus_number, s.fees_paid, s.remaining_fees]);
-  doc.autoTable({ head: [['ID', 'Name', 'Class', 'Bus No', 'Paid', 'Rem. Fees']], body: rows, startY: 20 });
-  doc.save("Students_List.pdf");
-}
 
-function downloadStudentExcel() {
-  const students = window.currentFilteredStudents || [];
-  if (students.length === 0) {
-    alert("No student data available to download.");
-    return;
-  }
-  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\n";
-  students.forEach(s => {
-    csv += `"${s.id}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\n`;
-  });
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = window.URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = "Students_List.csv";
-  a.click();
-}
 
 function downloadBusPDF() {
   if (typeof window.jspdf === 'undefined') { alert("PDF library not loaded."); return; }
