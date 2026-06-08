@@ -63,8 +63,8 @@ img, table {
 
 /* Sidebar Drawer - Hidden by default on Mobile */
 .sidebar {
-  width: 280px;
-  min-width: 280px;
+  width: 230px;
+  min-width: 230px;
   background: var(--clr-surface);
   border-right: 1px solid var(--clr-border);
   display: flex;
