@@ -728,29 +728,36 @@ body.light-theme .theme-toggle:hover {
   
   /* Mobile Header */
   .top-header, .topbar {
-    flex-wrap: wrap !important;
+    flex-wrap: nowrap !important;
     height: auto !important;
-    padding: 12px 16px !important;
-    gap: 10px !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    overflow-x: auto !important;
+  }
+  
+  .topbar-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
   }
   
   .topbar-left .page-title {
-    font-size: 1.1rem !important;
+    font-size: 1rem !important;
+    white-space: nowrap !important;
   }
   
   .topbar-right {
-    flex-wrap: wrap !important;
-    justify-content: flex-end !important;
-    width: 100% !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    align-items: center !important;
     gap: 8px !important;
   }
   
   .topbar-right select.modal-input {
-    width: 100% !important;
-    max-width: 100% !important;
-    font-size: 0.9rem !important;
-    padding: 8px 12px !important;
-    margin-bottom: 5px !important;
+    width: auto !important;
+    font-size: 0.85rem !important;
+    padding: 6px 10px !important;
+    margin-bottom: 0 !important;
   }
   
   .header-date {
@@ -758,12 +765,13 @@ body.light-theme .theme-toggle:hover {
   }
   
   .top-header h1 {
-    font-size: 1.2rem;
-    margin-left: 10px;
+    font-size: 1.1rem;
+    margin-left: 8px;
+    white-space: nowrap;
   }
   
   .main-content {
-    padding: 15px;
+    padding: 12px;
     height: auto;
     overflow: visible;
   }
@@ -787,18 +795,55 @@ body.light-theme .theme-toggle:hover {
     grid-template-columns: 1fr !important;
   }
 
-  /* Action Buttons in Panel Headers */
+  /* Action Buttons in Panel Headers - Horizontal Scroll to save vertical space! */
   .panel-header > div:last-child {
-    flex-wrap: wrap !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    overflow-x: auto !important;
     width: 100% !important;
-    justify-content: stretch !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    padding-bottom: 8px !important;
+    -webkit-overflow-scrolling: touch;
   }
   
   .panel-header button {
-    flex: 1 1 calc(50% - 10px) !important;
+    flex: 0 0 auto !important;
     justify-content: center !important;
     font-size: 0.85rem !important;
-    padding: 10px !important;
+    padding: 8px 12px !important;
+    white-space: nowrap !important;
+  }
+
+  /* Filter Bar - 2 Column Grid instead of 5 rows */
+  .filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    padding: 12px !important;
+  }
+  .filter-bar .search-box {
+    grid-column: span 2 !important;
+    margin-bottom: 4px !important;
+  }
+  .filter-select {
+    width: 100% !important;
+    min-width: 0 !important;
+    font-size: 0.85rem !important;
+    padding: 8px !important;
+  }
+
+  /* Student Card Extreme Mobile Fixes */
+  .student-card .sc-fees-row {
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)) !important;
+    gap: 6px !important;
+  }
+  .student-card .sc-actions {
+    flex-direction: column !important;
+    gap: 6px !important;
+  }
+  .student-card .sc-actions button {
+    width: 100% !important;
   }
 }
 
