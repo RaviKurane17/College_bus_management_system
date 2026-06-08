@@ -1012,6 +1012,34 @@ window.setStudentSort = function (col) {
 
 async function loadStudents() {
   try {
+    // Fetch FY columns to render dynamic headers
+    let fyColumns = [];
+    try {
+      const fyRes = await apiFetch('/api/settings/fy-columns');
+      if (fyRes && fyRes.success) {
+        fyColumns = fyRes.fyColumns || [];
+      }
+    } catch(e) {}
+
+    // Update dynamic headers
+    const headerRow = document.getElementById('studentTableHeaderRow');
+    if (headerRow) {
+      // Remove any previously injected dynamic headers (they have class 'dyn-fy-hdr')
+      document.querySelectorAll('.dyn-fy-hdr').forEach(el => el.remove());
+      const currentFeesHeader = document.getElementById('currentFeesHeader');
+      if (currentFeesHeader) {
+        fyColumns.forEach(col => {
+          const yearStr = col.replace('fees_', '').replace('_', '-');
+          const th = document.createElement('th');
+          th.className = 'dyn-fy-hdr';
+          th.innerHTML = `FY ${yearStr} <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i>`;
+          th.style.cursor = 'pointer';
+          th.onclick = () => setStudentSort(col);
+          headerRow.insertBefore(th, currentFeesHeader);
+        });
+      }
+    }
+
     const res = await apiFetch('/api/students');
     const tbody = document.querySelector('#studentsTable tbody');
     if (!tbody) return;
@@ -1138,6 +1166,7 @@ async function loadStudents() {
           <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')} ${s.short_name ? '<span style="font-size:0.75rem;opacity:0.8;">(' + escapeHtml(s.short_name) + ')</span>' : ''}</span></td>
           <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
+          ${fyColumns.map(col => `<td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s[col] || 0).toLocaleString()}</td>`).join('')}
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.current_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
           <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</td>

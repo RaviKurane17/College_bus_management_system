@@ -146,15 +146,20 @@ async function initializeDatabase() {
     await promisePool.query(`
       CREATE TABLE IF NOT EXISTS settings (
         id            INT AUTO_INCREMENT PRIMARY KEY,
-        setting_key   VARCHAR(50) UNIQUE NOT NULL,
-        setting_value VARCHAR(255),
+        setting_key   VARCHAR(100) UNIQUE NOT NULL,
+        setting_value TEXT,
         updated_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
       ) ENGINE=InnoDB
     `);
+    // Migrate setting_value to TEXT if it was VARCHAR
+    await safeAlter("ALTER TABLE settings MODIFY COLUMN setting_value TEXT");
+    await safeAlter("ALTER TABLE settings MODIFY COLUMN setting_key VARCHAR(100)");
     for (const [k, v] of [
       ['school_name','HOLY-WOOD ACADEMY'],
       ['academic_year','2026-27'],
-      ['fee_year','2026-27']
+      ['fee_year','2026-27'],
+      ['current_fy','2026-27'],
+      ['fy_columns','[]']
     ]) { await promisePool.query('INSERT IGNORE INTO settings (setting_key,setting_value) VALUES (?,?)', [k,v]); }
 
     // ── Student Queries ───────────────────────────────────────────────

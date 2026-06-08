@@ -827,7 +827,7 @@
             <div class="desktop-table" style="overflow-x:auto;">
               <table id="studentsTable">
                 <thead>
-                  <tr>
+                  <tr id="studentTableHeaderRow">
                     <th onclick="setStudentSort('id')" style="cursor:pointer;">Sr No. <i class="fa-solid fa-sort"
                         style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
                     <th onclick="setStudentSort('name')" style="cursor:pointer;">Name <i class="fa-solid fa-sort"
@@ -839,9 +839,10 @@
                     <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer;">Pick-up <i
                         class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
                     <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;"
-                      title="Old Fees (Pending fees till March 26)">Old Fees <i class="fa-solid fa-info-circle"></i> <i
+                      title="Old Fees (Legacy)">Old Fees <i class="fa-solid fa-info-circle"></i> <i
                         class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('current_fees')" style="cursor:pointer;" title="Fees Apr 26 - Mar 27">
+                    <!-- Dynamic FY Columns will be injected here via JS -->
+                    <th id="currentFeesHeader" onclick="setStudentSort('current_fees')" style="cursor:pointer;" title="Current Year Fees">
                       Curr. Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort"
                         style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
                     <th onclick="setStudentSort('total_fees')" style="cursor:pointer;" title="Total Fees">Total <i

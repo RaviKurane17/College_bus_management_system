@@ -36,30 +36,44 @@ router.post('/login', async (req, res) => {
   });
 });
 
-// Get dashboard statistics (protected) — Client-Wise Structure
-router.get('/stats', authenticateAdmin, (req, res) => {
+// Get dashboard statistics (protected) — Dynamic FY Support
+router.get('/stats', authenticateAdmin, async (req, res) => {
   const fy = req.query.fy || 'ALL';
 
+  // Read FY columns from settings
+  let fyColumns = [];
+  let currentFy = '2026-27';
+  try {
+    const promisePool = db.promise;
+    const [settingsRows] = await promisePool.query(
+      "SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('fy_columns','current_fy')"
+    );
+    settingsRows.forEach(r => {
+      if (r.setting_key === 'fy_columns') {
+        try { fyColumns = JSON.parse(r.setting_value || '[]'); } catch(e) {}
+      }
+      if (r.setting_key === 'current_fy') currentFy = r.setting_value || '2026-27';
+    });
+  } catch(e) { /* ignore */ }
+
   // Choose which fee columns to sum based on filter
-  let feesCol = 'total_fees';        // grand total column
+  let feesCol = 'total_fees';
   let paidCol = 'fees_paid';
   let remainingCol = 'remaining_fees';
 
   if (fy === 'OLD') {
-    // Old = old_bus_fees column (previous pending fees before Apr 2026)
     feesCol = 'old_bus_fees';
-    paidCol = '0';           // no separate paid tracking for old fees
-    remainingCol = 'old_bus_fees';  // old fees are all pending
-  } else if (fy === 'FY_2026') {
-    // Current year = current_fees column
+    paidCol = '0';
+    remainingCol = 'old_bus_fees';
+  } else if (fy === 'FY_CURRENT') {
     feesCol = 'current_fees';
     paidCol = 'fees_paid';
     remainingCol = '(current_fees - COALESCE(discount_amount,0) - fees_paid)';
-  } else if (fy === 'FY_2027') {
-    // Future year — no data yet
-    feesCol = '0';
+  } else if (fy.startsWith('fees_') && fyColumns.includes(fy)) {
+    // Archived FY column (e.g., "fees_26_27")
+    feesCol = `\`${fy}\``;
     paidCol = '0';
-    remainingCol = '0';
+    remainingCol = `\`${fy}\``;
   }
   // ALL = uses total_fees, fees_paid, remaining_fees as-is
 
@@ -77,7 +91,9 @@ router.get('/stats', authenticateAdmin, (req, res) => {
     schoolLeftStudents: 0,
     totalDrivers: 0,
     busWiseStats: [],
-    classWiseStats: []
+    classWiseStats: [],
+    fyColumns: fyColumns,
+    currentFy: currentFy
   };
 
   db.query('SELECT COUNT(*) as count FROM buses', (err, busResults) => {
@@ -115,8 +131,8 @@ router.get('/stats', authenticateAdmin, (req, res) => {
           db.query(`SELECT
             b.bus_number, b.route,
             COUNT(s.id) as student_count,
-            SUM(${paidCol !== '0' ? 's.' + paidCol : '0'}) as collected,
-            SUM(s.${feesCol !== '0' ? feesCol : 'total_fees'}) as total_fees_sum,
+            SUM(s.fees_paid) as collected,
+            SUM(s.total_fees) as total_fees_sum,
             SUM(s.old_bus_fees) as old_fees,
             SUM(s.current_fees) as current_fees
           FROM buses b

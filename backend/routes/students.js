@@ -3,23 +3,40 @@
 // Simple columns matching client Excel:
 //   name | class_name | phone | bus_id | pick_up_point
 //   old_bus_fees | current_fees | discount_amount
-//   total_fees (=old+current-discount) | fees_paid | remaining_fees
+//   total_fees (=old+current+archived_fy-discount) | fees_paid | remaining_fees
 //   student_status (active/passout/school_left)
 // =========================
 const express = require('express');
 const router  = express.Router();
 const db      = require('../db');
+const promisePool = db.promise;
 const bcrypt  = require('bcryptjs');
 const { sendEmail }                          = require('../utils/mailer');
 const { authenticateAdmin, authenticateAny } = require('../middleware/auth');
 
-// ─── Compute totals from Excel fields ────────────────────────────────────────
-function computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid) {
+// ─── Helper: Get archived FY columns from settings ─────────────────────────
+async function getFyColumns() {
+  try {
+    const [rows] = await promisePool.query("SELECT setting_value FROM settings WHERE setting_key='fy_columns'");
+    if (rows.length && rows[0].setting_value) {
+      return JSON.parse(rows[0].setting_value);
+    }
+  } catch(e) { /* ignore */ }
+  return [];
+}
+
+// ─── Compute totals from Excel fields + dynamic FY columns ──────────────────
+function computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid, fyColValues) {
   const old   = parseFloat(old_bus_fees    || 0);
   const curr  = parseFloat(current_fees    || 0);
   const disc  = parseFloat(discount_amount || 0);
   const paid  = parseFloat(fees_paid       || 0);
-  const total = Math.max(0, old + curr - disc);
+  // Sum all archived FY column values
+  let fySum = 0;
+  if (fyColValues && typeof fyColValues === 'object') {
+    Object.values(fyColValues).forEach(v => { fySum += parseFloat(v || 0); });
+  }
+  const total = Math.max(0, old + fySum + curr - disc);
   return {
     total_fees:     total.toFixed(2),
     remaining_fees: Math.max(0, total - paid).toFixed(2)
@@ -40,19 +57,32 @@ function deriveStatus(class_name, explicit) {
 // GET all students
 // Query params: ?status=active|passout|school_left  &bus_id=X
 // ============================
-router.get('/', authenticateAdmin, (req, res) => {
-  const { status, bus_id } = req.query;
-  let sql = `SELECT s.*, b.bus_number, b.route FROM students s LEFT JOIN buses b ON s.bus_id=b.id`;
-  const params = [], where = [];
-  if (status) { where.push('s.student_status=?'); params.push(status); }
-  if (bus_id) { where.push('s.bus_id=?');         params.push(bus_id); }
-  if (where.length) sql += ' WHERE ' + where.join(' AND ');
-  sql += ' ORDER BY s.name';
+router.get('/', authenticateAdmin, async (req, res) => {
+  try {
+    const fyColumns = await getFyColumns();
+    const { status, bus_id } = req.query;
+    
+    // Build dynamic SELECT with FY columns
+    let fyCols = '';
+    if (fyColumns.length > 0) {
+      fyCols = ', ' + fyColumns.map(c => `s.\`${c}\``).join(', ');
+    }
+    
+    let sql = `SELECT s.*${fyCols}, b.bus_number, b.route FROM students s LEFT JOIN buses b ON s.bus_id=b.id`;
+    const params = [], where = [];
+    if (status) { where.push('s.student_status=?'); params.push(status); }
+    if (bus_id) { where.push('s.bus_id=?');         params.push(bus_id); }
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    sql += ' ORDER BY s.name';
 
-  db.query(sql, params, (err, results) => {
-    if (err) return res.status(500).json({ success: false, message: 'Error retrieving students' });
-    res.json(results.map(({ password, reset_token, reset_token_expires, ...s }) => s));
-  });
+    db.query(sql, params, (err, results) => {
+      if (err) return res.status(500).json({ success: false, message: 'Error retrieving students' });
+      const data = results.map(({ password, reset_token, reset_token_expires, ...s }) => s);
+      res.json(data);
+    });
+  } catch(e) {
+    res.status(500).json({ success: false, message: 'Error: ' + e.message });
+  }
 });
 
 // ============================

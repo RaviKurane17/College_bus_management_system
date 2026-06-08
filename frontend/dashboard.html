@@ -1472,6 +1472,31 @@
           document.getElementById('welcomeStudents').textContent = s.totalStudents;
           document.getElementById('welcomeDrivers').textContent = s.totalDrivers;
 
+          // Update FY Filter dropdown options dynamically if empty/not initialized
+          const fySelect = document.getElementById('fyFilter');
+          if (fySelect && fySelect.options.length <= 4 && s.fyColumns && s.currentFy) {
+            const currentVal = fySelect.value;
+            let optionsHtml = `<option value="ALL">ALL (All Data)</option>
+                               <option value="OLD">OLD (Previous Pending)</option>`;
+            
+            s.fyColumns.forEach(col => {
+              // col is like 'fees_26_27'
+              const yearStr = col.replace('fees_', '').replace('_', '-');
+              optionsHtml += `<option value="${col}">FY ${yearStr} (Archived)</option>`;
+            });
+            
+            optionsHtml += `<option value="FY_CURRENT">Current FY (${s.currentFy})</option>`;
+            fySelect.innerHTML = optionsHtml;
+            // Restore selection or default to FY_CURRENT
+            if (currentVal !== 'ALL' && currentVal !== 'OLD' && currentVal !== 'FY_2026' && currentVal !== 'FY_2027') {
+              fySelect.value = currentVal;
+            } else if (currentVal === 'FY_2026') {
+              fySelect.value = 'FY_CURRENT';
+            } else {
+              fySelect.value = currentVal;
+            }
+          }
+
           // Build stats cards - labels change based on FY filter
           const statsContainer = document.getElementById('statsContainer');
           const fyVal = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
@@ -1480,24 +1505,26 @@
           let collectedLabel = 'Fees Collected';
           let pendingLabel = 'Pending Fees';
           let pendingSub = 'Yet to collect';
+          
           if (fyVal === 'OLD') {
             feesLabel = 'Old Fees (Previous Pending)';
-            feesSub = 'Fees before Apr 2026';
+            feesSub = 'Legacy pending fees';
             collectedLabel = 'Old Fees Collected';
             pendingLabel = 'Old Fees Pending';
-            pendingSub = 'Previous year pending';
-          } else if (fyVal === 'FY_2026') {
-            feesLabel = 'Current Year Fees (FY 2026)';
-            feesSub = '1 Apr 2026 - 31 Mar 2027';
-            collectedLabel = 'FY 2026 Collected';
-            pendingLabel = 'FY 2026 Pending';
-            pendingSub = 'Current year pending';
-          } else if (fyVal === 'FY_2027') {
-            feesLabel = 'Next Year Fees (FY 2027)';
-            feesSub = '1 Apr 2027 - 31 Mar 2028';
-            collectedLabel = 'FY 2027 Collected';
-            pendingLabel = 'FY 2027 Pending';
-            pendingSub = 'Next year pending';
+            pendingSub = 'Legacy pending';
+          } else if (fyVal === 'FY_CURRENT') {
+            feesLabel = 'Current Year Fees';
+            feesSub = s.currentFy ? \`Active FY: \${s.currentFy}\` : 'Active year';
+            collectedLabel = 'Current FY Collected';
+            pendingLabel = 'Current FY Pending';
+            pendingSub = 'Active year pending';
+          } else if (fyVal.startsWith('fees_')) {
+            const yearStr = fyVal.replace('fees_', '').replace('_', '-');
+            feesLabel = \`Archived FY \${yearStr} Fees\`;
+            feesSub = 'Historical data';
+            collectedLabel = \`FY \${yearStr} Collected\`;
+            pendingLabel = \`FY \${yearStr} Pending\`;
+            pendingSub = 'Archived pending';
           }
           statsContainer.innerHTML = `
             <div class="stat-card stat-bus">
@@ -1794,6 +1821,14 @@
               <input type="date" id="settingPaymentCycleEnd" value="${cycleEnd}" style="width:100%;padding:10px 12px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#e2e8f0;outline:none;" />
             </div>
 
+            <div style="margin-bottom: 25px; padding-top: 15px; border-top: 1px solid var(--clr-border-strong);">
+              <h4 style="color:#ef4444; margin-bottom: 10px; font-size:0.9rem;"><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h4>
+              <p style="font-size:0.8rem; color:var(--clr-muted); margin-bottom:10px;">Archive the current year fees and start a new financial year. This will reset current fees and paid amounts to zero.</p>
+              <button onclick="startNewFy()" style="width:100%; padding:10px; border-radius:var(--radius-sm); border:1px solid #ef4444; background:rgba(239, 68, 68, 0.1); color:#ef4444; font-weight:600; cursor:pointer;">
+                Start New Financial Year
+              </button>
+            </div>
+
             <div style="display:flex;justify-content:flex-end;gap:10px;">
               <button onclick="document.getElementById('settingsModal').remove()" style="padding:10px 20px;border-radius:var(--radius-sm);border:1px solid var(--clr-border-strong);background:var(--clr-surface-2);color:#cbd5e1;cursor:pointer;">Cancel</button>
               <button onclick="saveSettings()" style="padding:10px 20px;border-radius:var(--radius-sm);border:none;background:var(--clr-accent);color:#000;font-weight:700;cursor:pointer;">Save Settings</button>
@@ -1802,6 +1837,30 @@
         </div>
       `;
       document.body.insertAdjacentHTML('beforeend', modalHtml);
+    }
+
+    async function startNewFy() {
+      const confirmation = prompt("WARNING: This will archive the current year's fees and start a fresh year. All current_fees and fees_paid will be reset to 0.\n\nType 'ROLLOVER' to confirm:");
+      if (confirmation !== 'ROLLOVER') {
+        return alert("Rollover cancelled.");
+      }
+
+      try {
+        const res = await apiFetch('/api/settings/fy-rollover', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ confirmation })
+        });
+        
+        if (res.success) {
+          alert(`Success! ${res.message}`);
+          window.location.reload();
+        } else {
+          alert(res.message || 'Rollover failed');
+        }
+      } catch(e) {
+        alert('Server error during rollover');
+      }
     }
 
     async function saveSettings() {
