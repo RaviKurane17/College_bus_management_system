@@ -1041,9 +1041,9 @@
         <div class="topbar-right" style="gap:15px; display:flex; align-items:center;">
           <select id="fyFilter" class="modal-input" style="padding: 6px 12px; height: auto; min-width: 120px;" onchange="loadAdminStats()">
             <option value="ALL">ALL (All Data)</option>
-            <option value="OLD">OLD (Previous Data)</option>
-            <option value="FY_2027">FY 2027 (Apr 26 - Mar 27)</option>
-            <option value="FY_2028">FY 2028 (Apr 27 - Mar 28)</option>
+            <option value="OLD">OLD (Previous Pending)</option>
+            <option value="FY_2026" selected>FY 2026 (1 Apr 2026 - 31 Mar 2027)</option>
+            <option value="FY_2027">FY 2027 (1 Apr 2027 - 31 Mar 2028)</option>
           </select>
           <div class="header-date" id="headerDate" style="margin-left: 10px;"></div>
           <button class="btn-icon" title="Notifications">
@@ -1472,8 +1472,33 @@
           document.getElementById('welcomeStudents').textContent = s.totalStudents;
           document.getElementById('welcomeDrivers').textContent = s.totalDrivers;
 
-          // Build stats cards
+          // Build stats cards - labels change based on FY filter
           const statsContainer = document.getElementById('statsContainer');
+          const fyVal = document.getElementById('fyFilter') ? document.getElementById('fyFilter').value : 'ALL';
+          let feesLabel = 'Total Fees';
+          let feesSub = 'All fees combined';
+          let collectedLabel = 'Fees Collected';
+          let pendingLabel = 'Pending Fees';
+          let pendingSub = 'Yet to collect';
+          if (fyVal === 'OLD') {
+            feesLabel = 'Old Fees (Previous Pending)';
+            feesSub = 'Fees before Apr 2026';
+            collectedLabel = 'Old Fees Collected';
+            pendingLabel = 'Old Fees Pending';
+            pendingSub = 'Previous year pending';
+          } else if (fyVal === 'FY_2026') {
+            feesLabel = 'Current Year Fees (FY 2026)';
+            feesSub = '1 Apr 2026 - 31 Mar 2027';
+            collectedLabel = 'FY 2026 Collected';
+            pendingLabel = 'FY 2026 Pending';
+            pendingSub = 'Current year pending';
+          } else if (fyVal === 'FY_2027') {
+            feesLabel = 'Next Year Fees (FY 2027)';
+            feesSub = '1 Apr 2027 - 31 Mar 2028';
+            collectedLabel = 'FY 2027 Collected';
+            pendingLabel = 'FY 2027 Pending';
+            pendingSub = 'Next year pending';
+          }
           statsContainer.innerHTML = `
             <div class="stat-card stat-bus">
               <div class="stat-icon-wrap"><i class="fa-solid fa-bus"></i></div>
@@ -1502,17 +1527,25 @@
             <div class="stat-card stat-fees">
               <div class="stat-icon-wrap"><i class="fa-solid fa-indian-rupee-sign"></i></div>
               <div class="stat-data">
-                <h4>Fees Collected</h4>
-                <div class="stat-value">₹${(s.totalFeesCollected || 0).toLocaleString('en-IN')}</div>
+                <h4>${feesLabel}</h4>
+                <div class="stat-value">₹${(s.totalGrandFees || 0).toLocaleString('en-IN')}</div>
+                <div class="stat-sub">${feesSub}</div>
+              </div>
+            </div>
+            <div class="stat-card" style="--card-accent:#10b981;">
+              <div class="stat-icon-wrap" style="background:rgba(16,185,129,0.15);color:#34d399;"><i class="fa-solid fa-check-circle"></i></div>
+              <div class="stat-data">
+                <h4>${collectedLabel}</h4>
+                <div class="stat-value" style="color:#34d399;">₹${(s.totalFeesCollected || 0).toLocaleString('en-IN')}</div>
                 <div class="stat-sub">Total collection</div>
               </div>
             </div>
             <div class="stat-card stat-pending">
               <div class="stat-icon-wrap"><i class="fa-solid fa-file-invoice-dollar"></i></div>
               <div class="stat-data">
-                <h4>Pending Fees</h4>
+                <h4>${pendingLabel}</h4>
                 <div class="stat-value">₹${(s.totalRemainingFees || 0).toLocaleString('en-IN')}</div>
-                <div class="stat-sub">Yet to collect</div>
+                <div class="stat-sub">${pendingSub}</div>
               </div>
             </div>
             <div class="stat-card stat-overdue">

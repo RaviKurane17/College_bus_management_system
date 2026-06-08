@@ -39,15 +39,29 @@ router.post('/login', async (req, res) => {
 // Get dashboard statistics (protected) — Client-Wise Structure
 router.get('/stats', authenticateAdmin, (req, res) => {
   const fy = req.query.fy || 'ALL';
-  
-  let dateFilter = '';
+
+  // Choose which fee columns to sum based on filter
+  let feesCol = 'total_fees';        // grand total column
+  let paidCol = 'fees_paid';
+  let remainingCol = 'remaining_fees';
+
   if (fy === 'OLD') {
-    dateFilter = " AND joining_date < '2026-04-01' ";
+    // Old = old_bus_fees column (previous pending fees before Apr 2026)
+    feesCol = 'old_bus_fees';
+    paidCol = '0';           // no separate paid tracking for old fees
+    remainingCol = 'old_bus_fees';  // old fees are all pending
+  } else if (fy === 'FY_2026') {
+    // Current year = current_fees column
+    feesCol = 'current_fees';
+    paidCol = 'fees_paid';
+    remainingCol = '(current_fees - COALESCE(discount_amount,0) - fees_paid)';
   } else if (fy === 'FY_2027') {
-    dateFilter = " AND joining_date >= '2026-04-01' AND joining_date <= '2027-03-31 23:59:59' ";
-  } else if (fy === 'FY_2028') {
-    dateFilter = " AND joining_date >= '2027-04-01' AND joining_date <= '2028-03-31 23:59:59' ";
+    // Future year — no data yet
+    feesCol = '0';
+    paidCol = '0';
+    remainingCol = '0';
   }
+  // ALL = uses total_fees, fees_paid, remaining_fees as-is
 
   const stats = {
     totalBuses: 0,
@@ -74,15 +88,15 @@ router.get('/stats', authenticateAdmin, (req, res) => {
 
       db.query(`SELECT
         COUNT(*) as total,
-        SUM(fees_paid) as paid,
-        SUM(remaining_fees) as remaining,
+        SUM(${paidCol}) as paid,
+        SUM(${remainingCol}) as remaining,
+        SUM(${feesCol}) as grand_total,
         SUM(old_bus_fees) as old_fees,
         SUM(current_fees) as curr_fees,
-        SUM(total_fees) as grand_total,
         SUM(CASE WHEN student_status='active'      THEN 1 ELSE 0 END) as active_count,
         SUM(CASE WHEN student_status='passout'     THEN 1 ELSE 0 END) as passout_count,
         SUM(CASE WHEN student_status='school_left' THEN 1 ELSE 0 END) as left_count
-      FROM students WHERE 1=1 ${dateFilter}`, (err, sr) => {
+      FROM students`, (err, sr) => {
         if (!err && sr.length > 0) {
           stats.totalStudents = sr[0].total || 0;
           stats.totalFeesCollected = sr[0].paid || 0;
@@ -95,23 +109,23 @@ router.get('/stats', authenticateAdmin, (req, res) => {
           stats.schoolLeftStudents = sr[0].left_count || 0;
         }
 
-        db.query(`SELECT COUNT(*) as count FROM students WHERE remaining_fees > 0 ${dateFilter}`, (err, overdueResults) => {
+        db.query(`SELECT COUNT(*) as count FROM students WHERE ${remainingCol} > 0`, (err, overdueResults) => {
           if (!err && overdueResults.length > 0) stats.overdueStudents = overdueResults[0].count;
 
           db.query(`SELECT
             b.bus_number, b.route,
             COUNT(s.id) as student_count,
-            SUM(s.fees_paid) as collected,
-            SUM(s.remaining_fees) as remaining,
+            SUM(${paidCol !== '0' ? 's.' + paidCol : '0'}) as collected,
+            SUM(s.${feesCol !== '0' ? feesCol : 'total_fees'}) as total_fees_sum,
             SUM(s.old_bus_fees) as old_fees,
             SUM(s.current_fees) as current_fees
           FROM buses b
-          LEFT JOIN students s ON s.bus_id = b.id AND 1=1 ${dateFilter.replace(/joining_date/g, 's.joining_date')}
+          LEFT JOIN students s ON s.bus_id = b.id
           GROUP BY b.id, b.bus_number, b.route
           ORDER BY b.bus_number`, (err, busStats) => {
             if (!err) stats.busWiseStats = busStats;
 
-            db.query(`SELECT class_name, COUNT(*) as count, SUM(remaining_fees) as pending FROM students WHERE 1=1 ${dateFilter} GROUP BY class_name ORDER BY class_name`, (err, classResults) => {
+            db.query(`SELECT class_name, COUNT(*) as count, SUM(${remainingCol}) as pending FROM students GROUP BY class_name ORDER BY class_name`, (err, classResults) => {
               if (!err) stats.classWiseStats = classResults;
               res.json({ success: true, stats });
             });
