@@ -181,9 +181,9 @@
     async function uploadPhoto(){const p=document.getElementById('photo');if(!p.files||!p.files[0])return null;const f=new FormData();f.append('photo',p.files[0]);try{const r=await fetch('/api/upload/student-photo',{method:'POST',body:f});const d=await r.json();if(d.success){document.getElementById('photo_url').value=d.photo_url;return d.photo_url;}}catch(e){console.error(e);}return null;}
     document.addEventListener('DOMContentLoaded',()=>{const t=new Date(),n=new Date(t);n.setFullYear(t.getFullYear()+1);document.getElementById('pass_valid_from').value=t.toISOString().split('T')[0];document.getElementById('pass_valid_to').value=n.toISOString().split('T')[0];});
     const sidebar=document.getElementById('sidebar'),btnToggle=document.getElementById('btnSidebarToggle'),overlay=document.getElementById('sidebarOverlay');
-    btnToggle.addEventListener('click',()=>{if(window.innerWidth<=768){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));}});
+    btnToggle.addEventListener('click',()=>{if(window.innerWidth <= 992){sidebar.classList.toggle('mobile-open');overlay.classList.toggle('show');}else{sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed'));}});
     function closeMobileSidebar(){sidebar.classList.remove('mobile-open');overlay.classList.remove('show');}
-    document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth<=768)closeMobileSidebar();}));
+    document.querySelectorAll('.sidebar-nav a').forEach(l=>l.addEventListener('click',()=>{if(window.innerWidth <= 992)closeMobileSidebar();}));
     const btnTheme=document.getElementById('btnThemeToggle'),savedTheme=localStorage.getItem('theme');
     if(savedTheme==='light'){document.body.classList.add('light-theme');btnTheme.innerHTML='<i class="fa-solid fa-sun"></i>';}
     btnTheme.addEventListener('click',()=>{document.body.classList.toggle('light-theme');const il=document.body.classList.contains('light-theme');localStorage.setItem('theme',il?'light':'dark');btnTheme.innerHTML=il?'<i class="fa-solid fa-sun"></i>':'<i class="fa-solid fa-moon"></i>';});
