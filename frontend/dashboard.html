@@ -1514,16 +1514,16 @@
             pendingSub = 'Legacy pending';
           } else if (fyVal === 'FY_CURRENT') {
             feesLabel = 'Current Year Fees';
-            feesSub = s.currentFy ? \`Active FY: \${s.currentFy}\` : 'Active year';
+            feesSub = s.currentFy ? `Active FY: ${s.currentFy}` : 'Active year';
             collectedLabel = 'Current FY Collected';
             pendingLabel = 'Current FY Pending';
             pendingSub = 'Active year pending';
           } else if (fyVal.startsWith('fees_')) {
             const yearStr = fyVal.replace('fees_', '').replace('_', '-');
-            feesLabel = \`Archived FY \${yearStr} Fees\`;
+            feesLabel = `Archived FY ${yearStr} Fees`;
             feesSub = 'Historical data';
-            collectedLabel = \`FY \${yearStr} Collected\`;
-            pendingLabel = \`FY \${yearStr} Pending\`;
+            collectedLabel = `FY ${yearStr} Collected`;
+            pendingLabel = `FY ${yearStr} Pending`;
             pendingSub = 'Archived pending';
           }
           statsContainer.innerHTML = `
