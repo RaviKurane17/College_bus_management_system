@@ -458,7 +458,6 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
   <script src="js/script.js?v=6"></script>
-  </script>
   <script>
     const sidebar = document.getElementById('sidebar'), btnToggle = document.getElementById('btnSidebarToggle'), overlay = document.getElementById('sidebarOverlay');
     btnToggle.addEventListener('click', () => { if (window.innerWidth <= 992) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); } else { sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed')); } });
