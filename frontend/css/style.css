@@ -1,4 +1,4 @@
-/* 🎨 Modern College Bus System Theme */
+/* Modern College Bus System Theme */
 
 /* Import Google Font */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap');
@@ -534,7 +534,7 @@ body.light-theme .theme-toggle:hover {
   background: rgba(0,0,0,0.05);
 }
 
-.modal-body.login-page {
+.modal-body {
   overflow-y: auto;
   flex-grow: 1;
   padding-right: 10px;

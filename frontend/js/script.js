@@ -1141,16 +1141,25 @@ async function loadStudents() {
       window.currentFilteredStudents = filteredStudents;
 
       // Calculate aggregate totals
+      let aggOldFees = 0;
+      let aggCurrentFees = 0;
       let aggTotalFees = 0;
+      let aggDiscount = 0;
       let aggPaidFees = 0;
       let aggRemainingFees = 0;
 
       filteredStudents.forEach((s, index) => {
+        const oldFees = parseFloat(s.old_bus_fees || 0);
+        const currFees = parseFloat(s.current_fees || 0);
         const total = parseFloat(s.total_fees || 0);
+        const discount = parseFloat(s.discount_amount || 0);
         const paid = parseFloat(s.fees_paid || 0);
         const rem = parseFloat(s.remaining_fees || 0);
-
+        
+        aggOldFees += oldFees;
+        aggCurrentFees += currFees;
         aggTotalFees += total;
+        aggDiscount += discount;
         aggPaidFees += paid;
         aggRemainingFees += rem;
 
@@ -1245,7 +1254,10 @@ async function loadStudents() {
       if (tfoot) {
         if (filteredStudents.length > 0) {
           tfoot.style.display = 'table-footer-group';
+          document.getElementById('footOldFees').innerText = '₹' + aggOldFees.toLocaleString('en-IN');
+          document.getElementById('footCurrentFees').innerText = '₹' + aggCurrentFees.toLocaleString('en-IN');
           document.getElementById('footTotalFees').innerText = '₹' + aggTotalFees.toLocaleString('en-IN');
+          document.getElementById('footDiscount').innerText = '₹' + aggDiscount.toLocaleString('en-IN');
           document.getElementById('footPaidFees').innerText = '₹' + aggPaidFees.toLocaleString('en-IN');
           document.getElementById('footRemainingFees').innerText = '₹' + aggRemainingFees.toLocaleString('en-IN');
         } else {
