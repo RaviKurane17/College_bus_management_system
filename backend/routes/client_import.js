@@ -6,7 +6,7 @@
 //   Name of Students  → name
 //   Class             → class_name
 //   Old Bus Fees      → old_bus_fees
-//   Currents Bus Fees → current_fees
+//   26-27 Fees → current_fees
 //   Discount Amount   → discount_amount
 //   Total Amount      → total_fees (computed)
 //   Paid              → fees_paid

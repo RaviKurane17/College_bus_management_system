@@ -74,7 +74,7 @@ CREATE TABLE students (
   -- ── Excel: "Old Bus Fees" ───────────────────────────
   old_bus_fees  DECIMAL(10,2) DEFAULT 0,       -- carry-forward dues from previous years
 
-  -- ── Excel: "Currents Bus Fees" (2026-27) ────────────
+  -- ── Excel: "26-27 Fees" (Apr 2026 - Mar 2027) ────────────
   current_fees  DECIMAL(10,2) DEFAULT 0,       -- current academic year fees
 
   -- ── Excel: "Discount Amount" ────────────────────────

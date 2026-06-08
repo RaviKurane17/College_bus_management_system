@@ -3285,7 +3285,7 @@ window.downloadStudentExcel = function() {
     alert("No student data available to download.");
     return;
   }
-  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
+  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,26-27 Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
   students.forEach((s, index) => {
     csv += `"${index+1}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
   });
@@ -3336,7 +3336,7 @@ window.downloadFullStudentPDF = function () {
     "Old Fees"
   ];
   fyCols.forEach(c => tableColumn.push(c.replace('fees_','FY ').replace('_','-')));
-  tableColumn.push("Curr. Fees", "Total Fees", "Concess.", "Paid", "Rem. Fees", "Status");
+  tableColumn.push("26-27 Fees", "Total Fees", "Concess.", "Paid", "Rem. Fees", "Status");
 
   const tableRows = [];
 
@@ -3392,7 +3392,7 @@ window.downloadFullStudentExcel = function() {
   
   let header = ["Sr No", "Name", "Username", "Email", "Phone", "Class", "Bus No", "Pick-up", "Route", "Driver Name", "Driver Phone", "Old Fees"];
   fyCols.forEach(c => header.push(c.replace('fees_','FY ').replace('_','-')));
-  header.push("Curr. Fees", "Total Fees", "Concession", "Paid", "Rem. Fees", "Status");
+  header.push("26-27 Fees", "Total Fees", "Concession", "Paid", "Rem. Fees", "Status");
   
   let csv = header.join(",") + "\\n";
   
