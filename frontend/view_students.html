@@ -793,15 +793,26 @@
               <button onclick="window.location.href='bulk_upload.html'"
                 style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
                   class="fa-solid fa-file-excel"></i> Bulk Upload</button>
+              
+              <!-- Standard Downloads -->
               <button onclick="downloadStudentPDF()"
-                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                  class="fa-solid fa-file-pdf"></i> Download PDF</button>
+                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Standard PDF Export"><i
+                  class="fa-solid fa-file-pdf"></i> PDF</button>
               <button onclick="downloadStudentExcel()"
-                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                  class="fa-solid fa-file-excel"></i> Download Excel</button>
+                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Standard Excel Export"><i
+                  class="fa-solid fa-file-excel"></i> Excel</button>
+                  
+              <!-- Full A-Z Downloads -->
+              <button onclick="downloadFullStudentPDF()"
+                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#7f1d1d,#450a0a); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Full A-Z Report PDF"><i
+                  class="fa-solid fa-file-pdf"></i> Full PDF</button>
+              <button onclick="downloadFullStudentExcel()"
+                style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#064e3b,#022c22); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Full A-Z Report Excel"><i
+                  class="fa-solid fa-file-excel"></i> Full Excel</button>
+
               <button onclick="bulkResetPasswords()"
                 style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                  class="fa-solid fa-key"></i> Bulk Reset Pass</button>
+                  class="fa-solid fa-key"></i> Bulk Reset</button>
             </div>
           </div>
           <div class="filter-bar">

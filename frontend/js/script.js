@@ -3217,6 +3217,86 @@ window.downloadStudentPDF = function () {
   }
 
   const { jsPDF } = window.jspdf;
+  const doc = new jsPDF('landscape');
+
+  doc.setFontSize(18);
+  doc.text('Student Directory', 14, 22);
+
+  let filtersText = '';
+  const fClassEl = document.getElementById('filterClass');
+  const fStatusEl = document.getElementById('filterStatus');
+
+  const fClass = fClassEl && fClassEl.selectedIndex > 0 ? fClassEl.options[fClassEl.selectedIndex].text : 'All Classes';
+  const fStatus = fStatusEl && fStatusEl.selectedIndex > 0 ? fStatusEl.options[fStatusEl.selectedIndex].text : 'All Students';
+
+  filtersText = `Filters: ${fClass} | ${fStatus}`;
+
+  doc.setFontSize(11);
+  doc.setTextColor(100);
+  doc.text(filtersText, 14, 30);
+
+  const tableColumn = ["Sr No", "Name", "Class", "Bus No", "Pick-up", "Old Fees (Pending fees till March 26)", "Fees Apr 26 - Mar 27", "Total Fees", "Concession", "Paid Fees", "Remaining Fees"];
+  const tableRows = [];
+
+  students.forEach((s, index) => {
+    const studentData = [
+      `${index + 1}`,
+      s.name,
+      s.class_name || 'N/A',
+      s.bus_number || 'None',
+      s.pick_up_point || 'N/A',
+      `${parseFloat(s.old_bus_fees || 0)}`,
+      `${parseFloat(s.current_fees || 0)}`,
+      `${parseFloat(s.total_fees || 0)}`,
+      `${parseFloat(s.discount_amount || 0)}`,
+      `${parseFloat(s.fees_paid || 0)}`,
+      `${parseFloat(s.remaining_fees || 0)}`
+    ];
+    tableRows.push(studentData);
+  });
+
+  doc.autoTable({
+    head: [tableColumn],
+    body: tableRows,
+    startY: 35,
+    theme: 'grid',
+    styles: { fontSize: 8, cellPadding: 2 },
+    headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+  });
+
+  doc.save('student_list.pdf');
+}
+
+window.downloadStudentExcel = function() {
+  const students = window.currentFilteredStudents || [];
+  if (students.length === 0) {
+    alert("No student data available to download.");
+    return;
+  }
+  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,Curr. Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
+  students.forEach((s, index) => {
+    csv += `"${index+1}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
+  });
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = "Students_List.csv";
+  a.click();
+}
+
+window.downloadFullStudentPDF = function () {
+  if (!window.jspdf) {
+    alert('PDF library not loaded yet.');
+    return;
+  }
+  const students = window.currentFilteredStudents || [];
+  if (students.length === 0) {
+    alert('No students to download.');
+    return;
+  }
+
+  const { jsPDF } = window.jspdf;
   // Use A2 landscape to fit all A-Z columns
   const doc = new jsPDF('landscape', 'mm', 'a2');
 
@@ -3289,7 +3369,7 @@ window.downloadStudentPDF = function () {
   doc.save('Full_Student_List.pdf');
 }
 
-window.downloadStudentExcel = function() {
+window.downloadFullStudentExcel = function() {
   const students = window.currentFilteredStudents || [];
   if (students.length === 0) {
     alert("No student data available to download.");
