@@ -20,7 +20,7 @@
   font-family: 'Poppins', sans-serif;
 }
 
-body {
+body.login-page {
   background: linear-gradient(135deg, var(--dark), #1e293b);
   color: var(--light);
   min-height: 100vh;
@@ -215,7 +215,7 @@ nav a:hover {
 }
 
 /* Dashboard Layout */
-body.dashboard-body {
+body.dashboard-body.login-page {
   padding: 0;
   margin: 0;
   display: flex;
@@ -661,7 +661,7 @@ body.light-theme .theme-toggle:hover {
   background: rgba(0,0,0,0.05);
 }
 
-.modal-body {
+.modal-body.login-page {
   overflow-y: auto;
   flex-grow: 1;
   padding-right: 10px;
@@ -682,7 +682,7 @@ body.light-theme .theme-toggle:hover {
 /* ?? Mobile Responsiveness (Added)          */
 /* ========================================= */
 @media screen and (max-width: 768px) {
-  body.dashboard-body {
+  body.dashboard-body.login-page {
     height: auto;
     overflow: auto;
     display: block;
