@@ -1177,7 +1177,7 @@ async function loadStudents() {
             </a>
           </td>
           <td style="padding:6px 8px;"><span style="padding: 3px 8px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 5px; font-size: 0.75rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
-          <td style="padding:6px 8px; white-space:nowrap;"><i class="fa-solid fa-bus-simple" style="font-size: 0.75rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> ${escapeHtml(s.short_name || s.bus_number || 'None')}</td>
+          <td style="padding:6px 8px; white-space:nowrap;"><i class="fa-solid fa-bus-simple" style="font-size: 0.75rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> ${escapeHtml(s.short_name || (s.bus_number ? s.bus_number.split('-').pop() : 'None'))}</td>
           <td style="padding:6px 8px; font-size: 0.78rem; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
           <td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
           ${fyColumns.map(col => `<td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s[col] || 0).toLocaleString()}</td>`).join('')}
@@ -1210,7 +1210,7 @@ async function loadStudents() {
             <div class="sc-row">
               <div>
                 <div class="sc-label">Bus</div>
-                <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.short_name || s.bus_number || 'None')}</div>
+                <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.short_name || (s.bus_number ? s.bus_number.split('-').pop() : 'None'))}</div>
               </div>
               <div>
                 <div class="sc-label">Route</div>
