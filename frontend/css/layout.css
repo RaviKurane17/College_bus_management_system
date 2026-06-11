@@ -109,6 +109,23 @@ img, table {
   min-height: 100vh;
 }
 
+.sticky-table-controls {
+  position: sticky;
+  top: 48px;
+  z-index: 10;
+  background: var(--clr-surface);
+  padding: 14px 14px 10px 14px;
+  margin: -14px -14px 0 -14px;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border-bottom: 1px solid var(--clr-border);
+}
+
+@media (min-width: 992px) {
+  .sticky-table-controls {
+    top: 50px;
+  }
+}
+
 /* Topbar - Mobile */
 .topbar {
   position: sticky;
