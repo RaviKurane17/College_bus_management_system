@@ -390,7 +390,7 @@
               <option value="">All Buses</option>
             </select>
             <select class="filter-select" id="filterPickup" onchange="loadStudents()">
-              <option value="">All Pick-ups</option>
+              <option value="">All Routes</option>
             </select>
             <select class="filter-select" id="filterStatus" onchange="loadStudents()">
               <option value="">All Students</option>
@@ -400,51 +400,50 @@
           </div>
           <div class="panel-body">
             <!-- Desktop: scrollable table -->
-            <div class="desktop-table" style="overflow-x:auto;">
-              <table id="studentsTable">
-                <thead>
+            <div class="desktop-table" id="studentTableScroll" style="overflow-x:auto; overflow-y:auto; max-height:65vh; position:relative;">
+              <table id="studentsTable" style="font-size:0.78rem;">
+                <thead style="position:sticky; top:0; z-index:6; background:var(--clr-surface, #1e293b);">
                   <tr id="studentTableHeaderRow">
-                    <th onclick="setStudentSort('id')" style="cursor:pointer;">Sr No. <i class="fa-solid fa-sort"
-                        style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('name')" style="cursor:pointer;">Name <i class="fa-solid fa-sort"
-                        style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('class_name')" style="cursor:pointer;">Class <i class="fa-solid fa-sort"
-                        style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('bus_number')" style="cursor:pointer;">Bus No <i
-                        class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer;">Pick-up <i
-                        class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer;"
-                      title="Old Fees (Legacy)">Old Fees <i class="fa-solid fa-info-circle"></i> <i
-                        class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('id')" style="cursor:pointer; padding:6px 8px; white-space:nowrap;"># <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('name')" style="cursor:pointer; padding:6px 8px;">Name <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('class_name')" style="cursor:pointer; padding:6px 8px;">Class <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('bus_number')" style="cursor:pointer; padding:6px 8px;">Bus <i
+                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer; padding:6px 8px;">Route <i
+                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer; padding:6px 8px;"
+                      title="Old Fees (Legacy)">Old<br>Fees <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
                     <!-- Dynamic FY Columns will be injected here via JS -->
-                    <th id="currentFeesHeader" onclick="setStudentSort('current_fees')" style="cursor:pointer;" title="26-27 Fees (Apr 2026 - Mar 2027)">
-                      26-27 Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort"
-                        style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('total_fees')" style="cursor:pointer;" title="Total Fees">Total <i
-                        class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('discount_amount')" style="cursor:pointer;" title="Concession Amount">
-                      Conc. <i class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('fees_paid')" style="cursor:pointer;" title="Paid Fees">Paid <i
-                        class="fa-solid fa-sort" style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer;" title="Remaining Fees">Rem.
-                      Fees <i class="fa-solid fa-info-circle"></i> <i class="fa-solid fa-sort"
-                        style="font-size:0.7rem;color:var(--clr-muted);"></i></th>
-                    <th>Action</th>
+                    <th id="currentFeesHeader" onclick="setStudentSort('current_fees')" style="cursor:pointer; padding:6px 8px;" title="26-27 Fees (Apr 2026 - Mar 2027)">
+                      26-27<br>Fees <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('total_fees')" style="cursor:pointer; padding:6px 8px;" title="Total Fees">Total<br>Fees <i
+                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('discount_amount')" style="cursor:pointer; padding:6px 8px;" title="Concession Amount">
+                      Conc. <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('fees_paid')" style="cursor:pointer; padding:6px 8px;" title="Paid Fees">Paid <i
+                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer; padding:6px 8px;" title="Remaining Fees">Rem.<br>Fees <i class="fa-solid fa-sort"
+                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th style="padding:6px 8px;">Action</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
                 <tfoot id="tableFooter"
-                  style="position: sticky; bottom: 0; background: var(--clr-surface, #1e293b); box-shadow: 0 -4px 10px rgba(0,0,0,0.1); display: none; z-index: 5;">
+                  style="position: sticky; bottom: 0; background: var(--clr-surface, #1e293b); box-shadow: 0 -4px 10px rgba(0,0,0,0.15); display: none; z-index: 5;">
                   <tr>
-                    <td colspan="5" style="text-align: right; font-weight: 700; color: var(--clr-accent, #f59e0b);">
-                      Filtered Totals:</td>
-                    <td style="font-weight: 700; color: #f8fafc;" id="footOldFees">₹0</td>
-                    <td style="font-weight: 700; color: #f8fafc;" id="footCurrentFees">₹0</td>
-                    <td style="font-weight: 700; color: #f8fafc;" id="footTotalFees">₹0</td>
-                    <td style="font-weight: 700; color: #f8fafc;" id="footDiscount">₹0</td>
-                    <td style="font-weight: 700; color: var(--success, #10b981);" id="footPaidFees">₹0</td>
-                    <td style="font-weight: 700; color: var(--error, #ef4444);" id="footRemainingFees">₹0</td>
+                    <td colspan="5" style="text-align: right; font-weight: 700; color: var(--clr-accent, #f59e0b); padding:6px 8px; font-size:0.78rem;">
+                      Totals:</td>
+                    <td style="font-weight: 700; color: #f8fafc; padding:6px 8px;" id="footOldFees">₹0</td>
+                    <td style="font-weight: 700; color: #f8fafc; padding:6px 8px;" id="footCurrentFees">₹0</td>
+                    <td style="font-weight: 700; color: #f8fafc; padding:6px 8px;" id="footTotalFees">₹0</td>
+                    <td style="font-weight: 700; color: #f8fafc; padding:6px 8px;" id="footDiscount">₹0</td>
+                    <td style="font-weight: 700; color: var(--success, #10b981); padding:6px 8px;" id="footPaidFees">₹0</td>
+                    <td style="font-weight: 700; color: var(--error, #ef4444); padding:6px 8px;" id="footRemainingFees">₹0</td>
                     <td></td>
                   </tr>
                 </tfoot>

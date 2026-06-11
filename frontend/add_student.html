@@ -78,7 +78,8 @@
               <div><label>Institution Type</label>
                 <select id="institution" onchange="updateDynamicDropdowns()">
                   <option value="">-- Select Institution --</option>
-                  <option value="Degree">College Degree</option>
+                  <option value="Engineering">Engineering</option>
+                  <option value="Degree">Degree</option>
                   <option value="Polytechnic">Polytechnic</option>
                   <option value="PUC">Junior College (PUC)</option>
                   <option value="School">School</option>
@@ -139,8 +140,12 @@
   <script src="js/script.js?v=6"></script>
   <script>
     const categoryData = {
+      "Engineering": {
+        depts: ["Engineering - CSE|Computer Science (CSE)", "Engineering - AIML|AI & ML (AIML)", "Engineering - CIVIL|Civil", "Engineering - MECH|Mechanical", "Engineering - ELECTRICAL|Electrical", "Engineering - ECE|Electronics (ECE)"],
+        years: ["1st Year", "2nd Year", "3rd Year", "4th Year"]
+      },
       "Degree": {
-        depts: ["Degree - CSE|Computer Science (CSE)", "Degree - AIML|AI & ML (AIML)", "Degree - CIVIL|Civil", "Degree - MECH|Mechanical", "Degree - ELECTRICAL|Electrical", "Degree - ECE|Electronics (ECE)", "Degree - MBA|MBA", "Degree - BFA|BFA"],
+        depts: ["Degree - BBA|BBA", "Degree - BCA|BCA", "Degree - BSC|BSc", "Degree - BCOM|BCom", "Degree - MBA|MBA", "Degree - BFA|BFA"],
         years: ["1st Year", "2nd Year", "3rd Year", "4th Year"]
       },
       "Polytechnic": {

@@ -1169,31 +1169,29 @@ async function loadStudents() {
         const tr = document.createElement('tr');
         if (isOverdue) tr.style.borderLeft = '3px solid var(--error)';
         tr.innerHTML = `
-          <td>${index + 1}</td>
-          <td>
-            <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 10px;">
-              <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.9rem;"></i>
-              <div>
-                ${escapeHtml(s.name)}
-              </div>
+          <td style="padding:6px 8px;">${index + 1}</td>
+          <td style="padding:6px 8px;">
+            <a href="#" onclick="viewStudentDetails(${s.id}); return false;" style="color: var(--primary, var(--clr-accent)); font-weight: 700; text-decoration: none; display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-user-graduate" style="color:var(--clr-muted,var(--gray));font-size:0.8rem;"></i>
+              <div>${escapeHtml(s.name)}</div>
             </a>
           </td>
-          <td><span style="padding: 4px 10px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 6px; font-size: 0.8rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
-          <td><i class="fa-solid fa-bus-simple" style="font-size: 0.85rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> <span style="color: var(--clr-text, inherit);">${escapeHtml(s.bus_number || 'None')} ${s.short_name ? '<span style="font-size:0.75rem;opacity:0.8;">(' + escapeHtml(s.short_name) + ')</span>' : ''}</span></td>
-          <td style="font-size: 0.85rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
-          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
-          ${fyColumns.map(col => `<td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s[col] || 0).toLocaleString()}</td>`).join('')}
-          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.current_fees || 0).toLocaleString()}</td>
-          <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
-          <td style="font-weight: 600; color: var(--clr-muted, var(--gray));">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</td>
-          <td style="font-weight: 600; color: var(--clr-text, #f8fafc);">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
-          <td style="color: ${isOverdue ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${isOverdue ? '700' : '600'};">
+          <td style="padding:6px 8px;"><span style="padding: 3px 8px; background: var(--clr-border, rgba(255,255,255,0.08)); border-radius: 5px; font-size: 0.75rem; color: var(--clr-text, #e2e8f0); border: 1px solid var(--clr-border-strong, rgba(255,255,255,0.05));">${escapeHtml(s.class_name || 'N/A')}</span></td>
+          <td style="padding:6px 8px; white-space:nowrap;"><i class="fa-solid fa-bus-simple" style="font-size: 0.75rem; color: var(--primary, var(--clr-accent)); opacity: 0.7;"></i> ${escapeHtml(s.short_name || s.bus_number || 'None')}</td>
+          <td style="padding:6px 8px; font-size: 0.78rem; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--clr-muted, var(--gray));">${escapeHtml(s.pick_up_point || 'N/A')}</td>
+          <td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s.old_bus_fees || 0).toLocaleString()}</td>
+          ${fyColumns.map(col => `<td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s[col] || 0).toLocaleString()}</td>`).join('')}
+          <td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s.current_fees || 0).toLocaleString()}</td>
+          <td style="padding:6px 8px; font-weight: 600; color: var(--clr-text, #f8fafc); white-space:nowrap;">₹${parseFloat(s.total_fees || 0).toLocaleString()}</td>
+          <td style="padding:6px 8px; font-weight: 600; color: var(--clr-muted, var(--gray)); white-space:nowrap;">₹${parseFloat(s.discount_amount || 0).toLocaleString()}</td>
+          <td style="padding:6px 8px; font-weight: 600; color: var(--clr-text, #f8fafc); white-space:nowrap;">₹${parseFloat(s.fees_paid || 0).toLocaleString()}</td>
+          <td style="padding:6px 8px; color: ${isOverdue ? 'var(--clr-red, var(--error))' : 'var(--clr-green, var(--success))'}; font-weight: ${isOverdue ? '700' : '600'}; white-space:nowrap;">
             ₹${parseFloat(s.remaining_fees || 0).toLocaleString()}
-            ${isOverdue ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.8rem; margin-left: 4px;"></i>' : ''}
+            ${isOverdue ? ' <i class="fa-solid fa-triangle-exclamation" style="font-size: 0.7rem; margin-left: 3px;"></i>' : ''}
           </td>
-          <td style="white-space: nowrap;">
-            <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:6px;padding:7px 16px;border-radius:6px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.78rem;cursor:pointer;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
-            <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:6px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;margin-left:5px;" title="Delete"><i class="fa-solid fa-trash"></i></button>
+          <td style="padding:6px 8px; white-space: nowrap;">
+            <button onclick="payFees(${s.id})" class="btn-pay" style="display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border-radius:5px;border:none;background:linear-gradient(135deg,var(--clr-green, var(--success)),#059669);color:#fff;font-weight:700;font-size:0.72rem;cursor:pointer;min-height:28px;"><i class="fa-solid fa-indian-rupee-sign"></i> Pay</button>
+            <button onclick="deleteStudent(${s.id})" style="display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:5px;border:1px solid rgba(239,68,68,0.3);background:rgba(239,68,68,0.1);color:#ef4444;cursor:pointer;margin-left:4px;min-height:28px;" title="Delete"><i class="fa-solid fa-trash" style="font-size:0.7rem;"></i></button>
           </td>
         `;
         tbody.appendChild(tr);
@@ -1211,11 +1209,11 @@ async function loadStudents() {
             <div class="sc-dept">${escapeHtml(s.class_name || 'N/A')}</div>
             <div class="sc-row">
               <div>
-                <div class="sc-label">Bus No</div>
-                <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.bus_number || 'None')}</div>
+                <div class="sc-label">Bus</div>
+                <div class="sc-val"><i class="fa-solid fa-bus-simple" style="font-size:0.8rem;opacity:0.7;margin-right:4px;"></i>${escapeHtml(s.short_name || s.bus_number || 'None')}</div>
               </div>
               <div>
-                <div class="sc-label">Pick-up</div>
+                <div class="sc-label">Route</div>
                 <div class="sc-val" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(s.pick_up_point || 'N/A')}</div>
               </div>
             </div>

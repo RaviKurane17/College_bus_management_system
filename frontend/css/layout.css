@@ -118,7 +118,7 @@ img, table {
   backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--clr-border);
   padding: 0 14px;
-  height: 60px;
+  height: 48px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -241,7 +241,7 @@ form {
 }
 
 .page-content {
-  padding: 16px;
+  padding: 12px;
   flex: 1;
 }
 
@@ -251,8 +251,8 @@ form {
   background: var(--clr-surface);
   border: 1px solid var(--clr-border);
   border-radius: var(--radius-lg);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: 14px;
+  margin-bottom: 12px;
 }
 
 /* Tables & Cards Toggle (Mobile First) */
@@ -310,8 +310,8 @@ form {
   .stats-row { grid-template-columns: repeat(4, 1fr); }
   .desktop-table { display: table !important; width: 100%; }
   .student-cards, .driver-cards, .bus-cards, .buses-cards { display: none !important; }
-  .topbar { padding: 0 28px; }
-  .page-content { padding: 24px 28px 40px; }
+  .topbar { padding: 0 24px; height: 50px; }
+  .page-content { padding: 16px 24px 24px; }
 }
 
 /* ---------- SIDEBAR ---------- */

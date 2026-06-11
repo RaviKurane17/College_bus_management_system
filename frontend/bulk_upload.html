@@ -268,8 +268,10 @@
               </div>
             </div>
 
-            <div style="margin-top:20px;">
-              <button onclick="downloadBulkTemplate()" class="btn btn-download"><i class="fa-solid fa-download"></i> Download Template</button>
+            <div style="margin-top:20px; display:flex; gap:10px; flex-wrap:wrap;">
+              <button onclick="downloadBulkTemplate()" class="btn btn-download"><i class="fa-solid fa-download"></i> Student Template</button>
+              <button onclick="downloadDriverTemplate()" class="btn btn-download" style="border-color:rgba(52,211,153,0.3); color:#34d399;"><i class="fa-solid fa-download"></i> Driver Template</button>
+              <button onclick="downloadBusTemplate()" class="btn btn-download" style="border-color:rgba(248,113,113,0.3); color:#f87171;"><i class="fa-solid fa-download"></i> Bus Template</button>
             </div>
           </div>
           
@@ -435,6 +437,60 @@
         document.body.removeChild(a);
       } catch (err) {
         alert('Failed to download template: ' + err.message);
+      }
+    }
+
+    async function downloadDriverTemplate() {
+      const token = localStorage.getItem('authToken');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      try {
+        const res = await fetch('/api/students/bulk-upload/template/drivers', { headers });
+        if (res.status === 401 || res.status === 403) {
+          alert('Session expired. Please login again.');
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'driver_upload_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (err) {
+        alert('Failed to download driver template: ' + err.message);
+      }
+    }
+
+    async function downloadBusTemplate() {
+      const token = localStorage.getItem('authToken');
+      const headers = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      
+      try {
+        const res = await fetch('/api/students/bulk-upload/template/buses', { headers });
+        if (res.status === 401 || res.status === 403) {
+          alert('Session expired. Please login again.');
+          window.location.href = '/login.html';
+          return;
+        }
+        
+        const blob = await res.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'bus_upload_template.csv';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (err) {
+        alert('Failed to download bus template: ' + err.message);
       }
     }
 
