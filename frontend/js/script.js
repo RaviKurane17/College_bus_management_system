@@ -851,11 +851,11 @@ async function exportDriversCSV() {
       csvRows.push(row.join(','));
     });
 
-    const csvContent = "data:text/csv;charset=utf-8," + csvRows.join("\\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", "drivers_list.csv");
+    link.href = URL.createObjectURL(blob);
+    link.download = "drivers_list.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

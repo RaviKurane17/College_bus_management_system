@@ -114,6 +114,104 @@ router.get('/template/buses', authenticateAdmin, (req, res) => {
   }
 });
 
+// ─── Intelligent Student Row Extractor ─────────────────────────
+function extractStudentRows(sheet) {
+  const rawRows = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: '' });
+  if (!rawRows.length) return [];
+
+  // Find header row by keywords
+  let headerRowIdx = -1;
+  for (let r = 0; r < Math.min(rawRows.length, 15); r++) {
+    const row = rawRows[r].map(c => String(c).trim().toLowerCase());
+    const hasName = row.some(c => c.includes('name'));
+    const hasBusOrClass = row.some(c => c.includes('bus') || c.includes('class') || c.includes('fee'));
+    if (hasName && hasBusOrClass) {
+      headerRowIdx = r;
+      break;
+    }
+  }
+  if (headerRowIdx === -1) headerRowIdx = 0;
+  const headerRow = rawRows[headerRowIdx].map(c => String(c).trim());
+
+  function getField(raw, aliases) {
+    for (const a of aliases) {
+      const idx = headerRow.findIndex(h => {
+        const cleanH = h.toLowerCase().trim();
+        const cleanA = a.toLowerCase().trim();
+        return cleanH === cleanA || cleanH.replace(/[^a-z0-9]/g, '') === cleanA.replace(/[^a-z0-9]/g, '');
+      });
+      if (idx !== -1 && raw[idx] !== undefined && raw[idx] !== null && String(raw[idx]).trim() !== '') {
+        return raw[idx];
+      }
+    }
+    return '';
+  }
+
+  const students = [];
+  for (let r = headerRowIdx + 1; r < rawRows.length; r++) {
+    const raw = rawRows[r];
+    if (!raw || !raw.length) continue;
+
+    const name = String(getField(raw, ['Name of Students', 'Name of Student', 'Student Name', 'Name'])).trim();
+    if (!name) continue;
+
+    const lower = name.toLowerCase();
+    if (lower === 'name of students' || lower === 'student name' || lower === 'sr. no.' ||
+        lower.includes('fee receivable') || lower.includes('holy-wood') ||
+        lower === 'total' || lower === 'grand total') {
+      continue;
+    }
+
+    const class_name = String(getField(raw, ['Class', 'Class Name', 'Standard'])).trim();
+    const phone = String(getField(raw, ['Phone', 'Phone Number', 'Mobile', 'Mobile No', 'Contact'])).trim();
+    const email = String(getField(raw, ['Email', 'Email ID'])).trim();
+    const bus_number = String(getField(raw, ['Bus No.', 'Bus No', 'Bus Number', 'Bus'])).trim();
+    const pick_up_point = String(getField(raw, ['Pick-Up Point', 'Pick-up Point', 'Pickup Point', 'Pick-Up', 'Pickup', 'Pick up point', 'Stop'])).trim();
+    const old_bus_fees = parseFloat(getField(raw, ['Old Bus Fees', 'Old Fees', 'Old Bus Fee', 'Previous Fees'])) || 0;
+    const current_fees = parseFloat(getField(raw, ['Currents Bus Fees', 'Current Bus Fees', 'Current Fees', '26-27 Fees', '26-27 Fees (Apr-Mar)'])) || 0;
+    const discount_amount = parseFloat(getField(raw, ['Discount Amount', 'Discount', 'Concession', 'Concession Amount'])) || 0;
+    const fees_paid = parseFloat(getField(raw, ['Paid ', 'Paid', 'Fees Paid', 'Paid Amount'])) || 0;
+    const password = String(getField(raw, ['Password'])).trim() || '123456';
+
+    students.push({
+      rowNum: r + 1,
+      name, class_name, phone, email, bus_number, pick_up_point,
+      old_bus_fees, current_fees, discount_amount, fees_paid, password
+    });
+  }
+  return students;
+}
+
+function findBusId(busNumber, busMap) {
+  if (!busNumber) return null;
+  const raw = busNumber.toString().trim().toLowerCase();
+  if (busMap[raw]) return busMap[raw];
+  const alpha = raw.replace(/[^a-z0-9]/g, '');
+  if (busMap[alpha]) return busMap[alpha];
+  for (const b in busMap) {
+    if (b.endsWith(alpha) || alpha.endsWith(b)) return busMap[b];
+  }
+  return null;
+}
+
+function generateUsername(name, phone, index, existingSet) {
+  let base = '';
+  if (phone && phone.trim().length >= 6) {
+    base = phone.trim().replace(/[^0-9]/g, '');
+  } else {
+    base = name.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 12);
+    if (!base) base = 'student';
+  }
+  let candidate = base;
+  let counter = 1;
+  while (existingSet.has(candidate.toLowerCase())) {
+    candidate = `${base}.${index + counter}`;
+    counter++;
+  }
+  existingSet.add(candidate.toLowerCase());
+  return candidate;
+}
+
 // ============================
 // POST /preview
 // ============================
@@ -122,61 +220,57 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
     const { fileData } = req.body;
     if (!fileData) return res.status(400).json({ success: false, message: 'No file' });
 
-    const data = XLSX.utils.sheet_to_json(
-      XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).Sheets[
-        XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).SheetNames[0]
-      ], { defval: '' }
-    );
-    if (!data.length) return res.status(400).json({ success: false, message: 'File is empty' });
+    const wb = XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rawStudents = extractStudentRows(sheet);
 
-    const promisePool        = db.promise;
+    if (!rawStudents.length) return res.status(400).json({ success: false, message: 'No student data rows found in file' });
+
+    const promisePool = db.promise;
     const [existingStudents] = await promisePool.query('SELECT username FROM students');
     const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
 
-    const existingUsernames  = new Set(existingStudents.map(s => s.username.toLowerCase()));
-    const busMap             = {};
-    existingBuses.forEach(b => { busMap[b.bus_number.toString().toLowerCase()] = b.id; });
+    const usernameSet = new Set(existingStudents.map(s => s.username.toLowerCase()));
+    const busMap = {};
+    existingBuses.forEach(b => {
+      const bn = b.bus_number.toString().toLowerCase().trim();
+      busMap[bn] = b.id;
+      busMap[bn.replace(/[^a-z0-9]/g, '')] = b.id;
+    });
 
-    const fileUsernames = new Set();
-
-    const rows = data.map((row, i) => {
-      const name           = (row['Name']           || '').toString().trim();
-      const class_name     = (row['Class']           || '').toString().trim();
-      const phone          = (row['Phone']           || '').toString().trim();
-      const email          = (row['Email']           || '').toString().trim();
-      const bus_number     = (row['Bus Number']      || '').toString().trim();
-      const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
-      const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
-      const current_fees   = parseFloat(row['Current Fees'] || row['26-27 Fees'] || row['26-27 Fees (Apr-Mar)'])    || 0;
-      const discount_amount= parseFloat(row['Discount Amount']) || 0;
-      const fees_paid      = parseFloat(row['Fees Paid'])       || 0;
-      const password       = (row['Password'] || '123456').toString().trim() || '123456';
-
-      const username = phone
-        ? phone.substring(0, 30) + '.' + (i + 1)
-        : name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '').substring(0, 20) + '.' + (i+1);
-
-      const bus_id = busMap[bus_number.toLowerCase()] || null;
-      const t      = computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid);
+    const rows = rawStudents.map((s, i) => {
+      const bus_id = findBusId(s.bus_number, busMap);
+      const t = computeTotals(s.old_bus_fees, s.current_fees, s.discount_amount, s.fees_paid);
+      const username = generateUsername(s.name, s.phone, i + 1, usernameSet);
 
       const errors = [];
-      if (!name)                           errors.push('Name required');
-      if (!bus_number)                     errors.push('Bus Number required');
-      if (bus_number && !bus_id)           errors.push(`Bus "${bus_number}" not found`);
-      if (existingUsernames.has(username.toLowerCase())) errors.push('Username already exists');
-      if (fileUsernames.has(username.toLowerCase()))     errors.push('Duplicate in file');
-      fileUsernames.add(username.toLowerCase());
+      if (!s.name) errors.push('Name required');
+      if (s.bus_number && !bus_id) errors.push(`Bus "${s.bus_number}" not found`);
 
       return {
-        row: i + 2, name, class_name, phone, email, bus_number, bus_id, pick_up_point,
-        old_bus_fees, current_fees, discount_amount, fees_paid,
-        ...t, username, password,
-        valid: errors.length === 0, errors
+        row: s.rowNum,
+        name: s.name,
+        class_name: s.class_name,
+        phone: s.phone,
+        email: s.email,
+        bus_number: s.bus_number,
+        bus_id,
+        pick_up_point: s.pick_up_point,
+        old_bus_fees: s.old_bus_fees,
+        current_fees: s.current_fees,
+        discount_amount: s.discount_amount,
+        fees_paid: s.fees_paid,
+        ...t,
+        username,
+        password: s.password,
+        valid: errors.length === 0,
+        errors
       };
     });
 
     res.json({
-      success: true, totalRows: rows.length,
+      success: true,
+      totalRows: rows.length,
       validCount: rows.filter(r => r.valid).length,
       invalidCount: rows.filter(r => !r.valid).length,
       rows
@@ -194,82 +288,80 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
     const { fileData } = req.body;
     if (!fileData) return res.status(400).json({ success: false, message: 'No file' });
 
-    const data = XLSX.utils.sheet_to_json(
-      XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).Sheets[
-        XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' }).SheetNames[0]
-      ], { defval: '' }
-    );
-    if (!data.length) return res.status(400).json({ success: false, message: 'File is empty' });
+    const wb = XLSX.read(Buffer.from(fileData, 'base64'), { type: 'buffer' });
+    const sheet = wb.Sheets[wb.SheetNames[0]];
+    const rawStudents = extractStudentRows(sheet);
 
-    const promisePool        = db.promise;
+    if (!rawStudents.length) return res.status(400).json({ success: false, message: 'No student records found in file' });
+
+    const promisePool = db.promise;
     const [existingStudents] = await promisePool.query('SELECT username FROM students');
     const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
 
-    const existingUsernames  = new Set(existingStudents.map(s => s.username.toLowerCase()));
-    const busMap             = {};
-    existingBuses.forEach(b => { busMap[b.bus_number.toString().toLowerCase()] = b.id; });
+    const usernameSet = new Set(existingStudents.map(s => s.username.toLowerCase()));
+    const busMap = {};
+    existingBuses.forEach(b => {
+      const bn = b.bus_number.toString().toLowerCase().trim();
+      busMap[bn] = b.id;
+      busMap[bn.replace(/[^a-z0-9]/g, '')] = b.id;
+    });
 
-    const fileUsernames = new Set();
     const results = [];
     let successCount = 0, failCount = 0;
 
-    for (let i = 0; i < data.length; i++) {
-      const row = data[i];
-      const name           = (row['Name']           || '').toString().trim();
-      const class_name     = (row['Class']           || '').toString().trim();
-      const phone          = (row['Phone']           || '').toString().trim();
-      const email          = (row['Email']           || '').toString().trim();
-      const bus_number     = (row['Bus Number']      || '').toString().trim();
-      const pick_up_point  = (row['Pick-Up Point']   || '').toString().trim();
-      const old_bus_fees   = parseFloat(row['Old Bus Fees'])    || 0;
-      const current_fees   = parseFloat(row['Current Fees'] || row['26-27 Fees'] || row['26-27 Fees (Apr-Mar)'])    || 0;
-      const discount_amount= parseFloat(row['Discount Amount']) || 0;
-      const fees_paid      = parseFloat(row['Fees Paid'])       || 0;
-      const password       = (row['Password'] || '123456').toString().trim() || '123456';
+    for (let i = 0; i < rawStudents.length; i++) {
+      const s = rawStudents[i];
+      const bus_id = findBusId(s.bus_number, busMap);
+      const t = computeTotals(s.old_bus_fees, s.current_fees, s.discount_amount, s.fees_paid);
+      const username = generateUsername(s.name, s.phone, i + 1, usernameSet);
 
-      const username = phone
-        ? phone.substring(0, 30) + '.' + (i + 1)
-        : name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z.]/g, '').substring(0, 20) + '.' + (i+1);
-
-      const bus_id = busMap[bus_number.toLowerCase()] || null;
-      const t      = computeTotals(old_bus_fees, current_fees, discount_amount, fees_paid);
       const errors = [];
+      if (!s.name) errors.push('Name required');
+      if (s.bus_number && !bus_id) errors.push(`Bus "${s.bus_number}" not found`);
 
-      if (!name)             errors.push('Name required');
-      if (bus_number && !bus_id) errors.push(`Bus "${bus_number}" not found`);
-      if (existingUsernames.has(username.toLowerCase())) errors.push('Username exists');
-      if (fileUsernames.has(username.toLowerCase()))     errors.push('Duplicate in file');
-      fileUsernames.add(username.toLowerCase());
+      if (errors.length) {
+        failCount++;
+        results.push({ row: s.rowNum, name: s.name, success: false, errors });
+        continue;
+      }
 
-      if (errors.length) { failCount++; results.push({ row: i+2, name, success: false, errors }); continue; }
+      // Check student_status
+      let student_status = 'active';
+      const classLower = s.class_name.toLowerCase();
+      if (classLower.includes('passout')) student_status = 'passout';
+      else if (classLower.includes('cancel') || classLower.includes('left')) student_status = 'school_left';
 
       try {
-        const hashed = await bcrypt.hash(password, 12);
+        const hashed = await bcrypt.hash(s.password || '123456', 12);
         await promisePool.query(`INSERT INTO students
           (username, password, name, class_name, phone, email, bus_id, pick_up_point,
            old_bus_fees, current_fees, discount_amount, total_fees, fees_paid, remaining_fees,
            student_status, joining_date)
-          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,'active',CURDATE())`,
+          VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,CURDATE())`,
           [
             username.substring(0, 100), hashed,
-            name.substring(0, 150), class_name.substring(0, 100), phone.substring(0, 20), email.substring(0, 100),
-            bus_id, pick_up_point.substring(0, 150),
-            old_bus_fees.toFixed(2), current_fees.toFixed(2), discount_amount.toFixed(2),
-            t.total_fees, fees_paid.toFixed(2), t.remaining_fees
+            s.name.substring(0, 150), s.class_name.substring(0, 100), s.phone.substring(0, 20), (s.email || '').substring(0, 100),
+            bus_id, (s.pick_up_point || '').substring(0, 150),
+            s.old_bus_fees.toFixed(2), s.current_fees.toFixed(2), s.discount_amount.toFixed(2),
+            t.total_fees, s.fees_paid.toFixed(2), t.remaining_fees,
+            student_status
           ]);
-        existingUsernames.add(username.toLowerCase());
+        usernameSet.add(username.toLowerCase());
         successCount++;
-        results.push({ row: i+2, name, success: true, errors: [] });
+        results.push({ row: s.rowNum, name: s.name, success: true, errors: [] });
       } catch (e) {
         failCount++;
-        results.push({ row: i+2, name, success: false, errors: [e.code === 'ER_DUP_ENTRY' ? 'Duplicate' : e.message] });
+        results.push({ row: s.rowNum, name: s.name, success: false, errors: [e.code === 'ER_DUP_ENTRY' ? 'Duplicate username' : e.message] });
       }
     }
 
     res.json({
       success: true,
-      message: `Upload done: ${successCount} added, ${failCount} failed`,
-      successCount, failCount, totalRows: data.length, results
+      message: `Upload complete: ${successCount} added, ${failCount} skipped/failed`,
+      successCount,
+      failCount,
+      totalRows: rawStudents.length,
+      results
     });
   } catch (e) {
     res.status(500).json({ success: false, message: 'Upload error: ' + e.message });
