@@ -1102,7 +1102,12 @@ async function loadStudents() {
         const pickup = s.pick_up_point || '';
         const stat = s.student_status || 'active';
 
-        const matchesSearch = name.toLowerCase().includes(searchTerm) || cls.toLowerCase().includes(searchTerm);
+        const matchesSearch = !searchTerm || 
+          name.toLowerCase().includes(searchTerm) || 
+          cls.toLowerCase().includes(searchTerm) ||
+          bus.toLowerCase().includes(searchTerm) ||
+          pickup.toLowerCase().includes(searchTerm) ||
+          (s.phone && String(s.phone).includes(searchTerm));
         const matchesClass = classValue === '' || cls === classValue;
         const matchesBus = busValue === '' || bus === busValue;
         const matchesPickup = pickupValue === '' || pickup === pickupValue;

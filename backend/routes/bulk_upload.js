@@ -228,7 +228,7 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
 
     const promisePool = db.promise;
     const [existingStudents] = await promisePool.query('SELECT username FROM students');
-    const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
+    const [existingBuses]    = await promisePool.query('SELECT id, bus_number, short_name FROM buses');
 
     const usernameSet = new Set(existingStudents.map(s => s.username.toLowerCase()));
     const busMap = {};
@@ -236,6 +236,16 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
       const bn = b.bus_number.toString().toLowerCase().trim();
       busMap[bn] = b.id;
       busMap[bn.replace(/[^a-z0-9]/g, '')] = b.id;
+      if (b.short_name) {
+        const sn = b.short_name.toString().toLowerCase().trim();
+        busMap[sn] = b.id;
+        busMap[sn.replace(/[^a-z0-9]/g, '')] = b.id;
+        const num = parseInt(sn.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num)) {
+          busMap[String(num)] = b.id;
+          busMap[String(num).padStart(4, '0')] = b.id;
+        }
+      }
     });
 
     const rows = rawStudents.map((s, i) => {
@@ -296,7 +306,7 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
 
     const promisePool = db.promise;
     const [existingStudents] = await promisePool.query('SELECT username FROM students');
-    const [existingBuses]    = await promisePool.query('SELECT id, bus_number FROM buses');
+    const [existingBuses]    = await promisePool.query('SELECT id, bus_number, short_name FROM buses');
 
     const usernameSet = new Set(existingStudents.map(s => s.username.toLowerCase()));
     const busMap = {};
@@ -304,6 +314,16 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       const bn = b.bus_number.toString().toLowerCase().trim();
       busMap[bn] = b.id;
       busMap[bn.replace(/[^a-z0-9]/g, '')] = b.id;
+      if (b.short_name) {
+        const sn = b.short_name.toString().toLowerCase().trim();
+        busMap[sn] = b.id;
+        busMap[sn.replace(/[^a-z0-9]/g, '')] = b.id;
+        const num = parseInt(sn.replace(/[^0-9]/g, ''), 10);
+        if (!isNaN(num)) {
+          busMap[String(num)] = b.id;
+          busMap[String(num).padStart(4, '0')] = b.id;
+        }
+      }
     });
 
     const results = [];

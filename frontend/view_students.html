@@ -9,8 +9,82 @@
   <link rel="stylesheet" href="css/style.css?v=8">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
   <style>
-.page-content {
-      padding: 24px 28px 40px 28px;
+    @media (min-width: 769px) {
+      html, body {
+        height: 100vh;
+        overflow: hidden;
+      }
+      .app-shell {
+        height: 100vh;
+        overflow: hidden;
+      }
+      .main-wrap {
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+      }
+      .page-content {
+        height: calc(100vh - 50px);
+        padding: 10px 18px 12px 18px !important;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        flex: 1;
+        min-height: 0;
+      }
+      .panel {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        margin-bottom: 0 !important;
+      }
+      .panel-body {
+        flex: 1;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        position: relative;
+      }
+      .desktop-table {
+        display: block !important;
+        flex: 1;
+        min-height: 0;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto !important;
+        overflow-x: auto !important;
+        position: relative;
+      }
+      #studentsTable {
+        width: 100%;
+        border-collapse: separate !important;
+        border-spacing: 0 !important;
+      }
+      #studentsTable thead th {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 25 !important;
+        background: #141f36 !important;
+        color: #f8fafc !important;
+        border-bottom: 2px solid var(--clr-accent, #f59e0b) !important;
+        border-right: 1px solid var(--clr-border-strong) !important;
+        box-shadow: 0 3px 6px rgba(0,0,0,0.4) !important;
+      }
+      #studentsTable tfoot td {
+        position: sticky !important;
+        bottom: 0 !important;
+        z-index: 20 !important;
+        background: #141f36 !important;
+        box-shadow: 0 -3px 6px rgba(0,0,0,0.4) !important;
+      }
+    }
+
+    .page-content {
+      padding: 14px 20px;
       flex: 1;
     }
 
@@ -342,105 +416,109 @@
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="closeMobileSidebar()"></div>
     <div class="main-wrap">
       <header class="topbar">
-        <div class="topbar-left"><button class="btn-sidebar-toggle" id="btnSidebarToggle"><i
-              class="fa-solid fa-bars"></i></button><span class="page-title">All Students</span></div>
-        <div class="topbar-right"><button class="btn-icon" id="btnThemeToggle"><i class="fa-solid fa-moon"></i></button>
+        <div class="topbar-left">
+          <button class="btn-sidebar-toggle" id="btnSidebarToggle" title="Toggle Sidebar"><i class="fa-solid fa-bars"></i></button>
+          <span class="page-title">All Students</span>
+        </div>
+        <div class="topbar-right">
+          <button class="btn-icon" id="btnThemeToggle" title="Toggle Theme"><i class="fa-solid fa-moon"></i></button>
         </div>
       </header>
+
       <div class="page-content">
         <div class="panel">
-          <div class="sticky-table-controls">
-            <div class="panel-header">
-              <h3><i class="fa-solid fa-user-graduate"></i> Student Directory</h3>
-              <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div class="sticky-table-controls" style="flex-shrink: 0; background: var(--clr-surface); z-index: 30; border-bottom: 1px solid var(--clr-border);">
+            <div class="panel-header" style="padding: 12px 20px; border-bottom: 1px solid var(--clr-border);">
+              <h3 style="font-size: 1.1rem; margin: 0;"><i class="fa-solid fa-user-graduate"></i> Student Directory</h3>
+              <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                <!-- Add Student -->
                 <button onclick="window.location.href='add_student.html'"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                    class="fa-solid fa-plus-circle"></i> Add Student</button>
+                  style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:none; background:linear-gradient(135deg,var(--clr-accent),#fbbf24); color:#000; font-weight:700; font-size:0.82rem; cursor:pointer; font-family:inherit;">
+                  <i class="fa-solid fa-plus-circle"></i> Add Student
+                </button>
+                <!-- Bulk Upload -->
                 <button onclick="window.location.href='bulk_upload.html'"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                    class="fa-solid fa-file-excel"></i> Bulk Upload</button>
+                  style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; font-size:0.82rem; cursor:pointer; font-family:inherit;">
+                  <i class="fa-solid fa-file-excel"></i> Bulk Upload
+                </button>
                 
-                <!-- Standard Downloads -->
-                <button onclick="downloadStudentPDF()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#ef4444,#b91c1c); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Standard PDF Export"><i
-                    class="fa-solid fa-file-pdf"></i> PDF</button>
-                <button onclick="downloadStudentExcel()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#10b981,#059669); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Standard Excel Export"><i
-                    class="fa-solid fa-file-excel"></i> Excel</button>
-                    
-                <!-- Full A-Z Downloads -->
-                <button onclick="downloadFullStudentPDF()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#7f1d1d,#450a0a); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Full A-Z Report PDF"><i
-                    class="fa-solid fa-file-pdf"></i> Full PDF</button>
-                <button onclick="downloadFullStudentExcel()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#064e3b,#022c22); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Full A-Z Report Excel"><i
-                    class="fa-solid fa-file-excel"></i> Full Excel</button>
+                <!-- Unified Export Dropdown -->
+                <div style="position:relative; display:inline-block;">
+                  <button onclick="toggleExportDropdown(event)" id="btnExportDropdown"
+                    style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:1px solid rgba(59,130,246,0.3); background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:600; font-size:0.82rem; cursor:pointer; font-family:inherit;" title="Export Student Records">
+                    <i class="fa-solid fa-file-export"></i> Export <i class="fa-solid fa-chevron-down" style="font-size:0.68rem; margin-left:2px;"></i>
+                  </button>
+                  <div id="exportDropdownMenu" style="display:none; position:absolute; right:0; top:calc(100% + 5px); background:#1e293b; border:1px solid rgba(255,255,255,0.15); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:100; min-width:220px; padding:6px 0;">
+                    <div style="padding:6px 12px 4px 12px; font-size:0.68rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Current Filtered Students</div>
+                    <a href="javascript:void(0)" onclick="downloadStudentExcel(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-file-excel" style="color:#10b981; width:16px;"></i> Standard Excel (CSV)</a>
+                    <a href="javascript:void(0)" onclick="downloadStudentPDF(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-file-pdf" style="color:#ef4444; width:16px;"></i> Standard PDF</a>
+                    <div style="padding:6px 12px 4px 12px; font-size:0.68rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; border-top:1px solid rgba(255,255,255,0.08); margin-top:4px;">Full Directory (All Columns)</div>
+                    <a href="javascript:void(0)" onclick="downloadFullStudentExcel(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-table" style="color:#34d399; width:16px;"></i> Full A-Z Excel</a>
+                    <a href="javascript:void(0)" onclick="downloadFullStudentPDF(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-file-lines" style="color:#f87171; width:16px;"></i> Full A-Z PDF</a>
+                  </div>
+                </div>
 
+                <!-- Bulk Reset -->
                 <button onclick="bulkResetPasswords()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;"><i
-                    class="fa-solid fa-key"></i> Bulk Reset</button>
+                  style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:none; background:linear-gradient(135deg,#8b5cf6,#6d28d9); color:#fff; font-weight:600; font-size:0.82rem; cursor:pointer; font-family:inherit;" title="Reset all student passwords to 123456">
+                  <i class="fa-solid fa-key"></i> Bulk Reset
+                </button>
 
+                <!-- Remove Duplicates -->
                 <button onclick="removeDuplicateStudents()"
-                  style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:6px; border:none; background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff; font-weight:600; cursor:pointer; font-family:inherit;" title="Find and remove duplicate students"><i
-                    class="fa-solid fa-clone"></i> Remove Duplicates</button>
+                  style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:none; background:linear-gradient(135deg,#dc2626,#991b1b); color:#fff; font-weight:600; font-size:0.82rem; cursor:pointer; font-family:inherit;" title="Scan and delete duplicate records">
+                  <i class="fa-solid fa-clone"></i> Remove Duplicates
+                </button>
               </div>
             </div>
-            <div class="filter-bar" style="margin-bottom: 0;">
-              <div class="search-box"><i class="fa-solid fa-search"></i><input type="text" id="searchStudent"
-                  placeholder="Search name..." oninput="loadStudents()"></div>
-              <select class="filter-select" id="filterClass" onchange="loadStudents()">
+
+            <!-- Sticky Filter Bar -->
+            <div class="filter-bar" style="padding: 10px 20px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; background: var(--clr-surface-2); border-bottom: none;">
+              <div class="search-box" style="flex: 1.8; min-width: 200px;">
+                <i class="fa-solid fa-search"></i>
+                <input type="text" id="searchStudent" placeholder="Search by name, class, bus no, route, phone..." oninput="loadStudents()">
+              </div>
+              <select class="filter-select" id="filterClass" onchange="loadStudents()" style="flex: 1; min-width: 120px;">
                 <option value="">All Classes</option>
               </select>
-              <select class="filter-select" id="filterBus" onchange="loadStudents()">
+              <select class="filter-select" id="filterBus" onchange="loadStudents()" style="flex: 1; min-width: 110px;">
                 <option value="">All Buses</option>
               </select>
-              <select class="filter-select" id="filterPickup" onchange="loadStudents()">
+              <select class="filter-select" id="filterPickup" onchange="loadStudents()" style="flex: 1; min-width: 120px;">
                 <option value="">All Routes</option>
               </select>
-              <select class="filter-select" id="filterStatus" onchange="loadStudents()">
+              <select class="filter-select" id="filterStatus" onchange="loadStudents()" style="flex: 1; min-width: 120px;">
                 <option value="">All Students</option>
                 <option value="active" selected>Active Only</option>
-                <option value="passout">Passout / Pending Fees</option>
+                <option value="passout">Passout / Pending</option>
               </select>
             </div>
           </div>
-          <div class="panel-body">
+
+          <div class="panel-body" style="flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; padding: 0;">
             <!-- Desktop: scrollable table -->
-            <div class="desktop-table" id="studentTableScroll" style="overflow-x:auto; overflow-y:auto; max-height:calc(100vh - 260px); position:relative;">
-              <table id="studentsTable" style="font-size:0.78rem;">
-                <thead style="position:sticky; top:0; z-index:6; background:var(--clr-surface, #1e293b);">
+            <div class="desktop-table" id="studentTableScroll" style="display:block; flex:1; min-height:0; width:100%; height:100%; overflow-y:auto; overflow-x:auto; position:relative; background:var(--clr-surface-2); border-top:1px solid var(--clr-border);">
+              <table id="studentsTable" style="width:100%; border-collapse:separate; border-spacing:0; font-size:0.78rem;">
+                <thead style="position:sticky; top:0; z-index:25;">
                   <tr id="studentTableHeaderRow">
-                    <th onclick="setStudentSort('id')" style="cursor:pointer; padding:6px 8px; white-space:nowrap;"># <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('name')" style="cursor:pointer; padding:6px 8px;">Name <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('class_name')" style="cursor:pointer; padding:6px 8px;">Class <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('bus_number')" style="cursor:pointer; padding:6px 8px;">Bus <i
-                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('pick_up_point')" style="cursor:pointer; padding:6px 8px;">Route <i
-                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('old_bus_fees')" style="cursor:pointer; padding:6px 8px;"
-                      title="Old Fees (Legacy)">Old<br>Fees <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <!-- Dynamic FY Columns will be injected here via JS -->
-                    <th id="currentFeesHeader" onclick="setStudentSort('current_fees')" style="cursor:pointer; padding:6px 8px;" title="26-27 Fees (Apr 2026 - Mar 2027)">
-                      26-27<br>Fees <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('total_fees')" style="cursor:pointer; padding:6px 8px;" title="Total Fees">Total<br>Fees <i
-                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('discount_amount')" style="cursor:pointer; padding:6px 8px;" title="Concession Amount">
-                      Conc. <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('fees_paid')" style="cursor:pointer; padding:6px 8px;" title="Paid Fees">Paid <i
-                        class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th onclick="setStudentSort('remaining_fees')" style="cursor:pointer; padding:6px 8px;" title="Remaining Fees">Rem.<br>Fees <i class="fa-solid fa-sort"
-                        style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
-                    <th style="padding:6px 8px;">Action</th>
+                    <th onclick="setStudentSort('id')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; white-space:nowrap; box-shadow:0 3px 6px rgba(0,0,0,0.4);"># <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('name')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);">Name <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('class_name')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);">Class <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('bus_number')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);">Bus <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('pick_up_point')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);">Route <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('old_bus_fees')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="Old Fees (Legacy)">Old<br>Fees <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <!-- Dynamic FY Columns injected here -->
+                    <th id="currentFeesHeader" onclick="setStudentSort('current_fees')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="26-27 Fees (Apr 2026 - Mar 2027)">26-27<br>Fees <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('total_fees')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="Total Fees">Total<br>Fees <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('discount_amount')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="Concession Amount">Conc. <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('fees_paid')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="Paid Fees">Paid <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th onclick="setStudentSort('remaining_fees')" style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; cursor:pointer; box-shadow:0 3px 6px rgba(0,0,0,0.4);" title="Remaining Fees">Rem.<br>Fees <i class="fa-solid fa-sort" style="font-size:0.65rem;color:var(--clr-muted);"></i></th>
+                    <th style="position:sticky; top:0; z-index:25; background:#141f36; color:#f8fafc; border-bottom:2px solid var(--clr-accent,#f59e0b); padding:10px 8px; box-shadow:0 3px 6px rgba(0,0,0,0.4);">Action</th>
                   </tr>
                 </thead>
                 <tbody></tbody>
                 <tfoot id="tableFooter"
-                  style="position: sticky; bottom: 0; background: var(--clr-surface, #1e293b); box-shadow: 0 -4px 10px rgba(0,0,0,0.15); display: none; z-index: 5;">
+                  style="position: sticky; bottom: 0; background: #141f36; box-shadow: 0 -4px 10px rgba(0,0,0,0.25); display: none; z-index: 20;">
                   <tr>
                     <td colspan="5" style="text-align: right; font-weight: 700; color: var(--clr-accent, #f59e0b); padding:6px 8px; font-size:0.78rem;">
                       Totals:</td>
@@ -464,7 +542,7 @@
   </div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
-  <script src="js/script.js?v=6"></script>
+  <script src="js/script.js?v=7"></script>
   <script>
     const sidebar = document.getElementById('sidebar'), btnToggle = document.getElementById('btnSidebarToggle'), overlay = document.getElementById('sidebarOverlay');
     btnToggle.addEventListener('click', () => { if (window.innerWidth <= 992) { sidebar.classList.toggle('mobile-open'); overlay.classList.toggle('show'); } else { sidebar.classList.toggle('collapsed'); localStorage.setItem('sidebar_collapsed', sidebar.classList.contains('collapsed')); } });
@@ -473,6 +551,28 @@
     const btnTheme = document.getElementById('btnThemeToggle'), savedTheme = localStorage.getItem('theme');
     if (savedTheme === 'light') { document.body.classList.add('light-theme'); btnTheme.innerHTML = '<i class="fa-solid fa-sun"></i>'; }
     btnTheme.addEventListener('click', () => { document.body.classList.toggle('light-theme'); const il = document.body.classList.contains('light-theme'); localStorage.setItem('theme', il ? 'light' : 'dark'); btnTheme.innerHTML = il ? '<i class="fa-solid fa-sun"></i>' : '<i class="fa-solid fa-moon"></i>'; });
+
+    // Export Dropdown Toggle
+    function toggleExportDropdown(e) {
+      if (e) e.stopPropagation();
+      const menu = document.getElementById('exportDropdownMenu');
+      if (menu) {
+        menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+      }
+    }
+    function closeExportDropdown() {
+      const menu = document.getElementById('exportDropdownMenu');
+      if (menu) menu.style.display = 'none';
+    }
+    window.addEventListener('click', (e) => {
+      const btn = document.getElementById('btnExportDropdown');
+      const menu = document.getElementById('exportDropdownMenu');
+      if (menu && menu.style.display === 'block') {
+        if (btn && btn.contains(e.target)) return;
+        if (menu.contains(e.target)) return;
+        menu.style.display = 'none';
+      }
+    });
   </script>
 </body>
 
