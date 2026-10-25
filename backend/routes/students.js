@@ -320,6 +320,74 @@ router.put('/reset-password/:id', authenticateAdmin, async (req, res) => {
 });
 
 // ============================
+// GET /api/students/find-duplicates  (admin only)
+// MUST BE BEFORE /:id to prevent route shadowing
+// ============================
+router.get('/find-duplicates', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(`
+      SELECT MIN(name) AS name, MIN(class_name) AS class_name, COUNT(*) AS cnt, GROUP_CONCAT(id ORDER BY id) AS ids
+      FROM students
+      GROUP BY LOWER(TRIM(name)), LOWER(TRIM(COALESCE(class_name, '')))
+      HAVING cnt > 1
+      ORDER BY name
+    `);
+    res.json({ success: true, duplicates: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ============================
+// DELETE /api/students/delete-duplicates  (admin only)
+// MUST BE BEFORE /:id to prevent route shadowing
+// Keeps the record with the LOWEST id for each (name, class) pair
+// ============================
+router.delete('/delete-duplicates', authenticateAdmin, async (req, res) => {
+  try {
+    const [dupGroups] = await promisePool.query(`
+      SELECT MIN(id) AS min_id, GROUP_CONCAT(id ORDER BY id) AS all_ids
+      FROM students
+      GROUP BY LOWER(TRIM(name)), LOWER(TRIM(COALESCE(class_name, '')))
+      HAVING COUNT(*) > 1
+    `);
+    if (!dupGroups.length) return res.json({ success: true, message: 'No duplicate records found.', deleted: 0 });
+
+    const idsToDelete = [];
+    dupGroups.forEach(g => {
+      const ids = g.all_ids.split(',').map(Number);
+      ids.forEach(id => {
+        if (id !== g.min_id) idsToDelete.push(id);
+      });
+    });
+
+    if (!idsToDelete.length) {
+      return res.json({ success: true, message: 'No duplicate records to delete.', deleted: 0 });
+    }
+
+    // Safety: reassign any payments or student_queries from duplicates to keeper min_id
+    for (const g of dupGroups) {
+      const ids = g.all_ids.split(',').map(Number);
+      const keeperId = g.min_id;
+      const otherIds = ids.filter(id => id !== keeperId);
+      if (otherIds.length) {
+        await promisePool.query('UPDATE payments SET student_id = ? WHERE student_id IN (?)', [keeperId, otherIds]);
+        await promisePool.query('UPDATE student_queries SET student_id = ? WHERE student_id IN (?)', [keeperId, otherIds]);
+      }
+    }
+
+    await promisePool.query(`DELETE FROM students WHERE id IN (?)`, [idsToDelete]);
+    res.json({
+      success: true,
+      message: `Deleted ${idsToDelete.length} duplicate record(s). Original records kept safely.`,
+      deleted: idsToDelete.length
+    });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ============================
 // DELETE student
 // ============================
 router.delete('/:id', authenticateAdmin, (req, res) => {
@@ -377,72 +445,6 @@ router.post('/change-password', authenticateAny, async (req, res) => {
       [await bcrypt.hash(newPassword, 12), req.user.id],
       (err) => err ? res.status(500).json({ success: false, message: 'Update failed' }) : res.json({ success: true, message: 'Password updated' }));
   });
-});
-
-// ============================
-// GET /api/students/find-duplicates  (admin only)
-// ============================
-router.get('/find-duplicates', authenticateAdmin, async (req, res) => {
-  try {
-    const [rows] = await promisePool.query(`
-      SELECT MIN(name) AS name, MIN(class_name) AS class_name, COUNT(*) AS cnt, GROUP_CONCAT(id ORDER BY id) AS ids
-      FROM students
-      GROUP BY LOWER(TRIM(name)), LOWER(TRIM(COALESCE(class_name, '')))
-      HAVING cnt > 1
-      ORDER BY name
-    `);
-    res.json({ success: true, duplicates: rows });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
-});
-
-// ============================
-// DELETE /api/students/delete-duplicates  (admin only)
-// Keeps the record with the LOWEST id for each (name, class) pair
-// ============================
-router.delete('/delete-duplicates', authenticateAdmin, async (req, res) => {
-  try {
-    const [dupGroups] = await promisePool.query(`
-      SELECT MIN(id) AS min_id, GROUP_CONCAT(id ORDER BY id) AS all_ids
-      FROM students
-      GROUP BY LOWER(TRIM(name)), LOWER(TRIM(COALESCE(class_name, '')))
-      HAVING COUNT(*) > 1
-    `);
-    if (!dupGroups.length) return res.json({ success: true, message: 'No duplicate records found.', deleted: 0 });
-
-    const idsToDelete = [];
-    dupGroups.forEach(g => {
-      const ids = g.all_ids.split(',').map(Number);
-      ids.forEach(id => {
-        if (id !== g.min_id) idsToDelete.push(id);
-      });
-    });
-
-    if (!idsToDelete.length) {
-      return res.json({ success: true, message: 'No duplicate records to delete.', deleted: 0 });
-    }
-
-    // Safety: reassign any payments or student_queries from duplicates to keeper min_id
-    for (const g of dupGroups) {
-      const ids = g.all_ids.split(',').map(Number);
-      const keeperId = g.min_id;
-      const otherIds = ids.filter(id => id !== keeperId);
-      if (otherIds.length) {
-        await promisePool.query('UPDATE payments SET student_id = ? WHERE student_id IN (?)', [keeperId, otherIds]);
-        await promisePool.query('UPDATE student_queries SET student_id = ? WHERE student_id IN (?)', [keeperId, otherIds]);
-      }
-    }
-
-    await promisePool.query(`DELETE FROM students WHERE id IN (?)`, [idsToDelete]);
-    res.json({
-      success: true,
-      message: `Deleted ${idsToDelete.length} duplicate record(s). Original records kept safely.`,
-      deleted: idsToDelete.length
-    });
-  } catch (e) {
-    res.status(500).json({ success: false, message: e.message });
-  }
 });
 
 module.exports = router;
