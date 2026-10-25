@@ -44,8 +44,8 @@ router.get('/template', authenticateAdmin, (req, res) => {
     const instr = XLSX.utils.json_to_sheet([
       { Instructions: 'BULK UPLOAD TEMPLATE — HOLY-WOOD ACADEMY' },
       { Instructions: '' },
-      { Instructions: 'Required: Name, Phone, Bus Number' },
-      { Instructions: 'Optional: Class, Email, Pick-Up Point, Old Bus Fees, Current Fees, Discount Amount, Fees Paid, Password' },
+      { Instructions: 'Required: Name, Bus Number' },
+      { Instructions: 'Optional: Class, Phone, Email, Pick-Up Point, Old Bus Fees, Current Fees, Discount Amount, Fees Paid, Password' },
       { Instructions: '' },
       { Instructions: 'total_fees = Old Bus Fees + Current Fees - Discount (auto-computed)' },
       { Instructions: 'remaining_fees = total_fees - Fees Paid (auto-computed)' },
@@ -161,7 +161,6 @@ router.post('/preview', authenticateAdmin, async (req, res) => {
 
       const errors = [];
       if (!name)                           errors.push('Name required');
-      if (!phone)                          errors.push('Phone required');
       if (!bus_number)                     errors.push('Bus Number required');
       if (bus_number && !bus_id)           errors.push(`Bus "${bus_number}" not found`);
       if (existingUsernames.has(username.toLowerCase())) errors.push('Username already exists');
@@ -237,7 +236,6 @@ router.post('/upload', authenticateAdmin, async (req, res) => {
       const errors = [];
 
       if (!name)             errors.push('Name required');
-      if (!phone)            errors.push('Phone required');
       if (bus_number && !bus_id) errors.push(`Bus "${bus_number}" not found`);
       if (existingUsernames.has(username.toLowerCase())) errors.push('Username exists');
       if (fileUsernames.has(username.toLowerCase()))     errors.push('Duplicate in file');

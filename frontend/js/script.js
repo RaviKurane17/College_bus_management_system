@@ -1712,6 +1712,29 @@ async function resetStudentPassword(id) {
   }
 }
 
+async function removeDuplicateStudents() {
+  try {
+    const res = await apiFetch('/api/students/find-duplicates');
+    if (!res.success) { alert('Failed to check for duplicates.'); return; }
+    if (!res.duplicates || res.duplicates.length === 0) {
+      alert('✅ No duplicate student records found!');
+      return;
+    }
+    let msg = `⚠️ Found ${res.duplicates.length} duplicate groups:\n\n`;
+    res.duplicates.forEach(d => {
+      msg += `• ${d.name} (${d.class_name || 'No Class'}) — ${d.cnt} records, IDs: ${d.ids}\n`;
+    });
+    msg += `\nThe OLDEST record (lowest ID) for each student will be KEPT.\nAll newer duplicates will be DELETED.\n\nProceed?`;
+    if (!confirm(msg)) return;
+    const delRes = await apiFetch('/api/students/delete-duplicates', { method: 'DELETE' });
+    alert(delRes.message || (delRes.success ? 'Duplicates removed!' : 'Failed to remove duplicates.'));
+    if (delRes.success) loadStudents();
+  } catch (e) {
+    alert('Error checking/removing duplicates.');
+    console.error(e);
+  }
+}
+
 async function bulkResetPasswords() {
   if (!confirm("WARNING: This will reset ALL students' passwords to '123456'. Are you sure you want to proceed?")) return;
   try {
@@ -3283,9 +3306,9 @@ window.downloadStudentExcel = function() {
     alert("No student data available to download.");
     return;
   }
-  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,26-27 Fees,Total,Conc.,Paid,Rem. Fees,Status\\n";
+  let csv = "Sr No.,Name,Class,Phone,Bus No,Pick-up,Old Fees,26-27 Fees,Total,Conc.,Paid,Rem. Fees,Status\n";
   students.forEach((s, index) => {
-    csv += `"${index+1}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\\n`;
+    csv += `"${index+1}","${(s.name || '').replace(/"/g, '""')}","${s.class_name || ''}","${s.phone || ''}","${s.bus_number || ''}","${(s.pick_up_point || '').replace(/"/g, '""')}","${s.old_bus_fees || 0}","${s.current_fees || 0}","${s.total_fees || 0}","${s.discount_amount || 0}","${s.fees_paid || 0}","${s.remaining_fees || 0}","${s.student_status}"\n`;
   });
   const blob = new Blob([csv], { type: 'text/csv' });
   const url = window.URL.createObjectURL(blob);
@@ -3392,7 +3415,7 @@ window.downloadFullStudentExcel = function() {
   fyCols.forEach(c => header.push(c.replace('fees_','FY ').replace('_','-')));
   header.push("26-27 Fees", "Total Fees", "Concession", "Paid", "Rem. Fees", "Status");
   
-  let csv = header.join(",") + "\\n";
+  let csv = header.join(",") + "\n";
   
   students.forEach((s, index) => {
     const row = [
@@ -3421,7 +3444,7 @@ window.downloadFullStudentExcel = function() {
       `"${s.student_status || 'active'}"`
     );
     
-    csv += row.join(",") + "\\n";
+    csv += row.join(",") + "\n";
   });
   
   const blob = new Blob([csv], { type: 'text/csv' });

@@ -379,4 +379,55 @@ router.post('/change-password', authenticateAny, async (req, res) => {
   });
 });
 
+// ============================
+// GET /api/students/find-duplicates  (admin only)
+// ============================
+router.get('/find-duplicates', authenticateAdmin, async (req, res) => {
+  try {
+    const [rows] = await promisePool.query(`
+      SELECT name, class_name, COUNT(*) AS cnt, GROUP_CONCAT(id ORDER BY id) AS ids
+      FROM students
+      GROUP BY LOWER(TRIM(name)), LOWER(TRIM(class_name))
+      HAVING cnt > 1
+      ORDER BY name
+    `);
+    res.json({ success: true, duplicates: rows });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
+// ============================
+// DELETE /api/students/delete-duplicates  (admin only)
+// Keeps the record with the LOWEST id for each (name, class) pair
+// ============================
+router.delete('/delete-duplicates', authenticateAdmin, async (req, res) => {
+  try {
+    // Find IDs to delete (all but the min-id for each dup group)
+    const [dupRows] = await promisePool.query(`
+      SELECT id FROM students
+      WHERE id NOT IN (
+        SELECT min_id FROM (
+          SELECT MIN(id) AS min_id
+          FROM students
+          GROUP BY LOWER(TRIM(name)), LOWER(TRIM(class_name))
+        ) AS keepers
+      )
+      AND LOWER(TRIM(name)) IN (
+        SELECT LOWER(TRIM(name)) FROM (
+          SELECT name FROM students
+          GROUP BY LOWER(TRIM(name)), LOWER(TRIM(class_name))
+          HAVING COUNT(*) > 1
+        ) AS dups
+      )
+    `);
+    if (!dupRows.length) return res.json({ success: true, message: 'No duplicate records found.', deleted: 0 });
+    const idsToDelete = dupRows.map(r => r.id);
+    await promisePool.query(`DELETE FROM students WHERE id IN (?)`, [idsToDelete]);
+    res.json({ success: true, message: `Deleted ${idsToDelete.length} duplicate record(s). Original records kept.`, deleted: idsToDelete.length });
+  } catch (e) {
+    res.status(500).json({ success: false, message: e.message });
+  }
+});
+
 module.exports = router;
