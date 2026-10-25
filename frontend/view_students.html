@@ -67,10 +67,11 @@
         border: 1px solid var(--clr-border) !important;
         display: flex !important;
         flex-direction: column !important;
-        flex: 1 !important;
+        flex: 1 1 auto !important;
         min-height: 0 !important;
         height: 100% !important;
         overflow: hidden !important;
+        position: relative !important;
       }
       .panel-body {
         padding: 0 !important;
@@ -85,14 +86,17 @@
       /* Only the table scrolls smoothly */
       .desktop-table, #studentTableScroll {
         display: block !important;
-        flex: 1 1 0% !important;
+        flex: 1 1 auto !important;
         min-height: 0 !important;
-        height: 100% !important;
+        height: auto !important;
         width: 100% !important;
         overflow-y: scroll !important;
         overflow-x: auto !important;
         position: relative !important;
+        margin: 0 !important;
+        padding: 0 !important;
         background: var(--clr-surface-2) !important;
+        z-index: 10 !important;
       }
       #studentsTable {
         width: 100% !important;
@@ -111,7 +115,7 @@
         position: -webkit-sticky !important;
         position: sticky !important;
         top: 0 !important;
-        z-index: 30 !important;
+        z-index: 25 !important;
         background: #141f36 !important;
         color: #f8fafc !important;
         padding: 9px 8px !important;
@@ -140,7 +144,7 @@
         position: -webkit-sticky !important;
         position: sticky !important;
         bottom: 0 !important;
-        z-index: 25 !important;
+        z-index: 20 !important;
         background: #111a2e !important;
         color: #f8fafc !important;
         border-top: 2px solid rgba(255, 255, 255, 0.15) !important;
@@ -149,20 +153,31 @@
       }
     }
 
+    /* Fixed top controls (Header + Filter Bar) - always above table scroll and never overlapping */
     .sticky-table-controls {
+      position: relative !important;
+      top: 0 !important;
+      left: 0 !important;
+      right: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      flex: 0 0 auto !important;
       flex-shrink: 0 !important;
       background: var(--clr-surface) !important;
       border-bottom: 1px solid var(--clr-border) !important;
+      z-index: 100 !important;
+      border-radius: var(--radius-md) var(--radius-md) 0 0 !important;
     }
 
     .panel-header {
       padding: 9px 16px !important;
       border-bottom: 1px solid var(--clr-border) !important;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: space-between !important;
+      gap: 10px !important;
+      flex-wrap: wrap !important;
+      background: var(--clr-surface) !important;
     }
 
     .panel-header h3 {
@@ -180,62 +195,75 @@
     }
 
     .filter-bar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      padding: 8px 16px !important;
-      border-bottom: 1px solid var(--clr-border);
-      align-items: center;
+      display: flex !important;
+      flex-direction: row !important;
+      flex-wrap: wrap !important;
+      gap: 10px !important;
+      padding: 10px 16px !important;
+      border-bottom: 1px solid var(--clr-border) !important;
+      align-items: center !important;
       background: var(--clr-surface-2) !important;
+      min-height: 54px !important;
+      box-sizing: border-box !important;
     }
 
     .search-box {
-      position: relative;
-      flex: 1.8;
-      min-width: 200px;
+      position: relative !important;
+      flex: 1.8 !important;
+      min-width: 200px !important;
+      display: flex !important;
+      align-items: center !important;
     }
 
     .search-box i {
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--clr-muted);
-      font-size: 0.85rem;
+      position: absolute !important;
+      left: 14px !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      color: var(--clr-muted) !important;
+      font-size: 0.85rem !important;
+      pointer-events: none !important;
     }
 
     .search-box input {
-      width: 100%;
-      padding: 8px 14px 8px 36px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--clr-border-strong);
-      background: var(--clr-surface);
-      color: #e2e8f0;
-      font-family: inherit;
-      font-size: 0.82rem;
-      outline: none;
-      transition: border-color var(--transition);
+      width: 100% !important;
+      height: 38px !important;
+      line-height: 38px !important;
+      padding: 0 14px 0 38px !important;
+      border-radius: var(--radius-sm) !important;
+      border: 1px solid var(--clr-border-strong) !important;
+      background: var(--clr-surface) !important;
+      color: #e2e8f0 !important;
+      font-family: inherit !important;
+      font-size: 0.82rem !important;
+      outline: none !important;
+      box-sizing: border-box !important;
+      transition: border-color var(--transition) !important;
     }
 
     .search-box input:focus {
-      border-color: var(--clr-accent);
+      border-color: var(--clr-accent) !important;
     }
 
     .filter-select {
-      padding: 8px 12px;
-      border-radius: var(--radius-sm);
-      border: 1px solid var(--clr-border-strong);
-      background: var(--clr-surface);
-      color: #cbd5e1;
-      font-family: inherit;
-      font-size: 0.78rem;
-      cursor: pointer;
-      outline: none;
-      min-width: 110px;
+      height: 38px !important;
+      line-height: 38px !important;
+      padding: 0 12px !important;
+      border-radius: var(--radius-sm) !important;
+      border: 1px solid var(--clr-border-strong) !important;
+      background: var(--clr-surface) !important;
+      color: #cbd5e1 !important;
+      font-family: inherit !important;
+      font-size: 0.78rem !important;
+      cursor: pointer !important;
+      outline: none !important;
+      min-width: 110px !important;
+      box-sizing: border-box !important;
+      transition: border-color var(--transition) !important;
     }
 
     .filter-select:focus {
-      border-color: var(--clr-accent);
+      border-color: var(--clr-accent) !important;
     }
 
     .tag {
@@ -443,12 +471,12 @@
                 </button>
                 
                 <!-- Unified Export Dropdown -->
-                <div style="position:relative; display:inline-block;">
+                <div style="position:relative; display:inline-block; z-index:200;">
                   <button onclick="toggleExportDropdown(event)" id="btnExportDropdown"
                     style="display:flex; align-items:center; gap:6px; padding:7px 14px; border-radius:6px; border:1px solid rgba(59,130,246,0.3); background:linear-gradient(135deg,#2563eb,#1d4ed8); color:#fff; font-weight:600; font-size:0.82rem; cursor:pointer; font-family:inherit;" title="Export Student Records">
                     <i class="fa-solid fa-file-export"></i> Export <i class="fa-solid fa-chevron-down" style="font-size:0.68rem; margin-left:2px;"></i>
                   </button>
-                  <div id="exportDropdownMenu" style="display:none; position:absolute; right:0; top:calc(100% + 5px); background:#1e293b; border:1px solid rgba(255,255,255,0.15); border-radius:8px; box-shadow:0 10px 25px rgba(0,0,0,0.5); z-index:100; min-width:220px; padding:6px 0;">
+                  <div id="exportDropdownMenu" style="display:none; position:absolute; right:0; top:calc(100% + 6px); background:#1e293b; border:1px solid rgba(255,255,255,0.15); border-radius:8px; box-shadow:0 12px 30px rgba(0,0,0,0.6); z-index:9999; min-width:230px; padding:6px 0;">
                     <div style="padding:6px 12px 4px 12px; font-size:0.68rem; color:#94a3b8; font-weight:700; text-transform:uppercase; letter-spacing:0.5px;">Current Filtered Students</div>
                     <a href="javascript:void(0)" onclick="downloadStudentExcel(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-file-excel" style="color:#10b981; width:16px;"></i> Standard Excel (CSV)</a>
                     <a href="javascript:void(0)" onclick="downloadStudentPDF(); closeExportDropdown();" style="display:flex; align-items:center; gap:10px; padding:9px 14px; color:#e2e8f0; text-decoration:none; font-size:0.82rem; transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.08)'" onmouseout="this.style.background='transparent'"><i class="fa-solid fa-file-pdf" style="color:#ef4444; width:16px;"></i> Standard PDF</a>

@@ -110,19 +110,19 @@ img, table {
 }
 
 .sticky-table-controls {
-  position: sticky;
-  top: 48px;
-  z-index: 10;
+  position: relative;
+  z-index: 40;
   background: var(--clr-surface);
-  padding: 14px 14px 10px 14px;
-  margin: -14px -14px 0 -14px;
+  padding: 0;
+  margin: 0;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   border-bottom: 1px solid var(--clr-border);
 }
 
 @media (min-width: 992px) {
   .sticky-table-controls {
-    top: 50px;
+    position: relative;
+    top: 0;
   }
 }
 
