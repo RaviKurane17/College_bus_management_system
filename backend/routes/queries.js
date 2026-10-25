@@ -37,7 +37,7 @@ router.post('/submit', authenticateAny, (req, res) => {
 // Get all queries - admin view (protected)
 router.get('/all', authenticateAdmin, (req, res) => {
   db.query(
-    `SELECT q.*, s.name as student_name, s.roll_no, s.phone 
+    `SELECT q.*, s.name as student_name, s.class_name, s.phone 
      FROM student_queries q
      LEFT JOIN students s ON q.student_id = s.id
      ORDER BY q.created_at DESC`,

@@ -30,6 +30,9 @@ const clientImportRoutes = require('./routes/client_import');
 // Initialize Express app
 const app = express();
 
+// Trust Vercel / reverse proxy for accurate IP rate-limiting
+app.set('trust proxy', 1);
+
 // =========================
 // 🛡️ Security Middleware
 // =========================

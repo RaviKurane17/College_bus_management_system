@@ -150,7 +150,7 @@ router.get('/:id/students', authenticateAdmin, (req, res) => {
   }
 
   const sql = `
-    SELECT id, name, roll_no, department, course_year, section, fees_paid, remaining_fees 
+    SELECT id, name, class_name, phone, pick_up_point, course_year, section, fees_paid, remaining_fees 
     FROM students 
     WHERE bus_id = ? 
     ORDER BY name ASC

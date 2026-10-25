@@ -59,8 +59,8 @@ router.post('/send-email-reminder/:id', authenticateAdmin, (req, res) => {
             <p style="color: #475569;">This is a friendly reminder that you have an outstanding bus transport fee balance.</p>
             <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
               <table style="width: 100%; border-collapse: collapse;">
-                <tr><td style="padding: 8px; color: #64748b;">Roll No</td><td style="padding: 8px; font-weight: 600;">${student.roll_no}</td></tr>
-                <tr><td style="padding: 8px; color: #64748b;">Department</td><td style="padding: 8px; font-weight: 600;">${student.department || 'N/A'}</td></tr>
+                <tr><td style="padding: 8px; color: #64748b;">Class</td><td style="padding: 8px; font-weight: 600;">${student.class_name || 'N/A'}</td></tr>
+                <tr><td style="padding: 8px; color: #64748b;">Pick-up Point</td><td style="padding: 8px; font-weight: 600;">${student.pick_up_point || 'N/A'}</td></tr>
                 <tr><td style="padding: 8px; color: #64748b;">Total Fees</td><td style="padding: 8px; font-weight: 600;">₹${parseFloat(student.total_fees || 0).toLocaleString('en-IN')}</td></tr>
                 <tr><td style="padding: 8px; color: #64748b;">Fees Paid</td><td style="padding: 8px; font-weight: 600; color: #22c55e;">₹${parseFloat(student.fees_paid || 0).toLocaleString('en-IN')}</td></tr>
                 <tr style="background: #fef2f2;"><td style="padding: 8px; color: #64748b; font-weight: 600;">Remaining Balance</td><td style="padding: 8px; font-weight: 700; color: #ef4444; font-size: 18px;">₹${parseFloat(student.remaining_fees || 0).toLocaleString('en-IN')}</td></tr>
