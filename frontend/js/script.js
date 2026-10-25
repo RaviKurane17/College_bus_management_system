@@ -1727,8 +1727,9 @@ async function removeDuplicateStudents() {
     msg += `\nThe OLDEST record (lowest ID) for each student will be KEPT.\nAll newer duplicates will be DELETED.\n\nProceed?`;
     if (!confirm(msg)) return;
     const delRes = await apiFetch('/api/students/delete-duplicates', { method: 'DELETE' });
-    alert(delRes.message || (delRes.success ? 'Duplicates removed!' : 'Failed to remove duplicates.'));
-    if (delRes.success) loadStudents();
+    if (delRes.success) {
+      window.location.reload();
+    }
   } catch (e) {
     alert('Error checking/removing duplicates.');
     console.error(e);
