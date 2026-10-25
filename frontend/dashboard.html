@@ -715,6 +715,7 @@
           <div class="welcome-text">
             <h2>👋 Welcome back, Administrator</h2>
             <p>Here's what's happening with your fleet today.</p>
+            <button onclick="removeDuplicateStudents()" style="display:inline-flex; align-items:center; gap:8px; padding:7px 16px; background:linear-gradient(135deg, #dc2626, #991b1b); border:1px solid #ef4444; color:#fff; border-radius:6px; font-size:0.85rem; font-weight:600; cursor:pointer; margin-top:10px; box-shadow:0 2px 8px rgba(220,38,38,0.4);" title="Scan and delete duplicate records"><i class="fa-solid fa-clone"></i> Remove Duplicates</button>
           </div>
           <div class="welcome-stats" id="welcomeStats">
             <div class="welcome-stat-item">
@@ -1542,6 +1543,35 @@
         }
       } catch (e) {
         alert('Error saving settings.');
+      }
+    }
+
+    async function removeDuplicateStudents() {
+      try {
+        const res = await apiFetch('/api/students/find-duplicates');
+        if (!res.success) { alert('Failed to check for duplicates: ' + (res.message || '')); return; }
+        if (!res.duplicates || res.duplicates.length === 0) {
+          alert('✅ No duplicate student records found! Everything is clean.');
+          return;
+        }
+        let msg = `⚠️ Found ${res.duplicates.length} duplicate student groups!\n\n`;
+        res.duplicates.slice(0, 15).forEach(d => {
+          msg += `• ${d.name} (${d.class_name || 'No Class'}) — ${d.cnt} copies (IDs: ${d.ids})\n`;
+        });
+        if (res.duplicates.length > 15) {
+          msg += `...and ${res.duplicates.length - 15} more students.\n`;
+        }
+        msg += `\nThe OLDEST record (lowest ID) for each student will be KEPT safely.\nAll newer duplicate copies will be DELETED.\n\nDo you want to proceed and clean all duplicates now?`;
+        if (!confirm(msg)) return;
+
+        const delRes = await apiFetch('/api/students/delete-duplicates', { method: 'DELETE' });
+        alert(delRes.message || (delRes.success ? 'Duplicates removed successfully!' : 'Failed to remove duplicates.'));
+        if (delRes.success) {
+          window.location.reload();
+        }
+      } catch (e) {
+        alert('Error checking or removing duplicates: ' + e.message);
+        console.error(e);
       }
     }
   </script>
