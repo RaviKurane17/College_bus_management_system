@@ -509,7 +509,18 @@
         window.location.href = '/login.html';
         return;
       }
-      return res.json();
+      
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const text = await res.text();
+        throw new Error(text || `Server returned error (${res.status} ${res.statusText})`);
+      }
+      
+      const data = await res.json();
+      if (!res.ok && !data.message) {
+        throw new Error(data.error || `Request failed with status ${res.status}`);
+      }
+      return data;
     }
     
     function readFileAsBase64(file) {
@@ -542,7 +553,9 @@
         if (res.success) {
           resultsContainer.style.display = 'block';
           
-          document.getElementById('validCountSpan').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${res.validCount} Valid`;
+          const updateCount = res.updateCount || 0;
+          const newCount = res.newCount || 0;
+          document.getElementById('validCountSpan').innerHTML = `<i class="fa-solid fa-check-circle"></i> ${res.validCount} Valid (${newCount} New, ${updateCount} Updates)`;
           document.getElementById('errorCountSpan').innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> ${res.invalidCount} Errors`;
           
           const alertEl = document.getElementById('uploadAlert');
@@ -551,32 +564,39 @@
             alertEl.style.backgroundColor = 'rgba(16,185,129,0.15)';
             alertEl.style.color = '#34d399';
             alertEl.style.border = '1px solid rgba(16,185,129,0.3)';
-            alertEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> All ${res.totalRows} rows are valid. You can proceed with the upload.`;
+            alertEl.innerHTML = `<i class="fa-solid fa-circle-check"></i> All <strong>${res.totalRows}</strong> records are valid: <strong>${newCount}</strong> new students will be registered, and <strong>${updateCount}</strong> existing students will be updated with latest fees.`;
             document.getElementById('btnSubmitUpload').disabled = false;
           } else if (res.validCount > 0) {
             alertEl.style.backgroundColor = 'rgba(245,158,11,0.15)';
             alertEl.style.color = '#fbbf24';
             alertEl.style.border = '1px solid rgba(245,158,11,0.3)';
-            alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Found ${res.invalidCount} errors. You can upload the ${res.validCount} valid rows, but errors will be skipped.`;
+            alertEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Found ${res.invalidCount} invalid rows. You can proceed to upload the ${res.validCount} valid rows (${newCount} new, ${updateCount} updates).`;
             document.getElementById('btnSubmitUpload').disabled = false;
           } else {
             alertEl.style.backgroundColor = 'rgba(239,68,68,0.15)';
             alertEl.style.color = '#f87171';
             alertEl.style.border = '1px solid rgba(239,68,68,0.3)';
-            alertEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> No valid rows found. Please fix the errors in your Excel file and try again.`;
+            alertEl.innerHTML = `<i class="fa-solid fa-circle-xmark"></i> No valid student rows found. Please check your Excel headers and data.`;
             document.getElementById('btnSubmitUpload').disabled = true;
           }
           
           const tbody = document.getElementById('previewBody');
           tbody.innerHTML = res.rows.map(row => {
             const isError = !row.valid;
-            const statusBadge = isError 
-              ? '<span class="status-badge status-error">Error</span>' 
-              : '<span class="status-badge status-valid">Valid</span>';
+            let statusBadge = '';
+            if (isError) {
+              statusBadge = '<span class="status-badge status-error">Error</span>';
+            } else if (row.action === 'update') {
+              statusBadge = '<span class="status-badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;border:1px solid rgba(59,130,246,0.3);"><i class="fa-solid fa-arrows-rotate"></i> Update Fee</span>';
+            } else {
+              statusBadge = '<span class="status-badge status-valid"><i class="fa-solid fa-user-plus"></i> New</span>';
+            }
               
             const detailsHtml = isError
               ? `<span style="color:#f87171; font-weight:600;"><i class="fa-solid fa-triangle-exclamation"></i> ${row.errors.join(', ')}</span>`
-              : `<span style="color:var(--clr-muted); font-size:0.75rem;">Ready to upload</span>`;
+              : (row.action === 'update' 
+                  ? `<span style="color:#60a5fa; font-size:0.75rem;">Existing student — fees will update</span>` 
+                  : `<span style="color:#34d399; font-size:0.75rem;">New student — ready to add</span>`);
               
             return `
               <tr class="${isError ? 'error-row' : ''}">
@@ -600,7 +620,7 @@
       } catch (e) {
         btn.innerHTML = '<i class="fa-solid fa-eye"></i> Preview';
         btn.disabled = false;
-        alert('Error details: ' + e.message + '\n' + e.stack);
+        alert('Preview error: ' + e.message);
       }
     }
 
@@ -615,12 +635,16 @@
         const fileData = await readFileAsBase64(currentFile);
         const res = await uploadJsonData('/api/students/bulk-upload/upload', { fileData });
         
+        btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
+        btn.disabled = false;
+
         if (res.success) {
-          alert(`✅ Success!\n${res.successCount} students added successfully.\n${res.failCount} rows skipped due to errors.`);
+          const inserted = res.insertedCount || 0;
+          const updated = res.updatedCount || 0;
+          const failed = res.failCount || 0;
+          alert(`✅ Bulk Upload Complete!\n\n• ${inserted} new students registered\n• ${updated} existing students updated with latest fees\n• ${failed} rows skipped/failed\n\nDatabase is now up to date.`);
           clearFile();
         } else {
-          btn.innerHTML = '<i class="fa-solid fa-upload"></i> Upload Valid Data';
-          btn.disabled = false;
           alert('Upload failed: ' + (res.message || 'Unknown error'));
         }
       } catch (e) {
